@@ -1,11 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import ChangePasswordModal from '@/components/modals/ChangePasswordModal';
 
 const Sidebar = () => {
   const pathname = usePathname();
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
 
   const menuItems = [
     {
@@ -76,7 +78,11 @@ const Sidebar = () => {
             <div className="text-sm font-medium text-white">Minh Quang</div>
             <div className="text-xs text-amber-100">Admin@gmail.com</div>
           </div>
-          <button className="text-amber-100 hover:text-white transition-colors">
+          <button 
+            onClick={() => setIsChangePasswordModalOpen(true)}
+            className="text-amber-100 hover:text-white transition-colors"
+            title="Đổi mật khẩu"
+          >
             <svg
               className="w-5 h-5"
               fill="none"
@@ -99,6 +105,12 @@ const Sidebar = () => {
           </button>
         </div>
       </div>
+
+      {/* Change Password Modal */}
+      <ChangePasswordModal 
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+      />
     </div>
   );
 };

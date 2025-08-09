@@ -1,80 +1,57 @@
 'use client';
 
 import React, { useState } from 'react';
-import ResetUserPasswordModal from '@/components/modals/ResetUserPasswordModal';
 
-interface User {
+interface Activity {
   id: number;
-  name: string;
-  username: string;
-  phone: string;
-  email: string;
-  avatar: string;
+  admin: {
+    name: string;
+    avatar: string;
+  };
+  timestamp: string;
+  action: string;
 }
 
-const UsersContent = () => {
+const ActivityContent = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
 
-  const users: User[] = [
+  const activities: Activity[] = [
     {
       id: 1,
-      name: 'Kristin Watson',
-      username: 'Chemistry',
-      phone: 'JSS 2',
-      email: 'michelle.rivera@example.com',
-      avatar: '👩'
+      admin: { name: 'Kristin Watson', avatar: '👩' },
+      timestamp: '06/08/2025 13:45',
+      action: 'Admin vừa cập nhật mật khẩu user'
     },
     {
       id: 2,
-      name: 'Marvin McKinney',
-      username: 'French',
-      phone: 'JSS 3',
-      email: 'debbie.baker@example.com',
-      avatar: '👨'
+      admin: { name: 'Marvin McKinney', avatar: '👨' },
+      timestamp: '05/07/2025 16:35',
+      action: 'Admin vừa phản hồi user'
     },
     {
       id: 3,
-      name: 'Jane Cooper',
-      username: 'Maths',
-      phone: 'JSS 3',
-      email: 'kenzi.lawson@example.com',
-      avatar: '👩'
+      admin: { name: 'Jane Cooper', avatar: '👩' },
+      timestamp: '06/08/2025 11:00',
+      action: 'Admin vừa duyệt bài đăng'
     },
     {
       id: 4,
-      name: 'Cody Fisher',
-      username: 'English',
-      phone: 'SS 3',
-      email: 'nathan.roberts@example.com',
-      avatar: '👨'
+      admin: { name: 'Cody Fisher', avatar: '👨' },
+      timestamp: '26/12/2025 12:03',
+      action: 'Admin đăng nhập'
     },
     {
       id: 5,
-      name: 'Bessie Cooper',
-      username: 'Social studies',
-      phone: 'SS 3',
-      email: 'felicia.reid@example.com',
-      avatar: '👩'
+      admin: { name: 'Bessie Cooper', avatar: '👩' },
+      timestamp: '17/12/2025 08:35',
+      action: 'Admin vừa tạo khoản'
     }
   ];
 
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredActivities = activities.filter(activity =>
+    activity.admin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    activity.action.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleResetPassword = (user: User) => {
-    setSelectedUser(user);
-    setIsResetPasswordModalOpen(true);
-  };
-
-  const handleCloseResetPasswordModal = () => {
-    setSelectedUser(null);
-    setIsResetPasswordModalOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -83,7 +60,7 @@ const UsersContent = () => {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Người dùng</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Lịch sử hoạt động</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
@@ -117,8 +94,8 @@ const UsersContent = () => {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
+          <div className="mb-6 flex items-center justify-between">
+            <div className="relative flex-1 mr-4">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <svg
                   className="h-5 w-5 text-gray-400"
@@ -142,98 +119,63 @@ const UsersContent = () => {
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <button className="p-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </button>
+            </div>
           </div>
 
-          {/* Users Table */}
+          {/* Activities Table */}
           <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tên người dùng
+                    Admin
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tên đăng nhập
+                    Thời gian
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Số điện thoại
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Tình trạng
+                    Hành động
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
+                {filteredActivities.map((activity) => (
+                  <tr key={activity.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="h-10 w-10 flex-shrink-0">
                           <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center text-lg">
-                            {user.avatar}
+                            {activity.admin.avatar}
                           </div>
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">
-                            {user.name}
+                            {activity.admin.name}
                           </div>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.username}</div>
+                      <div className="text-sm text-gray-900">{activity.timestamp}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.phone}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{user.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex items-center space-x-2">
-                        <button className="text-red-600 hover:text-red-900">
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                            />
-                          </svg>
-                        </button>
-                        <button 
-                          onClick={() => handleResetPassword(user)}
-                          className="text-blue-600 hover:text-blue-900"
-                          title="Cấp lại mật khẩu"
-                        >
-                          <svg
-                            className="w-5 h-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                            />
-                          </svg>
-                        </button>
-                      </div>
+                      <div className="text-sm text-gray-900">{activity.action}</div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Results Info */}
+          <div className="mt-4 text-sm text-gray-500">
+            Hiển thị {filteredActivities.length} / {activities.length} hoạt động
           </div>
         </div>
       </div>
@@ -270,15 +212,8 @@ const UsersContent = () => {
           </svg>
         </button>
       </div>
-
-      {/* Reset User Password Modal */}
-      <ResetUserPasswordModal 
-        isOpen={isResetPasswordModalOpen}
-        onClose={handleCloseResetPasswordModal}
-        user={selectedUser}
-      />
     </div>
   );
 };
 
-export default UsersContent;
+export default ActivityContent;
