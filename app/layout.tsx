@@ -2,7 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "../contexts/AuthContext";
 import LayoutWrapper from "./LayoutWrapper";
 
-export const metadata = { title: "Trust Stay", description: "Tìm trọ, ở ghép thông minh" };
+export const metadata = { title: "Nhà Chung", description: "Tìm trọ, ở ghép thông minh" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
