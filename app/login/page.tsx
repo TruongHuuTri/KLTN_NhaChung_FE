@@ -1,30 +1,31 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuth } from '../../contexts/AuthContext';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const { login, isLoading } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!email || !password) {
-      setError('Vui lòng nhập đầy đủ thông tin');
+      setError("Vui lòng nhập đầy đủ thông tin");
       return;
     }
 
-    const success = await login(email, password);
+    const { success, message } = await login(email, password);
+
     if (success) {
-      router.push('/');
+      router.push("/");
     } else {
-      setError('Email hoặc mật khẩu không đúng');
+      setError(message); // hiện thông báo cụ thể từ BE (sai mật khẩu, user không tồn tại, v.v.)
     }
   };
 
@@ -33,9 +34,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full space-y-8">
         {/* Header */}
         <div className="text-center">
-          <img 
-            src="/home/logo.webp" 
-            alt="Nhà Chung Logo" 
+          <img
+            src="/home/logo.webp"
+            alt="Nhà Chung Logo"
             className="mx-auto h-18 w-18 rounded-xl shadow-lg"
           />
           <h2 className="mt-6 text-3xl font-bold text-gray-900">
@@ -56,7 +57,10 @@ export default function LoginPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email
               </label>
               <input
@@ -73,7 +77,10 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Mật khẩu
               </label>
               <input
@@ -96,73 +103,34 @@ export default function LoginPage() {
             >
               {isLoading ? (
                 <div className="flex items-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg
+                    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
                   </svg>
                   Đang đăng nhập...
                 </div>
               ) : (
-                'Đăng nhập'
+                "Đăng nhập"
               )}
             </button>
           </div>
         </form>
-
-        {/* Demo Accounts */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Tài khoản demo:</h3>
-          <div className="space-y-3 text-sm">
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Trương Hữu Trí</p>
-                <p className="text-gray-600">tri@example.com</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEmail('tri@example.com');
-                  setPassword('123456');
-                }}
-                className="px-3 py-1 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
-              >
-                Sử dụng
-              </button>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Nguyễn Kiều Mỹ An</p>
-                <p className="text-gray-600">an@example.com</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEmail('an@example.com');
-                  setPassword('123456');
-                }}
-                className="px-3 py-1 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
-              >
-                Sử dụng
-              </button>
-            </div>
-            <div className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="font-medium text-gray-900">Trần Minh Quang</p>
-                <p className="text-gray-600">quang@example.com</p>
-              </div>
-              <button
-                onClick={() => {
-                  setEmail('quang@example.com');
-                  setPassword('123456');
-                }}
-                className="px-3 py-1 bg-teal-100 text-teal-700 rounded-lg hover:bg-teal-200 transition-colors"
-              >
-                Sử dụng
-              </button>
-            </div>
-          </div>
-          <p className="text-xs text-gray-500 mt-3">
-            Mật khẩu cho tất cả tài khoản: <span className="font-mono bg-gray-100 px-1 rounded">123456</span>
-          </p>
-        </div>
       </div>
     </div>
   );

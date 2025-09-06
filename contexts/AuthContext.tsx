@@ -1,90 +1,85 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
 
 interface User {
-  id: string;
+  userId: number | string;
   name: string;
   email: string;
+  role?: string;
   avatar?: string;
+  phone?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   isLoading: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Dữ liệu cứng cho demo
-const DEMO_USERS = [
-  {
-    id: '1',
-    name: 'Trương Hữu Trí',
-    email: 'tri@example.com',
-    password: '123456',
-    avatar: '/home/avt1.png'
-  },
-  {
-    id: '2', 
-    name: 'Nguyễn Kiều Mỹ An',
-    email: 'an@example.com',
-    password: '123456',
-    avatar: '/home/avt2.png'
-  },
-  {
-    id: '3',
-    name: 'Trần Minh Quang',
-    email: 'quang@example.com', 
-    password: '123456',
-    avatar: '/home/avt3.png'
-  }
-];
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Khôi phục session khi load app
   useEffect(() => {
-    // Kiểm tra localStorage khi component mount
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
+    const u = localStorage.getItem("user");
+    const t = localStorage.getItem("token");
+    if (u && t) setUser(JSON.parse(u));
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  // Đăng nhập thật
+  const login = async (email: string, password: string) => {
     setIsLoading(true);
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const foundUser = DEMO_USERS.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const userData = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        avatar: foundUser.avatar
-      };
-      
-      setUser(userData);
-      localStorage.setItem('user', JSON.stringify(userData));
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/users/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
+
+      const data = await res.json(); // luôn parse JSON để lấy message cụ thể
+
+      if (!res.ok) {
+        setIsLoading(false);
+        return {
+          success: false,
+          message: data?.message || "Đăng nhập thất bại",
+        };
+      }
+
+      const { access_token, user } = data;
+      localStorage.setItem("token", access_token);
+      localStorage.setItem("user", JSON.stringify(user));
+      setUser(user);
       setIsLoading(false);
-      return true;
+      return { success: true, message: "Đăng nhập thành công" };
+    } catch (e) {
+      setIsLoading(false);
+      return { success: false, message: "Có lỗi xảy ra, vui lòng thử lại" };
     }
-    
-    setIsLoading(false);
-    return false;
   };
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
   };
 
   return (
@@ -95,9 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  return ctx;
 }
