@@ -1,206 +1,274 @@
 "use client";
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 
-import { useState } from 'react';
+export type CategoryId = "phong-tro" | "chung-cu" | "nha-nguyen-can";
+const CATEGORIES = [
+  { id: "phong-tro", label: "Phòng trọ" },
+  { id: "chung-cu", label: "Căn hộ/Chung cư" },
+  { id: "nha-nguyen-can", label: "Nhà nguyên căn" },
+] as const;
+
+const PhongTroForm = dynamic(() => import("./forms/phongtro"));
+const ChungCuForm = dynamic(() => import("./forms/chungcu"));
+const NhaNguyenCanForm = dynamic(() => import("./forms/nhanguyencan"));
+
+/* Modal chọn danh mục */
+function CategoryModal({
+  open,
+  onClose,
+  onSelect,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSelect: (c: CategoryId) => void;
+}) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl">
+          <div className="px-5 py-3 border-b text-center font-semibold">
+            Chọn danh mục
+          </div>
+          <div className="p-4 space-y-3">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => onSelect(c.id as CategoryId)}
+                className="w-full flex items-center justify-between rounded-xl border px-4 py-3 hover:bg-gray-50"
+              >
+                <span className="font-medium">{c.label}</span>
+                <span>→</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* Modal Quy định */
+function RulesModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-xl bg-white rounded-2xl shadow-2xl">
+          <div className="px-5 py-3 border-b text-center font-semibold">
+            Quy định
+          </div>
+          <div className="p-5 text-sm text-gray-700 leading-6">
+            Nội dung quy định sẽ bổ sung sau. (Modal mẫu)
+          </div>
+          <div className="px-5 pb-4">
+            <button
+              onClick={onClose}
+              className="h-10 px-4 rounded-lg bg-teal-500 text-white w-full"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function PostForm() {
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<CategoryId | "">("");
+  const [showCateModal, setShowCateModal] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+
+  // input file
+  const imgRef = useRef<HTMLInputElement>(null);
+  const vidRef = useRef<HTMLInputElement>(null);
+  const [imgCount, setImgCount] = useState(0);
+  const [vidName, setVidName] = useState("");
+
+  useEffect(() => {
+    const p = new URLSearchParams(location.search);
+    const fromUrl = p.get("category") as CategoryId | null;
+    const saved = localStorage.getItem("post_category") as CategoryId | null;
+    const ids = CATEGORIES.map((c) => c.id);
+    const initial =
+      fromUrl && ids.includes(fromUrl)
+        ? fromUrl
+        : saved && ids.includes(saved)
+        ? saved
+        : "";
+    setCategory(initial);
+    setShowCateModal(!initial);
+  }, []);
+  useEffect(() => {
+    if (!category) return;
+    localStorage.setItem("post_category", category);
+    const url = new URL(location.href);
+    url.searchParams.set("category", category);
+    history.replaceState({}, "", url.toString());
+  }, [category]);
+
+  const ActiveForm = useMemo(() => {
+    switch (category) {
+      case "phong-tro":
+        return PhongTroForm as any;
+      case "chung-cu":
+        return ChungCuForm as any;
+      case "nha-nguyen-can":
+        return NhaNguyenCanForm as any;
+      default:
+        return null;
+    }
+  }, [category]);
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg p-8">
-      {/* Hình ảnh và video sản phẩm */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">Hình ảnh và video sản phẩm</h2>
-          <a href="#" className="text-blue-600 hover:text-blue-700 text-sm">
-            Xem thêm về quy định đăng tin
-          </a>
+    <div className="mx-auto max-w-7xl px-4 md:px-6 space-y-6">
+      <CategoryModal
+        open={showCateModal}
+        onClose={() => setShowCateModal(false)}
+        onSelect={(c) => {
+          setCategory(c);
+          setShowCateModal(false);
+        }}
+      />
+      <RulesModal open={showRules} onClose={() => setShowRules(false)} />
+
+      {/* Hình ảnh + Form */}
+      <div className="bg-white rounded-2xl border p-5">
+        <div className="flex items-center justify-between">
+          <h2 className="text-[20px] font-semibold">
+            Hình ảnh và Video sản phẩm
+          </h2>
+          <button
+            onClick={() => setShowRules(true)}
+            className="text-[13px] text-sky-600 hover:underline"
+          >
+            Quy định đăng tin
+          </button>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6">
-          {/* Upload hình ảnh */}
-          <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-blue-400 transition-colors cursor-pointer">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-6">
+          {/* LEFT: Upload */}
+          <aside className="md:col-span-5 space-y-4">
+            {/* Tile ảnh */}
+            <button
+              onClick={() => imgRef.current?.click()}
+              className="relative w-full rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/40 p-4 text-left"
+            >
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRules(true);
+                }}
+                className="absolute -top-3 left-4 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-medium text-sky-600 ring-1 ring-sky-200 cursor-pointer"
+              >
+                <span className="inline-block h-3 w-3 rounded-full bg-sky-500" />{" "}
+                Hình ảnh hợp lệ
+              </span>
+              <div className="h-48 grid place-items-center text-center text-orange-400">
+                <svg
+                  width="52"
+                  height="40"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  className="mx-auto"
+                >
+                  <path
+                    d="M9 7l1.2-2h3.6L15 7h3a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h3z"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
+                  <circle
+                    cx="12"
+                    cy="13"
+                    r="3.2"
+                    stroke="currentColor"
+                    strokeWidth="1.2"
+                  />
                 </svg>
+                <p className="mt-3 text-[12px] text-gray-600">
+                  {imgCount > 0
+                    ? `Đã chọn ${imgCount} hình`
+                    : "ĐĂNG TỪ 03 ĐẾN 12 HÌNH"}
+                </p>
               </div>
-              <p className="text-gray-600 font-medium">Thêm từ 3-10 hình ảnh về căn nhà của bạn</p>
-            </div>
-            <div className="absolute top-4 right-4 flex items-center gap-1 text-green-600 text-sm">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>Hình ảnh hợp lệ</span>
-            </div>
-          </div>
-
-          {/* Upload video */}
-          <div className="border-2 border-dashed border-orange-300 bg-orange-50 rounded-xl p-8 text-center hover:border-orange-400 transition-colors cursor-pointer">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mb-4">
-                <svg className="w-8 h-8 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              </div>
-              <p className="text-gray-600 font-medium">Thêm video sẽ giúp khách hàng nhìn rõ hơn về chỗ ở</p>
-            </div>
-            <div className="absolute top-4 right-4 flex items-center gap-1 text-green-600 text-sm">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              <span>Video hợp lệ</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Danh mục đăng tin */}
-      <div className="mb-8">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Danh mục đăng tin:
-        </label>
-        <input
-          type="text"
-          placeholder="Phòng trọ"
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      {/* Địa chỉ cho thuê */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Địa chỉ cho thuê</h3>
-        <div className="space-y-4">
-          <input
-            type="text"
-            placeholder="Khu vực, Thành phố, Tỉnh..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <input
-            type="text"
-            placeholder="Tên phường, xã..."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <input
-            type="text"
-            placeholder="Số nhà, tên đường,.."
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <textarea
-            placeholder="Mô tả thêm về địa chỉ của bạn để người khác dễ tìm kiếm hơn... (cạnh siêu thị, cạnh trường học,...)"
-            rows={3}
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-      </div>
-
-      {/* Diện tích & chi phí */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Diện tích & chi phí</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Diện tích"
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <input
-            type="text"
-            placeholder="Giá cho thuê"
-            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-          <select className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-            <option>Tiền cọc</option>
-            <option>1 tháng</option>
-            <option>2 tháng</option>
-            <option>3 tháng</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Tình trạng nội thất */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tình trạng nội thất</h3>
-        <input
-          type="text"
-          placeholder="Nội thất đầy đủ, Nội thất cơ bản, Nhà trống"
-          className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
-      </div>
-
-      {/* Tiêu đề bài đăng và mô tả chi tiết */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Tiêu đề bài đăng và mô tả chi tiết</h3>
-        <div className="space-y-4">
-          <div>
+            </button>
             <input
-              type="text"
-              placeholder="Tiêu đề"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              ref={imgRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => setImgCount(e.target.files?.length ?? 0)}
             />
-            <div className="text-right text-sm text-gray-500 mt-1">
-              {title.length}/50 kí tự
-            </div>
-          </div>
-          <div>
-            <textarea
-              placeholder="Mô tả: tình trạng, số phòng, tiện ích, nội thất,..."
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+
+            {/* Tile video */}
+            <button
+              onClick={() => vidRef.current?.click()}
+              className="relative w-full rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 p-4 text-left"
+            >
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowRules(true);
+                }}
+                className="absolute -top-3 left-4 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-medium text-sky-600 ring-1 ring-sky-200 cursor-pointer"
+              >
+                Bán nhanh hơn với{" "}
+                <span className="text-sky-600">Chợ Tốt Video</span>
+              </span>
+              <div className="h-48 grid place-items-center text-center">
+                <p className="font-semibold">Đăng video để bán nhanh hơn</p>
+                <p className="mt-1 text-[13px]">
+                  🔥 Lượt xem tăng đến <b>x2</b>
+                </p>
+                {vidName && (
+                  <p className="mt-2 text-[12px] text-gray-600 truncate w-56">
+                    {vidName}
+                  </p>
+                )}
+              </div>
+            </button>
+            <input
+              ref={vidRef}
+              type="file"
+              accept="video/*"
+              className="hidden"
+              onChange={(e) => setVidName(e.target.files?.[0]?.name ?? "")}
             />
-            <div className="text-right text-sm text-gray-500 mt-1">
-              {description.length}/300 kí tự
-            </div>
-          </div>
-        </div>
-      </div>
+          </aside>
 
-      {/* Xác thực tin đăng */}
-      <div className="mb-8">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Xác thực tin đăng để đảm bảo tính minh bạch và tăng hiệu quả tin đăng
-        </h3>
-        <p className="text-gray-600 mb-6">Đăng tin với nhãn xác thực bằng cách</p>
-        
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors cursor-pointer">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
-              </svg>
+          {/* RIGHT: Danh mục + Form con */}
+          <section className="md:col-span-7">
+            {/* Danh mục NHÚNG CHUNG TRONG FORM */}
+            <div className="mb-5">
+              <div className="text-sm font-medium text-gray-700 mb-2">
+                Danh mục Tin Đăng *
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCateModal(true)}
+                className="w-full h-11 px-3 rounded-lg border border-gray-300 text-left bg-white hover:bg-gray-50"
+              >
+                {category
+                  ? CATEGORIES.find((c) => c.id === category)?.label
+                  : "Chọn danh mục"}
+                <span className="float-right opacity-60">▾</span>
+              </button>
             </div>
-            <span className="text-sm font-medium text-gray-700">Đăng bằng tài khoản xác thực</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors cursor-pointer">
-            <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700">Đăng bài có video rõ ràng</span>
-          </div>
-          
-          <div className="flex items-center gap-3 p-4 border border-gray-200 rounded-xl hover:border-blue-300 transition-colors cursor-pointer">
-            <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <span className="text-sm font-medium text-gray-700">Đăng bài với những thông tin chính xác</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Nút đăng tin */}
-      <div className="flex justify-center pt-6">
-        <button className="px-8 py-4 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-          Đăng tin
-        </button>
+            {ActiveForm ? (
+              <ActiveForm />
+            ) : (
+              <div className="text-gray-500 text-center py-16 border rounded-2xl">
+                Chọn danh mục để bắt đầu.
+              </div>
+            )}
+          </section>
+        </div>
       </div>
     </div>
   );
