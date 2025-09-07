@@ -1,6 +1,9 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
+import MediaPickerPanel, { LocalMediaItem } from "../common/MediaPickerLocal";
+import { uploadFiles } from "@/utils/upload";
+import { useAuth } from "@/contexts/AuthContext";
 
 /** DANH MỤC */
 export type CategoryId = "phong-tro" | "chung-cu" | "nha-nguyen-can";
@@ -23,9 +26,9 @@ export type Address = {
 export type PhongTroData = {
   addr: Address | null;
   furniture: "" | "full" | "co-ban" | "trong"; // ✅ Đổi từ noiThat
-  area: number;        // ✅ Đổi từ string sang number
-  price: number;       // ✅ Đổi từ string sang number
-  deposit: number;     // ✅ Đổi từ string sang number
+  area: number; // ✅ Đổi từ string sang number
+  price: number; // ✅ Đổi từ string sang number
+  deposit: number; // ✅ Đổi từ string sang number
   title: string;
   desc: string;
 };
@@ -34,17 +37,17 @@ export type ChungCuData = {
   buildingName: string;
   addr: Address | null;
   blockOrTower: string;
-  floorNumber: number;     // ✅ Đổi từ string sang number
+  floorNumber: number; // ✅ Đổi từ string sang number
   unitCode: string;
-  propertyType: string;    // ✅ Đổi từ loaiHinh
-  bedrooms: number;        // ✅ Đổi từ soPhongNgu
-  bathrooms: number;       // ✅ Đổi từ soVeSinh
-  direction: string;       // ✅ Đổi từ huong
-  furniture: string;       // ✅ Đổi từ noiThat
-  legalStatus: string;     // ✅ Đổi từ tinhTrangSo
-  area: number;           // ✅ Đổi từ string sang number
-  price: number;          // ✅ Đổi từ string sang number
-  deposit: number;        // ✅ Đổi từ string sang number
+  propertyType: string; // ✅ Đổi từ loaiHinh
+  bedrooms: number; // ✅ Đổi từ soPhongNgu
+  bathrooms: number; // ✅ Đổi từ soVeSinh
+  direction: string; // ✅ Đổi từ huong
+  furniture: string; // ✅ Đổi từ noiThat
+  legalStatus: string; // ✅ Đổi từ tinhTrangSo
+  area: number; // ✅ Đổi từ string sang number
+  price: number; // ✅ Đổi từ string sang number
+  deposit: number; // ✅ Đổi từ string sang number
   title: string;
   desc: string;
 };
@@ -53,31 +56,31 @@ export type NhaNguyenCanData = {
   addr: Address | null;
   khuLo: string;
   unitCode: string;
-  propertyType: string;    // ✅ Đổi từ loaiHinh
-  bedrooms: number;        // ✅ Đổi từ soPhongNgu
-  bathrooms: number;       // ✅ Đổi từ soVeSinh
-  direction: string;       // ✅ Đổi từ huong
-  totalFloors: number;     // ✅ Đổi từ tongSoTang
-  furniture: string;       // ✅ Đổi từ noiThat
-  legalStatus: string;     // ✅ Đổi từ tinhTrangSo
-  landArea: number;        // ✅ Đổi từ dtDat
-  usableArea: number;      // ✅ Đổi từ dtSuDung
-  width: number;           // ✅ Đổi từ ngang
-  length: number;          // ✅ Đổi từ dai
-  price: number;           // ✅ Đổi từ string sang number
-  deposit: number;         // ✅ Đổi từ string sang number
+  propertyType: string; // ✅ Đổi từ loaiHinh
+  bedrooms: number; // ✅ Đổi từ soPhongNgu
+  bathrooms: number; // ✅ Đổi từ soVeSinh
+  direction: string; // ✅ Đổi từ huong
+  totalFloors: number; // ✅ Đổi từ tongSoTang
+  furniture: string; // ✅ Đổi từ noiThat
+  legalStatus: string; // ✅ Đổi từ tinhTrangSo
+  landArea: number; // ✅ Đổi từ dtDat
+  usableArea: number; // ✅ Đổi từ dtSuDung
+  width: number; // ✅ Đổi từ ngang
+  length: number; // ✅ Đổi từ dai
+  price: number; // ✅ Đổi từ string sang number
+  deposit: number; // ✅ Đổi từ string sang number
   title: string;
   desc: string;
-  features: string[];      // ✅ Đổi từ featureSet
+  features: string[]; // ✅ Đổi từ featureSet
 };
 
 /** init - CẬP NHẬT VỚI KIỂU DỮ LIỆU MỚI */
 const initPhongTro: PhongTroData = {
   addr: null,
   furniture: "",
-  area: 0,        // ✅ Đổi từ "" sang 0
-  price: 0,       // ✅ Đổi từ "" sang 0
-  deposit: 0,     // ✅ Đổi từ "" sang 0
+  area: 0, // ✅ Đổi từ "" sang 0
+  price: 0, // ✅ Đổi từ "" sang 0
+  deposit: 0, // ✅ Đổi từ "" sang 0
   title: "",
   desc: "",
 };
@@ -86,17 +89,17 @@ const initChungCu: ChungCuData = {
   buildingName: "",
   addr: null,
   blockOrTower: "",
-  floorNumber: 0,     // ✅ Đổi từ "" sang 0
+  floorNumber: 0, // ✅ Đổi từ "" sang 0
   unitCode: "",
-  propertyType: "",   // ✅ Đổi từ loaiHinh
-  bedrooms: 0,        // ✅ Đổi từ soPhongNgu
-  bathrooms: 0,       // ✅ Đổi từ soVeSinh
-  direction: "",      // ✅ Đổi từ huong
-  furniture: "",      // ✅ Đổi từ noiThat
-  legalStatus: "",    // ✅ Đổi từ tinhTrangSo
-  area: 0,           // ✅ Đổi từ "" sang 0
-  price: 0,          // ✅ Đổi từ "" sang 0
-  deposit: 0,        // ✅ Đổi từ "" sang 0
+  propertyType: "", // ✅ Đổi từ loaiHinh
+  bedrooms: 0, // ✅ Đổi từ soPhongNgu
+  bathrooms: 0, // ✅ Đổi từ soVeSinh
+  direction: "", // ✅ Đổi từ huong
+  furniture: "", // ✅ Đổi từ noiThat
+  legalStatus: "", // ✅ Đổi từ tinhTrangSo
+  area: 0, // ✅ Đổi từ "" sang 0
+  price: 0, // ✅ Đổi từ "" sang 0
+  deposit: 0, // ✅ Đổi từ "" sang 0
   title: "",
   desc: "",
 };
@@ -105,22 +108,22 @@ const initNNC: NhaNguyenCanData = {
   addr: null,
   khuLo: "",
   unitCode: "",
-  propertyType: "",   // ✅ Đổi từ loaiHinh
-  bedrooms: 0,        // ✅ Đổi từ soPhongNgu
-  bathrooms: 0,       // ✅ Đổi từ soVeSinh
-  direction: "",      // ✅ Đổi từ huong
-  totalFloors: 0,     // ✅ Đổi từ tongSoTang
-  furniture: "",      // ✅ Đổi từ noiThat
-  legalStatus: "",    // ✅ Đổi từ tinhTrangSo
-  landArea: 0,        // ✅ Đổi từ dtDat
-  usableArea: 0,      // ✅ Đổi từ dtSuDung
-  width: 0,           // ✅ Đổi từ ngang
-  length: 0,          // ✅ Đổi từ dai
-  price: 0,           // ✅ Đổi từ "" sang 0
-  deposit: 0,         // ✅ Đổi từ "" sang 0
+  propertyType: "", // ✅ Đổi từ loaiHinh
+  bedrooms: 0, // ✅ Đổi từ soPhongNgu
+  bathrooms: 0, // ✅ Đổi từ soVeSinh
+  direction: "", // ✅ Đổi từ huong
+  totalFloors: 0, // ✅ Đổi từ tongSoTang
+  furniture: "", // ✅ Đổi từ noiThat
+  legalStatus: "", // ✅ Đổi từ tinhTrangSo
+  landArea: 0, // ✅ Đổi từ dtDat
+  usableArea: 0, // ✅ Đổi từ dtSuDung
+  width: 0, // ✅ Đổi từ ngang
+  length: 0, // ✅ Đổi từ dai
+  price: 0, // ✅ Đổi từ "" sang 0
+  deposit: 0, // ✅ Đổi từ "" sang 0
   title: "",
   desc: "",
-  features: [],       // ✅ Đổi từ featureSet
+  features: [], // ✅ Đổi từ featureSet
 };
 
 /** Lazy load form con */
@@ -199,16 +202,18 @@ export default function PostForm() {
   const [showRules, setShowRules] = useState(false);
 
   // upload
-  const imgRef = useRef<HTMLInputElement>(null);
-  const vidRef = useRef<HTMLInputElement>(null);
-  const [imgCount, setImgCount] = useState(0);
-  const [vidName, setVidName] = useState("");
+  const [images, setImages] = useState<LocalMediaItem[]>([]);
+  const [videos, setVideos] = useState<LocalMediaItem[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [videoUrls, setVideoUrls] = useState<string[]>([]);
 
   // STATE CHO 3 FORM
   const [phongtroData, setPhongtroData] = useState<PhongTroData>(initPhongTro);
   const [chungcuData, setChungcuData] = useState<ChungCuData>(initChungCu);
   const [nncData, setNncData] = useState<NhaNguyenCanData>(initNNC);
 
+  // Auth context
+  const { user } = useAuth();
   // khởi tạo category
   useEffect(() => {
     const p = new URLSearchParams(location.search);
@@ -263,18 +268,30 @@ export default function PostForm() {
   const handleSubmit = async () => {
     if (!category) return;
 
-    // TODO: Lấy userId từ auth context
-    const userId = "1"; // Tạm thời hardcode, cần lấy từ auth context
-    
-    // TODO: Lấy images và videos từ upload state
-    const images: string[] = []; // Tạm thời empty array
-    const videos: string[] = []; // Tạm thời empty array
+    if (!user) {
+      alert("Bạn cần đăng nhập trước khi đăng tin");
+      return;
+    }
+
+    const userId = user.userId; // ✅ lấy từ context
+
+    // 1. Upload trước
+    const imageUrls = await uploadFiles(
+      images.map((i) => i.file),
+      String(userId),
+      "images"
+    );
+    const videoUrls = await uploadFiles(
+      videos.map((v) => v.file),
+      String(userId),
+      "videos"
+    );
 
     const basePayload = {
       userId,
-      images,
-      videos,
-      status: "active"
+      images: imageUrls,
+      videos: videoUrls,
+      status: "active",
     };
 
     let payload: any = {};
@@ -292,7 +309,7 @@ export default function PostForm() {
         area: phongtroData.area,
         price: phongtroData.price,
         deposit: phongtroData.deposit,
-        furniture: phongtroData.furniture
+        furniture: phongtroData.furniture,
       };
     }
 
@@ -310,7 +327,7 @@ export default function PostForm() {
           buildingName: chungcuData.buildingName,
           blockOrTower: chungcuData.blockOrTower,
           floorNumber: chungcuData.floorNumber,
-          unitCode: chungcuData.unitCode
+          unitCode: chungcuData.unitCode,
         },
         area: chungcuData.area,
         price: chungcuData.price,
@@ -320,7 +337,7 @@ export default function PostForm() {
         bathrooms: chungcuData.bathrooms,
         direction: chungcuData.direction,
         propertyType: chungcuData.propertyType,
-        legalStatus: chungcuData.legalStatus
+        legalStatus: chungcuData.legalStatus,
       };
     }
 
@@ -339,7 +356,7 @@ export default function PostForm() {
           unitCode: nncData.unitCode,
           propertyType: nncData.propertyType,
           totalFloors: nncData.totalFloors,
-          features: nncData.features
+          features: nncData.features,
         },
         landArea: nncData.landArea,
         usableArea: nncData.usableArea,
@@ -351,34 +368,34 @@ export default function PostForm() {
         bedrooms: nncData.bedrooms,
         bathrooms: nncData.bathrooms,
         direction: nncData.direction,
-        legalStatus: nncData.legalStatus
+        legalStatus: nncData.legalStatus,
       };
     }
 
     try {
       console.log("SUBMIT PAYLOAD:", payload);
-      
+
       // TODO: Uncomment khi đã có API endpoint
       // const response = await fetch(`/api/rent-posts/${category}`, {
       //   method: 'POST',
-      //   headers: { 
+      //   headers: {
       //     'Content-Type': 'application/json',
       //     'Authorization': `Bearer ${getToken()}` // Lấy từ auth context
       //   },
       //   body: JSON.stringify(payload)
       // });
-      
+
       // if (!response.ok) {
       //   throw new Error('Failed to create post');
       // }
-      
+
       // const result = await response.json();
       // console.log('Post created successfully:', result);
-      
+
       alert(`Submit ${category} thành công!`);
     } catch (error) {
-      console.error('Error creating post:', error);
-      alert('Có lỗi xảy ra khi tạo bài đăng');
+      console.error("Error creating post:", error);
+      alert("Có lỗi xảy ra khi tạo bài đăng");
     }
   };
 
@@ -387,6 +404,26 @@ export default function PostForm() {
     if (category === "phong-tro") setPhongtroData(initPhongTro);
     if (category === "chung-cu") setChungcuData(initChungCu);
     if (category === "nha-nguyen-can") setNncData(initNNC);
+    setImages([]);
+    setVideos([]);
+  };
+
+  const handleUploadImages = async () => {
+    const urls = await uploadFiles(
+      images.map((i) => i.file),
+      "1",
+      "images"
+    );
+    setImageUrls(urls);
+  };
+
+  const handleUploadVideos = async () => {
+    const urls = await uploadFiles(
+      videos.map((v) => v.file),
+      "1",
+      "videos"
+    );
+    setVideoUrls(urls);
   };
 
   return (
@@ -418,92 +455,36 @@ export default function PostForm() {
         <div className="mt-3 grid grid-cols-1 md:grid-cols-12 gap-6">
           {/* LEFT: Upload */}
           <aside className="md:col-span-5 space-y-4">
-            <button
-              onClick={() => imgRef.current?.click()}
-              className="relative w-full rounded-xl border-2 border-dashed border-orange-300 bg-orange-50/40 p-4 text-left"
-            >
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowRules(true);
-                }}
-                className="absolute -top-3 left-4 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-medium text-sky-600 ring-1 ring-sky-200 cursor-pointer"
-              >
-                <span className="inline-block h-3 w-3 rounded-full bg-sky-500" />{" "}
-                Hình ảnh hợp lệ
-              </span>
-              <div className="h-48 grid place-items-center text-center text-orange-400">
-                <svg
-                  width="52"
-                  height="40"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  className="mx-auto"
-                >
-                  <path
-                    d="M9 7l1.2-2h3.6L15 7h3a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V9a2 2 0 012-2h3z"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  />
-                  <circle
-                    cx="12"
-                    cy="13"
-                    r="3.2"
-                    stroke="currentColor"
-                    strokeWidth="1.2"
-                  />
-                </svg>
-                <p className="mt-3 text-[12px] text-gray-600">
-                  {imgCount > 0
-                    ? `Đã chọn ${imgCount} hình`
-                    : "ĐĂNG TỪ 03 ĐẾN 12 HÌNH"}
-                </p>
-              </div>
-            </button>
-            <input
-              ref={imgRef}
-              type="file"
+            <MediaPickerPanel
+              pillText="Hình ảnh hợp lệ"
+              helper="BẮT BUỘC ĐĂNG TỪ 03 ĐẾN 12 HÌNH"
               accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => setImgCount(e.target.files?.length ?? 0)}
+              max={12}
+              value={images}
+              onChange={setImages}
+              guideTitle="Hình ảnh hợp lệ – Yêu cầu"
+              guideItems={[
+                "Tối thiểu 3 ảnh, tối đa 12 ảnh.",
+                "Ưu tiên chụp thật, rõ nét, nội dung đúng sản phẩm.",
+                "Không mờ/nhòe, không dán số điện thoại to trên ảnh.",
+              ]}
             />
 
-            <button
-              onClick={() => vidRef.current?.click()}
-              className="relative w-full rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 p-4 text-left"
-            >
-              <span
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowRules(true);
-                }}
-                className="absolute -top-3 left-4 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-[12px] font-medium text-sky-600 ring-1 ring-sky-200 cursor-pointer"
-              >
-                Bán nhanh hơn với{" "}
-                <span className="text-sky-600">Chợ Tốt Video</span>
-              </span>
-              <div className="h-48 grid place-items-center text-center">
-                <p className="font-semibold">Đăng video để bán nhanh hơn</p>
-                <p className="mt-1 text-[13px]">
-                  🔥 Lượt xem tăng đến <b>x2</b>
-                </p>
-                {vidName && (
-                  <p className="mt-2 text-[12px] text-gray-600 truncate w-56">
-                    {vidName}
-                  </p>
-                )}
-              </div>
-            </button>
-            <input
-              ref={vidRef}
-              type="file"
+            <MediaPickerPanel
+              pillText="Video hợp lệ"
+              helper="Đăng video để bán nhanh hơn"
               accept="video/*"
-              className="hidden"
-              onChange={(e) => setVidName(e.target.files?.[0]?.name ?? "")}
+              max={2}
+              value={videos}
+              onChange={setVideos}
+              guideTitle="Video hợp lệ – Yêu cầu"
+              guideItems={[
+                "Tối đa 2 video, ≤ 60s/video.",
+                "mp4/mov/webm; dung lượng ≤ 100MB.",
+                "Góc quay sáng, rõ ràng, không nội dung nhạy cảm.",
+              ]}
             />
           </aside>
-
           {/* RIGHT: Danh mục + Form con */}
           <section className="md:col-span-7">
             <div className="mb-5">
