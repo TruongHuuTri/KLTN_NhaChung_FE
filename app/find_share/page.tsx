@@ -1,4 +1,3 @@
-import Header from "../../components/common/Header";
 import SearchDetails from "../../components/common/SearchDetails";
 import PropertyList from "../../components/find_share/PropertyList";
 import FilterSidebar from "../../components/find_share/FilterSidebar";
@@ -8,7 +7,6 @@ import Footer from "../../components/common/Footer";
 export default function FindSharePage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <SearchDetails />
       
       {/* Main Content */}

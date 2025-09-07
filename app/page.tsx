@@ -1,4 +1,3 @@
-import Header from "@/components/common/Header";
 import HeroSection from "@/components/home/HeroSection";
 import WhyChooseUs from "@/components/home/WhyChooseUs";
 import FeaturedAreas from "@/components/home/FeaturedAreas";
@@ -12,8 +11,7 @@ import Footer from "@/components/common/Footer";
 
 export default function HomePage() {
   return (
-    <main>
-      <Header />
+    <>
       <HeroSection />
       <WhyChooseUs />
       <FeaturedAreas />
@@ -24,6 +22,6 @@ export default function HomePage() {
       <Testimonials />
       <LandlordSection />
       <Footer />
-    </main>
+    </>
   );
 }

@@ -8,9 +8,11 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const isLoginPage = pathname === '/login';
 
   return (
-    <div className={isLoginPage ? 'min-h-screen' : 'pt-20'}>
+    <div className="min-h-screen">
       {!isLoginPage && <Header />}
-      {children}
+      <main className={isLoginPage ? '' : 'pt-20'}>
+        {children}
+      </main>
     </div>
   );
 }

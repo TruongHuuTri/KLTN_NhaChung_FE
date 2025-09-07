@@ -1,4 +1,3 @@
-import Header from "../../components/common/Header";
 import SearchDetails from "../../components/common/SearchDetails";
 import PropertyInfo from "../../components/room_details/PropertyInfo";
 import PropertyDetails from "../../components/room_details/PropertyDetails";
@@ -10,7 +9,6 @@ import Footer from "../../components/common/Footer";
 export default function RoomDetailsPage() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <SearchDetails />
       
              {/* Main Content */}
