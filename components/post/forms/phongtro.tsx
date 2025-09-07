@@ -92,8 +92,8 @@ export default function PhongTroForm({
   const [addrOpen, setAddrOpen] = useState(false);
   const [err, setErr] = useState<{ area?: string; price?: string }>({});
 
-  const onBlurRequired = (k: "area" | "price", v: string, m: string) =>
-    setErr((s) => ({ ...s, [k]: v.trim() ? undefined : m }));
+  const onBlurRequired = (k: "area" | "price", v: number, m: string) =>
+    setErr((s) => ({ ...s, [k]: v > 0 ? undefined : m }));
 
   const titleCount = useMemo(
     () => `${data.title.length}/70 kí tự`,
@@ -122,6 +122,12 @@ export default function PhongTroForm({
     <K extends keyof PhongTroData>(k: K) =>
     (v: PhongTroData[K]) =>
       setData({ ...data, [k]: v });
+
+  // ✅ Helper function để convert string sang number
+  const handleNumberChange = (k: "area" | "price" | "deposit", value: string) => {
+    const numValue = value === "" ? 0 : parseFloat(value) || 0;
+    patch(k)(numValue);
+  };
 
   return (
     <div className="space-y-6">
@@ -154,13 +160,13 @@ export default function PhongTroForm({
             className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px]
                         focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none
                         ${
-                          data.noiThat === ""
+                          data.furniture === ""
                             ? "text-gray-400"
                             : "text-gray-900"
                         }`}
-            value={data.noiThat}
+            value={data.furniture}
             onChange={(e) =>
-              patch("noiThat")(e.target.value as PhongTroData["noiThat"])
+              patch("furniture")(e.target.value as PhongTroData["furniture"])
             }
           >
             <option value="" disabled hidden>
@@ -182,6 +188,9 @@ export default function PhongTroForm({
 
         <div className="relative mb-3">
           <input
+            type="number"
+            min="0"
+            step="0.1"
             className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-12 text-[15px] placeholder-transparent focus:outline-none focus:ring-2
                        ${
                          err.area
@@ -189,10 +198,10 @@ export default function PhongTroForm({
                            : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
                        }`}
             placeholder=" "
-            value={data.area}
-            onChange={(e) => patch("area")(e.target.value)}
+            value={data.area || ""}
+            onChange={(e) => handleNumberChange("area", e.target.value)}
             onBlur={(e) =>
-              onBlurRequired("area", e.target.value, "Vui lòng điền diện tích")
+              onBlurRequired("area", data.area, "Vui lòng điền diện tích")
             }
           />
           <label
@@ -212,6 +221,9 @@ export default function PhongTroForm({
 
         <div className="relative mb-3">
           <input
+            type="number"
+            min="0"
+            step="1000"
             className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-20 text-[15px] placeholder-transparent focus:outline-none focus:ring-2
                        ${
                          err.price
@@ -219,10 +231,10 @@ export default function PhongTroForm({
                            : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
                        }`}
             placeholder=" "
-            value={data.price}
-            onChange={(e) => patch("price")(e.target.value)}
+            value={data.price || ""}
+            onChange={(e) => handleNumberChange("price", e.target.value)}
             onBlur={(e) =>
-              onBlurRequired("price", e.target.value, "Vui lòng điền giá thuê")
+              onBlurRequired("price", data.price, "Vui lòng điền giá thuê")
             }
           />
           <label
@@ -242,10 +254,13 @@ export default function PhongTroForm({
 
         <div className="relative">
           <input
+            type="number"
+            min="0"
+            step="1000"
             className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 pr-10 text-[15px] placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             placeholder=" "
-            value={data.deposit}
-            onChange={(e) => patch("deposit")(e.target.value)}
+            value={data.deposit || ""}
+            onChange={(e) => handleNumberChange("deposit", e.target.value)}
           />
           <label
             className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all

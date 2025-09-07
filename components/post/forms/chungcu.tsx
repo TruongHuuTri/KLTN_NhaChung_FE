@@ -119,8 +119,14 @@ export default function ChungCuForm({
         .join(", ")
     : "";
 
-  const onBlurRequired = (k: "area" | "price", v: string, m: string) =>
-    setErr((s) => ({ ...s, [k]: v.trim() ? undefined : m }));
+  const onBlurRequired = (k: "area" | "price", v: number, m: string) =>
+    setErr((s) => ({ ...s, [k]: v > 0 ? undefined : m }));
+
+  // ✅ Helper function để convert string sang number
+  const handleNumberChange = (k: "area" | "price" | "deposit" | "bedrooms" | "bathrooms" | "floorNumber", value: string) => {
+    const numValue = value === "" ? 0 : parseFloat(value) || 0;
+    patch(k)(numValue);
+  };
 
   return (
     <div className="space-y-6">
@@ -170,8 +176,14 @@ export default function ChungCuForm({
               <input
                 className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 placeholder=" "
-                value={(data as any)[k]}
-                onChange={(e) => patch(k as any)(e.target.value)}
+                value={k === "floorNumber" ? (data as any)[k] || "" : (data as any)[k]}
+                onChange={(e) => {
+                  if (k === "floorNumber") {
+                    handleNumberChange("floorNumber", e.target.value);
+                  } else {
+                    patch(k as any)(e.target.value);
+                  }
+                }}
               />
               <label
                 className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all
@@ -192,10 +204,10 @@ export default function ChungCuForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.loaiHinh === "" ? "text-gray-400" : "text-gray-900"
+                data.propertyType === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.loaiHinh}
-              onChange={(e) => patch("loaiHinh")(e.target.value)}
+              value={data.propertyType}
+              onChange={(e) => patch("propertyType")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Loại hình
@@ -212,8 +224,8 @@ export default function ChungCuForm({
 
           {/* Số PN / VS */}
           {[
-            ["soPhongNgu", "Số phòng ngủ"],
-            ["soVeSinh", "Số phòng vệ sinh"],
+            ["bedrooms", "Số phòng ngủ"],
+            ["bathrooms", "Số phòng vệ sinh"],
           ].map(([k, label]) => (
             <div className="relative" key={k}>
               <input
@@ -222,8 +234,8 @@ export default function ChungCuForm({
                 step={1}
                 className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                 placeholder=" "
-                value={(data as any)[k]}
-                onChange={(e) => patch(k as any)(e.target.value)}
+                value={(data as any)[k] || ""}
+                onChange={(e) => handleNumberChange(k as any, e.target.value)}
               />
               <label
                 className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all
@@ -238,10 +250,10 @@ export default function ChungCuForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.huong === "" ? "text-gray-400" : "text-gray-900"
+                data.direction === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.huong}
-              onChange={(e) => patch("huong")(e.target.value)}
+              value={data.direction}
+              onChange={(e) => patch("direction")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Hướng
@@ -276,10 +288,10 @@ export default function ChungCuForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.noiThat === "" ? "text-gray-400" : "text-gray-900"
+                data.furniture === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.noiThat}
-              onChange={(e) => patch("noiThat")(e.target.value)}
+              value={data.furniture}
+              onChange={(e) => patch("furniture")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Tình trạng nội thất
@@ -296,10 +308,10 @@ export default function ChungCuForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.tinhTrangSo === "" ? "text-gray-400" : "text-gray-900"
+                data.legalStatus === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.tinhTrangSo}
-              onChange={(e) => patch("tinhTrangSo")(e.target.value)}
+              value={data.legalStatus}
+              onChange={(e) => patch("legalStatus")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Tình trạng sổ
@@ -320,16 +332,19 @@ export default function ChungCuForm({
 
         <div className="relative mb-3">
           <input
+            type="number"
+            min="0"
+            step="0.1"
             className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-12 placeholder-transparent focus:outline-none focus:ring-2 ${
               err.area
                 ? "border-red-400 ring-red-100"
                 : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
             }`}
             placeholder=" "
-            value={data.area}
-            onChange={(e) => patch("area")(e.target.value)}
+            value={data.area || ""}
+            onChange={(e) => handleNumberChange("area", e.target.value)}
             onBlur={(e) =>
-              onBlurRequired("area", e.target.value, "Vui lòng điền diện tích")
+              onBlurRequired("area", data.area, "Vui lòng điền diện tích")
             }
           />
           <label
@@ -348,16 +363,19 @@ export default function ChungCuForm({
 
         <div className="relative mb-3">
           <input
+            type="number"
+            min="0"
+            step="1000"
             className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-20 placeholder-transparent focus:outline-none focus:ring-2 ${
               err.price
                 ? "border-red-400 ring-red-100"
                 : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
             }`}
             placeholder=" "
-            value={data.price}
-            onChange={(e) => patch("price")(e.target.value)}
+            value={data.price || ""}
+            onChange={(e) => handleNumberChange("price", e.target.value)}
             onBlur={(e) =>
-              onBlurRequired("price", e.target.value, "Vui lòng điền giá thuê")
+              onBlurRequired("price", data.price, "Vui lòng điền giá thuê")
             }
           />
           <label
@@ -376,10 +394,13 @@ export default function ChungCuForm({
 
         <div className="relative">
           <input
+            type="number"
+            min="0"
+            step="1000"
             className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 pr-10 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
             placeholder=" "
-            value={data.deposit}
-            onChange={(e) => patch("deposit")(e.target.value)}
+            value={data.deposit || ""}
+            onChange={(e) => handleNumberChange("deposit", e.target.value)}
           />
           <label
             className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all

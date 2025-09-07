@@ -98,7 +98,7 @@ export default function NhaNguyenCanForm({
   setData: (next: NhaNguyenCanData) => void;
 }) {
   const [addrOpen, setAddrOpen] = useState(false);
-  const [err, setErr] = useState<{ dtDat?: string; price?: string }>({});
+  const [err, setErr] = useState<{ landArea?: string; price?: string }>({});
 
   const patch =
     <K extends keyof NhaNguyenCanData>(k: K) =>
@@ -128,13 +128,19 @@ export default function NhaNguyenCanForm({
         .join(", ")
     : "";
 
-  const onBlurReq = (k: "dtDat" | "price", v: string, m: string) =>
-    setErr((s) => ({ ...s, [k]: v.trim() ? undefined : m }));
+  const onBlurReq = (k: "landArea" | "price", v: number, m: string) =>
+    setErr((s) => ({ ...s, [k]: v > 0 ? undefined : m }));
 
   const toggleFeature = (f: string) => {
-    const cur = data.featureSet ?? [];
+    const cur = data.features ?? [];
     const next = cur.includes(f) ? cur.filter((x) => x !== f) : [...cur, f];
-    patch("featureSet")(next);
+    patch("features")(next);
+  };
+
+  // ✅ Helper function để convert string sang number
+  const handleNumberChange = (k: "landArea" | "usableArea" | "width" | "length" | "price" | "deposit" | "bedrooms" | "bathrooms" | "totalFloors", value: string) => {
+    const numValue = value === "" ? 0 : parseFloat(value) || 0;
+    patch(k)(numValue);
   };
 
   return (
@@ -191,10 +197,10 @@ export default function NhaNguyenCanForm({
         <div className="relative mb-3">
           <select
             className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-              data.loaiHinh === "" ? "text-gray-400" : "text-gray-900"
+              data.propertyType === "" ? "text-gray-400" : "text-gray-900"
             }`}
-            value={data.loaiHinh}
-            onChange={(e) => patch("loaiHinh")(e.target.value)}
+            value={data.propertyType}
+            onChange={(e) => patch("propertyType")(e.target.value)}
           >
             <option value="" disabled hidden>
               Loại hình
@@ -212,20 +218,20 @@ export default function NhaNguyenCanForm({
         {/* Còn lại: 2 cột */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {[
-            ["soPhongNgu", "Số phòng ngủ"],
-            ["soVeSinh", "Số phòng vệ sinh"],
-            ["huong", "Hướng"],
-            ["tongSoTang", "Tổng số tầng"],
+            ["bedrooms", "Số phòng ngủ"],
+            ["bathrooms", "Số phòng vệ sinh"],
+            ["direction", "Hướng"],
+            ["totalFloors", "Tổng số tầng"],
           ].map(([k, label]) => (
             <div className="relative" key={k}>
-              {k === "huong" ? (
+              {k === "direction" ? (
                 <>
                   <select
                     className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                      data.huong === "" ? "text-gray-400" : "text-gray-900"
+                      data.direction === "" ? "text-gray-400" : "text-gray-900"
                     }`}
-                    value={data.huong}
-                    onChange={(e) => patch("huong")(e.target.value)}
+                    value={data.direction}
+                    onChange={(e) => patch("direction")(e.target.value)}
                   >
                     <option value="" disabled hidden>
                       Hướng
@@ -257,8 +263,8 @@ export default function NhaNguyenCanForm({
                     step={1}
                     className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
                     placeholder=" "
-                    value={(data as any)[k]}
-                    onChange={(e) => patch(k as any)(e.target.value)}
+                    value={(data as any)[k] || ""}
+                    onChange={(e) => handleNumberChange(k as any, e.target.value)}
                   />
                   <label
                     className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all
@@ -281,10 +287,10 @@ export default function NhaNguyenCanForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.tinhTrangSo === "" ? "text-gray-400" : "text-gray-900"
+                data.legalStatus === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.tinhTrangSo}
-              onChange={(e) => patch("tinhTrangSo")(e.target.value)}
+              value={data.legalStatus}
+              onChange={(e) => patch("legalStatus")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Giấy tờ pháp lý
@@ -301,10 +307,10 @@ export default function NhaNguyenCanForm({
           <div className="relative">
             <select
               className={`w-full h-11 px-3 pr-8 rounded-lg border border-gray-300 bg-white text-[15px] focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 appearance-none ${
-                data.noiThat === "" ? "text-gray-400" : "text-gray-900"
+                data.furniture === "" ? "text-gray-400" : "text-gray-900"
               }`}
-              value={data.noiThat}
-              onChange={(e) => patch("noiThat")(e.target.value)}
+              value={data.furniture}
+              onChange={(e) => patch("furniture")(e.target.value)}
             >
               <option value="" disabled hidden>
                 Tình trạng nội thất
@@ -336,7 +342,7 @@ export default function NhaNguyenCanForm({
                 <input
                   type="checkbox"
                   className="h-5 w-5 shrink-0 rounded-md border-gray-300"
-                  checked={(data.featureSet ?? []).includes(f)} // <-- sửa
+                  checked={(data.features ?? []).includes(f)}
                   onChange={() => toggleFeature(f)}
                 />
               </label>
@@ -352,26 +358,29 @@ export default function NhaNguyenCanForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Đất / Sử dụng */}
           {[
-            ["dtDat", "Diện tích đất", "m²", true],
-            ["dtSuDung", "Diện tích sử dụng", "m²", false],
-            ["ngang", "Chiều ngang", "m", false],
-            ["dai", "Chiều dài", "m", false],
+            ["landArea", "Diện tích đất", "m²", true],
+            ["usableArea", "Diện tích sử dụng", "m²", false],
+            ["width", "Chiều ngang", "m", false],
+            ["length", "Chiều dài", "m", false],
           ].map(([k, label, unit, required]) => (
             <div className="relative" key={k as string}>
               <input
+                type="number"
+                min="0"
+                step="0.1"
                 className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-12 placeholder-transparent focus:outline-none focus:ring-2 ${
-                  required && err.dtDat
+                  required && err.landArea
                     ? "border-red-400 ring-red-100"
                     : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
                 }`}
                 placeholder=" "
-                value={(data as any)[k as string]}
-                onChange={(e) => patch(k as any)(e.target.value)}
+                value={(data as any)[k as string] || ""}
+                onChange={(e) => handleNumberChange(k as any, e.target.value)}
                 onBlur={(e) =>
                   required &&
                   onBlurReq(
-                    "dtDat",
-                    e.target.value,
+                    "landArea",
+                    data.landArea,
                     "Vui lòng điền diện tích đất"
                   )
                 }
@@ -386,8 +395,8 @@ export default function NhaNguyenCanForm({
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-500">
                 {unit as string}
               </span>
-              {required && err.dtDat && (
-                <div className="text-[12px] text-red-500 mt-1">{err.dtDat}</div>
+              {required && err.landArea && (
+                <div className="text-[12px] text-red-500 mt-1">{err.landArea}</div>
               )}
             </div>
           ))}
@@ -397,16 +406,19 @@ export default function NhaNguyenCanForm({
         <div className="mt-4">
           <div className="relative mb-3">
             <input
+              type="number"
+              min="0"
+              step="1000"
               className={`peer w-full h-12 rounded-lg border bg-white px-3 pr-20 placeholder-transparent focus:outline-none focus:ring-2 ${
                 err.price
                   ? "border-red-400 ring-red-100"
                   : "border-gray-300 focus:ring-teal-500 focus:border-teal-500"
               }`}
               placeholder=" "
-              value={data.price}
-              onChange={(e) => patch("price")(e.target.value)}
+              value={data.price || ""}
+              onChange={(e) => handleNumberChange("price", e.target.value)}
               onBlur={(e) =>
-                onBlurReq("price", e.target.value, "Vui lòng điền giá thuê")
+                onBlurReq("price", data.price, "Vui lòng điền giá thuê")
               }
             />
             <label
@@ -425,10 +437,13 @@ export default function NhaNguyenCanForm({
 
           <div className="relative">
             <input
+              type="number"
+              min="0"
+              step="1000"
               className="peer w-full h-12 rounded-lg border border-gray-300 bg-white px-3 pr-10 placeholder-transparent focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               placeholder=" "
-              value={data.deposit}
-              onChange={(e) => patch("deposit")(e.target.value)}
+              value={data.deposit || ""}
+              onChange={(e) => handleNumberChange("deposit", e.target.value)}
             />
             <label
               className="pointer-events-none absolute left-3 top-3 text-gray-500 transition-all
