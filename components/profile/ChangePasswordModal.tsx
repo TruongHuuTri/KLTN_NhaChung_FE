@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from 'react';
+import { changePassword } from '../../services/user';
 
 interface ChangePasswordModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: ChangePasswordData) => void;
+  onSuccess?: (message: string) => void;
 }
 
 export interface ChangePasswordData {
@@ -14,7 +15,7 @@ export interface ChangePasswordData {
   confirmPassword: string;
 }
 
-export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: ChangePasswordModalProps) {
+export default function ChangePasswordModal({ isOpen, onClose, onSuccess }: ChangePasswordModalProps) {
   const [formData, setFormData] = useState<ChangePasswordData>({
     currentPassword: '',
     newPassword: '',
@@ -26,6 +27,8 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: Chang
     confirm: false
   });
   const [errors, setErrors] = useState<Partial<ChangePasswordData>>({});
+  const [isLoading, setIsLoading] = useState(false);
+  const [generalError, setGeneralError] = useState<string>('');
 
   const handleInputChange = (field: keyof ChangePasswordData, value: string) => {
     setFormData(prev => ({
@@ -68,10 +71,20 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: Chang
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      onSubmit(formData);
+    
+    if (!validateForm()) return;
+    
+    setIsLoading(true);
+    setGeneralError('');
+    
+    try {
+      const response = await changePassword(formData);
+      
+      // Success
+      onSuccess?.(response.message || 'Đổi mật khẩu thành công!');
+      
       // Reset form
       setFormData({
         currentPassword: '',
@@ -80,6 +93,26 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: Chang
       });
       setErrors({});
       onClose();
+      
+    } catch (error: any) {
+      console.error('Error changing password:', error);
+      
+      // Handle specific error cases
+      if (error.status === 401) {
+        setErrors({ currentPassword: 'Mật khẩu hiện tại không đúng' });
+      } else if (error.status === 400) {
+        if (error.message?.includes('không khớp')) {
+          setErrors({ confirmPassword: error.message });
+        } else if (error.message?.includes('khác mật khẩu hiện tại')) {
+          setErrors({ newPassword: error.message });
+        } else {
+          setGeneralError(error.message || 'Có lỗi xảy ra khi đổi mật khẩu');
+        }
+      } else {
+        setGeneralError('Có lỗi xảy ra, vui lòng thử lại');
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -112,6 +145,12 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: Chang
 
         {/* Content */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {/* General Error */}
+          {generalError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-700 text-sm">{generalError}</p>
+            </div>
+          )}
           {/* Current Password */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -217,9 +256,10 @@ export default function ChangePasswordModal({ isOpen, onClose, onSubmit }: Chang
             </button>
             <button
               type="submit"
-              className="flex-1 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              disabled={isLoading}
+              className="flex-1 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Đổi mật khẩu
+              {isLoading ? 'Đang xử lý...' : 'Đổi mật khẩu'}
             </button>
           </div>
         </form>

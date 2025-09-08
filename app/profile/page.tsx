@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
+import { updateUserProfile, updateUserAvatar } from "../../services/user";
 import Footer from "../../components/common/Footer";
 import ProfileHeader from "../../components/profile/ProfileHeader";
 import ProfileForm from "../../components/profile/ProfileForm";
 import AccountSettings from "../../components/profile/AccountSettings";
-import { VerificationData } from "../../components/profile/VerificationModal";
+import { VerificationData } from "../../types/User";
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isVerified, setIsVerified] = useState(false); // Trạng thái xác thực
   const [formData, setFormData] = useState({
@@ -18,6 +19,8 @@ export default function ProfilePage() {
     phone: user?.phone || "",
     avatar: user?.avatar || "",
   });
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
+  const [selectedAvatarFile, setSelectedAvatarFile] = useState<File | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -30,19 +33,58 @@ export default function ProfilePage() {
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      // Lưu file để upload sau
+      setSelectedAvatarFile(file);
       // Tạo URL tạm thời để preview
       const imageUrl = URL.createObjectURL(file);
-      setFormData(prev => ({
-        ...prev,
-        avatar: imageUrl
-      }));
+      setAvatarPreview(imageUrl);
     }
   };
 
-  const handleSave = () => {
-    // TODO: Gọi API cập nhật thông tin
-    console.log("Saving profile:", formData);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      // 1. Upload avatar nếu có
+      if (selectedAvatarFile) {
+        try {
+          await updateUserAvatar(selectedAvatarFile);
+          setSelectedAvatarFile(null);
+          setAvatarPreview("");
+        } catch (avatarError: any) {
+          // Hiển thị thông báo CORS và tiếp tục
+          if (avatarError.message?.includes('CORS')) {
+            alert(
+              "⚠️ Upload avatar thất bại - CORS Error\n\n" +
+              "Cần yêu cầu Backend config S3 CORS policy:\n" +
+              "- Thêm origin: http://localhost:3000\n" +
+              "- Allow methods: GET, PUT, POST\n" +
+              "- Allow headers: *\n\n" +
+              "Thông tin khác sẽ được lưu bình thường."
+            );
+          } else {
+            alert("⚠️ Upload avatar thất bại: " + avatarError.message + "\n\nThông tin khác sẽ được lưu bình thường.");
+          }
+          setAvatarPreview("");
+          setSelectedAvatarFile(null);
+        }
+      }
+      
+      // 2. Update thông tin khác
+      const { avatar, ...otherData } = formData;
+      if (Object.keys(otherData).some(key => otherData[key as keyof typeof otherData] !== "")) {
+        await updateUserProfile(otherData);
+      }
+      
+      // 3. Refresh và thông báo
+      if (refreshUser) {
+        await refreshUser();
+      }
+      
+      setIsEditing(false);
+      alert("✅ Cập nhật thông tin thành công!");
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      alert("❌ Có lỗi xảy ra khi cập nhật thông tin: " + error);
+    }
   };
 
   const handleCancel = () => {
@@ -52,14 +94,29 @@ export default function ProfilePage() {
       phone: user?.phone || "",
       avatar: user?.avatar || "",
     });
+    setAvatarPreview(""); // Clear preview
+    setSelectedAvatarFile(null); // Clear selected file
     setIsEditing(false);
   };
 
-  const handleVerificationComplete = (data: VerificationData) => {
-    // TODO: Gọi API lưu thông tin xác thực
-    console.log("Verification completed:", data);
-    setIsVerified(true);
+  const handleVerificationComplete = async (data: VerificationData) => {
+    // Xử lý xác thực hoàn tất - refresh user data
+    if (refreshUser) {
+      await refreshUser();
+    }
   };
+
+  // Refresh user data khi component mount để đảm bảo có dữ liệu mới nhất
+  useEffect(() => {
+    if (user) {
+      setFormData({
+        name: user.name || "",
+        email: user.email || "",
+        phone: user.phone || "",
+        avatar: user.avatar || "",
+      });
+    }
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -72,7 +129,7 @@ export default function ProfilePage() {
 
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
           <ProfileHeader 
-            user={formData}
+            user={{...formData, isVerified: user?.isVerified}}
             isEditing={isEditing}
             onEditClick={() => setIsEditing(true)}
           />
@@ -82,13 +139,14 @@ export default function ProfilePage() {
             isEditing={isEditing}
             onInputChange={handleInputChange}
             onAvatarChange={handleAvatarChange}
+            avatarPreview={avatarPreview}
             onSave={handleSave}
             onCancel={handleCancel}
             onEditClick={() => setIsEditing(true)}
           />
           
           <AccountSettings 
-            isVerified={isVerified}
+            isVerified={user?.isVerified || false}
             onVerificationComplete={handleVerificationComplete}
           />
         </div>

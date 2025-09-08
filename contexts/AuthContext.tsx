@@ -9,6 +9,7 @@ import {
 import { User } from "@/types/User";
 import { AuthContextType } from "@/types/Auth";
 import { loginService, logoutService } from "@/services/auth";
+import { getUserProfile } from "@/services/user";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -17,10 +18,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const u = localStorage.getItem("user");
-    const t = localStorage.getItem("token");
-    if (u && t) setUser(JSON.parse(u));
-    setIsLoading(false);
+    const initializeAuth = async () => {
+      const token = localStorage.getItem("token");
+      const storedUser = localStorage.getItem("user");
+      
+      if (token) {
+        try {
+          // Nếu có token, gọi API để lấy thông tin user mới nhất
+          const userData = await getUserProfile();
+          setUser(userData);
+          // Cập nhật localStorage với dữ liệu mới
+          localStorage.setItem("user", JSON.stringify(userData));
+        } catch (error) {
+          // Nếu API call thất bại, thử dùng dữ liệu từ localStorage
+          if (storedUser) {
+            setUser(JSON.parse(storedUser));
+          } else {
+            // Nếu không có dữ liệu nào, xóa token
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+          }
+        }
+      } else if (storedUser) {
+        // Nếu không có token nhưng có user data, sử dụng dữ liệu cũ
+        setUser(JSON.parse(storedUser));
+      }
+      
+      setIsLoading(false);
+    };
+
+    initializeAuth();
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -38,13 +65,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshUser = async () => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const userData = await getUserProfile();
+        setUser(userData);
+        localStorage.setItem("user", JSON.stringify(userData));
+        return { success: true };
+      } catch (error) {
+        return { success: false, message: "Không thể tải thông tin user" };
+      }
+    }
+    return { success: false, message: "Không có token" };
+  };
+
   const logout = () => {
     setUser(null);
     logoutService();
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, isLoading }}>
       {children}
     </AuthContext.Provider>
   );

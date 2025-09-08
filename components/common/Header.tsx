@@ -183,6 +183,12 @@ export default function Header() {
                 src={user.avatar || '/home/avt1.png'}
                 alt={user.name}
                 className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/home/avt1.png') {
+                    target.src = '/home/avt1.png';
+                  }
+                }}
               />
               <span className="hidden sm:block font-medium">{user.name}</span>
               <svg className={`w-4 h-4 transition-transform duration-300 ${isUserMenuOpen ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">

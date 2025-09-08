@@ -1,3 +1,5 @@
+import { API_BASE } from "./api";
+
 export async function uploadFiles(
   files: File[],
   userId: string,
@@ -7,9 +9,13 @@ export async function uploadFiles(
 
   for (const file of files) {
     // 1. Xin presigned URL từ BE
-    const presignRes = await fetch("/api/files/presign", {
+    const token = localStorage.getItem("token");
+    const presignRes = await fetch(`${API_BASE}/files/presign`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` })
+      },
       body: JSON.stringify({
         userId,
         fileName: file.name,

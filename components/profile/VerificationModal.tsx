@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from 'react';
+import { submitVerification } from "../../services/verification";
+import { VerificationData } from "../../types/User";
 // import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 
 interface VerificationModalProps {
@@ -9,16 +11,7 @@ interface VerificationModalProps {
   onVerify: (data: VerificationData) => void;
 }
 
-export interface VerificationData {
-  idNumber: string;
-  fullName: string;
-  dateOfBirth: string;
-  issueDate: string;
-  issuePlace: string;
-  gender: 'male' | 'female';
-  frontImage: string;
-  backImage: string;
-}
+// Remove local interface since we import from types/User.ts
 
 // Real OCR processing using FPT.AI Reader API
 const processOCRWithFPT = async (frontImage: string, backImage: string) => {
@@ -156,18 +149,33 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
     }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (formData.idNumber && formData.fullName && formData.dateOfBirth && 
         formData.issueDate && formData.issuePlace && formData.gender) {
-      onVerify(formData as VerificationData);
-      setStep('success');
-      setTimeout(() => {
-        onClose();
-        setStep('upload');
-        setFormData({});
-        setFrontImage('');
-        setBackImage('');
-      }, 2000);
+      
+      try {
+        // Gọi API thật từ Backend
+        const response = await submitVerification(formData as VerificationData);
+        console.log('Verification submitted successfully:', response);
+        
+        // Thông báo cho parent component
+        onVerify(formData as VerificationData);
+        
+        setStep('success');
+        setTimeout(() => {
+          onClose();
+          setStep('upload');
+          setFormData({});
+          setFrontImage('');
+          setBackImage('');
+        }, 2000);
+        
+      } catch (error: any) {
+        console.error('Verification submission failed:', error);
+        alert('❌ Gửi yêu cầu xác thực thất bại: ' + (error.message || 'Vui lòng thử lại'));
+      }
+    } else {
+      alert('⚠️ Vui lòng điền đầy đủ thông tin bắt buộc');
     }
   };
 
@@ -454,10 +462,10 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
                   </label>
                   <input
                     type="text"
-                    value={formData.issuePlace || ''}
+                    value={formData.issuePlace || 'Cục Cảnh sát quản lý hành chính về trật tự xã hội'}
                     onChange={(e) => handleInputChange('issuePlace', e.target.value)}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                    placeholder="Nhập nơi cấp"
+                    placeholder="Nơi cấp CCCD/CMND"
                   />
                 </div>
 

@@ -7,5 +7,6 @@ export interface AuthContextType {
     password: string
   ) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
+  refreshUser: () => Promise<{ success: boolean; message?: string }>;
   isLoading: boolean;
 }

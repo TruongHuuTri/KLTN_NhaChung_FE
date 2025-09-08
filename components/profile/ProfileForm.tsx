@@ -10,6 +10,7 @@ interface ProfileFormProps {
   isEditing: boolean;
   onInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onAvatarChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  avatarPreview?: string;
   onSave: () => void;
   onCancel: () => void;
   onEditClick: () => void;
@@ -19,7 +20,8 @@ export default function ProfileForm({
   formData, 
   isEditing, 
   onInputChange, 
-  onAvatarChange,
+  onAvatarChange, 
+  avatarPreview,
   onSave, 
   onCancel, 
   onEditClick 
@@ -81,10 +83,12 @@ export default function ProfileForm({
             type="email"
             name="email"
             value={formData.email}
-            onChange={onInputChange}
-            disabled={!isEditing}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 disabled:bg-gray-50 disabled:text-gray-500"
+            disabled={true} // Luôn disabled vì không thể chỉnh sửa
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-500 cursor-not-allowed"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Email không thể thay đổi. Liên hệ admin nếu cần hỗ trợ.
+          </p>
         </div>
 
         {/* Số điện thoại */}
@@ -111,9 +115,15 @@ export default function ProfileForm({
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
               <img
-                src={formData.avatar || '/home/avt1.png'}
+                src={avatarPreview || formData.avatar || '/home/avt1.png'}
                 alt="Avatar preview"
                 className="w-16 h-16 rounded-full object-cover border-2 border-gray-300"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  if (target.src !== '/home/avt1.png') {
+                    target.src = '/home/avt1.png';
+                  }
+                }}
               />
             </div>
             <div className="flex-1">
