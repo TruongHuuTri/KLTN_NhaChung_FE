@@ -83,6 +83,17 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
           currentOccupants: post.currentRoom?.currentOccupants || 0,
           remainingDuration: post.currentRoom?.remainingDuration || '',
 
+          // Utilities (Roommate currentRoom)
+          shareMethod: post.currentRoom?.shareMethod || '',
+          estimatedMonthlyUtilities: post.currentRoom?.estimatedMonthlyUtilities || 0,
+          capIncludedAmount: post.currentRoom?.capIncludedAmount || 0,
+          electricityPricePerKwh: post.currentRoom?.electricityPricePerKwh || 0,
+          waterPrice: post.currentRoom?.waterPrice || 0,
+          waterBillingType: post.currentRoom?.waterBillingType || '',
+          internetFee: post.currentRoom?.internetFee || 0,
+          garbageFee: post.currentRoom?.garbageFee || 0,
+          cleaningFee: post.currentRoom?.cleaningFee || 0,
+
           // Requirements
           ageRangeMin: Array.isArray(post.requirements?.ageRange) && post.requirements.ageRange.length > 0 ? post.requirements.ageRange[0] : 0,
           ageRangeMax: Array.isArray(post.requirements?.ageRange) && post.requirements.ageRange.length > 1 ? post.requirements.ageRange[1] : 0,
@@ -224,6 +235,44 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
       // Xác định roommate: sử dụng logic đã detect ở trên
       const isRoommatePost = isRoommateByCat;
 
+      // Làm sạch utilities: bỏ unit rỗng/không hợp lệ để tránh 400
+      const sanitizeUtilities = (u: any) => {
+        if (!u || typeof u !== 'object') return undefined;
+        const allowedManagementUnits = ['per_month', 'per_m2_per_month'];
+        const allowedWaterUnits = ['per_m3', 'per_person'];
+        const result: any = {};
+
+        const maybeAssignNumber = (key: string) => {
+          const v = u[key];
+          if (v === undefined || v === null || v === '') return;
+          const num = typeof v === 'number' ? v : Number(v);
+          if (!Number.isNaN(num)) result[key] = num;
+        };
+
+        // numeric fields
+        [
+          'electricityPricePerKwh','waterPrice','internetFee','garbageFee','cleaningFee',
+          'parkingMotorbikeFee','parkingCarFee','managementFee','gardeningFee','cookingGasFee'
+        ].forEach(maybeAssignNumber);
+
+        // unit fields
+        if (u.waterBillingType && allowedWaterUnits.includes(String(u.waterBillingType))) {
+          result.waterBillingType = String(u.waterBillingType);
+        }
+        if (u.managementFeeUnit && allowedManagementUnits.includes(String(u.managementFeeUnit))) {
+          result.managementFeeUnit = String(u.managementFeeUnit);
+        }
+
+        // includedInRent (nếu có object hợp lệ)
+        if (u.includedInRent && typeof u.includedInRent === 'object') {
+          result.includedInRent = { ...u.includedInRent };
+        }
+
+        return Object.keys(result).length ? result : undefined;
+      };
+
+      const cleanedUtilities = sanitizeUtilities(formData.utilities);
+
       // Construct payload based on category
       let payload: any = {
         title: formData.title,
@@ -284,7 +333,10 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         }
 
         // Map currentRoom
-        if (formData.roomAddress || formData.roomPrice || formData.roomArea || formData.roomDescription) {
+        if (formData.roomAddress || formData.roomPrice || formData.roomArea || formData.roomDescription ||
+            formData.shareMethod || formData.estimatedMonthlyUtilities || formData.capIncludedAmount ||
+            formData.electricityPricePerKwh || formData.waterPrice || formData.waterBillingType ||
+            formData.internetFee || formData.garbageFee || formData.cleaningFee) {
           rmPayload.currentRoom = {
             address: formData.roomAddress || {
               street: '',
@@ -300,6 +352,15 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             ...(formData.roomType ? { roomType: formData.roomType } : {}),
             ...(formData.currentOccupants ? { currentOccupants: Number(formData.currentOccupants) } : {}),
             ...(formData.remainingDuration ? { remainingDuration: formData.remainingDuration } : {}),
+            ...(formData.shareMethod ? { shareMethod: formData.shareMethod } : {}),
+            ...(Number(formData.estimatedMonthlyUtilities) ? { estimatedMonthlyUtilities: Number(formData.estimatedMonthlyUtilities) } : {}),
+            ...(Number(formData.capIncludedAmount) ? { capIncludedAmount: Number(formData.capIncludedAmount) } : {}),
+            ...(Number(formData.electricityPricePerKwh) ? { electricityPricePerKwh: Number(formData.electricityPricePerKwh) } : {}),
+            ...(Number(formData.waterPrice) ? { waterPrice: Number(formData.waterPrice) } : {}),
+            ...(formData.waterBillingType ? { waterBillingType: formData.waterBillingType } : {}),
+            ...(Number(formData.internetFee) ? { internetFee: Number(formData.internetFee) } : {}),
+            ...(Number(formData.garbageFee) ? { garbageFee: Number(formData.garbageFee) } : {}),
+            ...(Number(formData.cleaningFee) ? { cleaningFee: Number(formData.cleaningFee) } : {}),
           };
         }
 
@@ -374,12 +435,14 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'phong-tro':
           payload = {
             ...payload,
-            area: formData.area,
-            price: formData.price,
-            deposit: formData.deposit,
-            furniture: formData.furniture,
+            basicInfo: {
+              area: formData.area,
+              price: formData.price,
+              deposit: formData.deposit,
+              furniture: formData.furniture
+            },
             address: formData.address,
-            utilities: formData.utilities,
+            ...(cleanedUtilities ? { utilities: cleanedUtilities } : {}),
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
@@ -388,24 +451,25 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'chung-cu':
           payload = {
             ...payload,
-            // Trường cơ bản ở ROOT
-            area: formData.area,
-            price: formData.price,
-            deposit: formData.deposit,
-            furniture: formData.furniture,
-            bedrooms: formData.bedrooms,
-            bathrooms: formData.bathrooms,
-            direction: formData.direction,
-            legalStatus: formData.legalStatus,
-            propertyType: formData.propertyType,
-            buildingInfo: {
+            basicInfo: {
+              area: formData.area,
+              price: formData.price,
+              deposit: formData.deposit,
+              furniture: formData.furniture,
+              bedrooms: formData.bedrooms,
+              bathrooms: formData.bathrooms,
+              direction: formData.direction,
+              legalStatus: formData.legalStatus
+            },
+            chungCuInfo: {
               buildingName: formData.buildingName,
               blockOrTower: formData.blockOrTower,
               floorNumber: formData.floorNumber,
-              unitCode: formData.unitCode
+              unitCode: formData.unitCode,
+              propertyType: formData.propertyType
             },
             address: formData.address,
-            utilities: formData.utilities,
+            ...(cleanedUtilities ? { utilities: cleanedUtilities } : {}),
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
@@ -414,19 +478,20 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'nha-nguyen-can':
           payload = {
             ...payload,
-            // Trường cơ bản ở ROOT
-            area: (formData.area || formData.usableArea || formData.landArea || 0),
-            price: formData.price,
-            deposit: formData.deposit,
-            furniture: formData.furniture,
-            bedrooms: formData.bedrooms,
-            bathrooms: formData.bathrooms,
-            direction: formData.direction,
-            legalStatus: formData.legalStatus,
-            propertyType: formData.propertyType,
-            propertyInfo: {
+            basicInfo: {
+              area: (formData.area || formData.usableArea || formData.landArea || 0),
+              price: formData.price,
+              deposit: formData.deposit,
+              furniture: formData.furniture,
+              bedrooms: formData.bedrooms,
+              bathrooms: formData.bathrooms,
+              direction: formData.direction,
+              legalStatus: formData.legalStatus
+            },
+            nhaNguyenCanInfo: {
               khuLo: formData.khuLo,
               unitCode: formData.unitCode,
+              propertyType: formData.propertyType,
               totalFloors: formData.totalFloors,
               landArea: formData.landArea,
               usableArea: formData.usableArea,
@@ -435,7 +500,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
               features: formData.features
             },
             address: formData.address,
-            utilities: formData.utilities,
+            ...(cleanedUtilities ? { utilities: cleanedUtilities } : {}),
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };

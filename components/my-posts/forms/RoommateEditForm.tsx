@@ -293,6 +293,108 @@ export default function RoommateEditForm({ formData, onInputChange, onNumberChan
         </div>
       </div>
 
+      {/* Chi phí & Dịch vụ */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Chi phí & Dịch vụ</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cách chia tiền điện nước</label>
+            <select
+              value={formData.shareMethod || ''}
+              onChange={(e) => onInputChange('shareMethod', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- Chọn --</option>
+              <option value="split_evenly">Chia đều</option>
+              <option value="by_usage">Theo sử dụng</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Ước tính chi phí điện nước/tháng (đ)</label>
+            <input
+              type="number"
+              value={formData.estimatedMonthlyUtilities || ''}
+              onChange={(e) => onInputChange('estimatedMonthlyUtilities', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Mức bao gồm trong tiền phòng (đ)</label>
+            <input
+              type="number"
+              value={formData.capIncludedAmount || ''}
+              onChange={(e) => onInputChange('capIncludedAmount', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Giá điện (đ/kWh)</label>
+            <input
+              type="number"
+              value={formData.electricityPricePerKwh || ''}
+              onChange={(e) => onInputChange('electricityPricePerKwh', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Giá nước</label>
+            <input
+              type="number"
+              value={formData.waterPrice || ''}
+              onChange={(e) => onInputChange('waterPrice', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Cách tính nước</label>
+            <select
+              value={formData.waterBillingType || ''}
+              onChange={(e) => onInputChange('waterBillingType', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">-- Chọn --</option>
+              <option value="per_m3">Theo m³</option>
+              <option value="per_person">Theo đầu người</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Internet (đ/tháng)</label>
+            <input
+              type="number"
+              value={formData.internetFee || ''}
+              onChange={(e) => onInputChange('internetFee', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phí rác (đ/tháng)</label>
+            <input
+              type="number"
+              value={formData.garbageFee || ''}
+              onChange={(e) => onInputChange('garbageFee', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phí vệ sinh (đ/tháng)</label>
+            <input
+              type="number"
+              value={formData.cleaningFee || ''}
+              onChange={(e) => onInputChange('cleaningFee', parseInt(e.target.value) || 0)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Sở thích và thói quen */}
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-4">Sở thích và thói quen</h3>
