@@ -79,9 +79,7 @@ export async function uploadUserAvatar(file: File): Promise<string> {
     
     return uploadedUrls[0];
   } catch (error: any) {
-    console.error("Presigned URL upload failed:", error);
-    
-    // Cung cấp thông tin chi tiết cho việc debug CORS
+    // Handle upload error
     if (error.message?.includes('CORS') || error.message?.includes('blocked')) {
       throw new Error(
         "CORS Error: S3 bucket chưa được config CORS.\n" +

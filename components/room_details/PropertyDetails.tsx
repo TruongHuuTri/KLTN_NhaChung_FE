@@ -10,9 +10,12 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
   const getAddressString = () => {
     if (postType === 'rent' && postData?.address) {
       const addr = postData.address;
-      return `${addr.houseNumber || ''} ${addr.street}, ${addr.ward}, ${addr.district}, ${addr.city}`.trim();
+      return `${addr.specificAddress || ''} ${addr.street}, ${addr.ward}, ${addr.city}`.trim();
     } else if (postType === 'roommate' && postData?.currentRoom?.address) {
-      return postData.currentRoom.address;
+      const addr = postData.currentRoom.address;
+      return typeof addr === 'string' 
+        ? addr 
+        : `${addr.specificAddress ? addr.specificAddress + ', ' : ''}${addr.street}, ${addr.ward}, ${addr.city}`.replace(/^,\s*/, '');
     }
     return 'Chưa có thông tin địa chỉ';
   };

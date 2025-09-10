@@ -1,6 +1,7 @@
 import { apiGet, apiPost, apiPut } from "@/utils/api";
+import { Address } from "./address";
 
-// Types cho Roommate Posts
+// Types cho Roommate Posts - Updated theo API Guide
 export interface RoommatePost {
   postId?: number; // Backward compatibility
   roommatePostId?: number; // Actual backend field
@@ -8,18 +9,25 @@ export interface RoommatePost {
   title: string;
   description: string;
   images: string[];
+  video?: string; // Video giới thiệu bản thân
   currentRoom: {
-    address: string;
+    address: Address;
     price: number;
     area: number;
     description: string;
+    roomType?: 'single' | 'double' | 'shared';
+    currentOccupants?: number;
+    remainingDuration?: '1-3 months' | '3-6 months' | '6-12 months' | 'over_1_year';
   };
   personalInfo: {
+    fullName: string;
     age: number;
     gender: 'male' | 'female' | 'other';
     occupation: string;
     hobbies: string[];
     habits: string[];
+    lifestyle?: 'early' | 'normal' | 'late';
+    cleanliness?: 'very_clean' | 'clean' | 'normal' | 'flexible';
   };
   requirements: {
     ageRange: [number, number];
@@ -27,7 +35,9 @@ export interface RoommatePost {
     traits: string[];
     maxPrice: number;
   };
-  status: 'searching' | 'found' | 'inactive';
+  phone?: string;
+  email?: string;
+  status: 'active' | 'inactive';
   createdAt: string;
   updatedAt: string;
 }

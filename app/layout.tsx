@@ -7,7 +7,7 @@ export const metadata = { title: "Nhà Chung", description: "Tìm trọ, ở gh�
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="vi">
-      <body>
+      <body suppressHydrationWarning={true}>
         <AuthProvider>
           <LayoutWrapper>
             {children}

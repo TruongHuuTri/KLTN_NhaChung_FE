@@ -1,6 +1,71 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import MediaPickerLocal from "../../common/MediaPickerLocal";
+import AddressSelector from "../../common/AddressSelector";
+import { Address, addressService } from "../../../services/address";
+
+// Address Modal Component
+function AddressModal({
+  open,
+  onClose,
+  onSave,
+  initial,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (a: Address | null) => void;
+  initial?: Partial<Address>;
+}) {
+  const [address, setAddress] = useState<Address | null>(initial as Address || null);
+  
+  // Sync address when modal opens or initial changes
+  useEffect(() => {
+    if (open) {
+      setAddress((initial as Address) || null);
+    }
+  }, [open, initial]);
+  
+  if (!open) return null;
+
+  const handleSave = () => {
+    onSave(address);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="px-4 py-3 border-b text-center font-semibold">
+            Địa chỉ
+          </div>
+          <div className="p-4">
+            <AddressSelector
+              value={address}
+              onChange={setAddress}
+            />
+          </div>
+          <div className="px-4 py-3 border-t flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 h-10 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
+            >
+              Lưu
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   formData: any;
@@ -9,6 +74,12 @@ interface Props {
 }
 
 export default function PhongTroEditForm({ formData, onInputChange, onNumberChange }: Props) {
+  const [addrOpen, setAddrOpen] = useState(false);
+
+  const addrText = formData.address
+    ? addressService.formatAddressForDisplay(formData.address)
+    : "";
+
   return (
     <div className="space-y-6">
       {/* Hình ảnh và video */}
@@ -125,51 +196,22 @@ export default function PhongTroEditForm({ formData, onInputChange, onNumberChan
           {/* Địa chỉ */}
           <div>
             <h4 className="text-sm font-medium text-gray-800 mb-2">Địa chỉ</h4>
-            <div className="grid md:grid-cols-2 gap-4">
-              <input
-                type="text"
-                value={formData.address?.city || ''}
-                onChange={(e) => onInputChange('address', { ...(formData.address || {}), city: e.target.value })}
-                placeholder="Thành phố"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <input
-                type="text"
-                value={formData.address?.district || ''}
-                onChange={(e) => onInputChange('address', { ...(formData.address || {}), district: e.target.value })}
-                placeholder="Quận/Huyện"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <input
-                type="text"
-                value={formData.address?.ward || ''}
-                onChange={(e) => onInputChange('address', { ...(formData.address || {}), ward: e.target.value })}
-                placeholder="Phường/Xã"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <input
-                type="text"
-                value={formData.address?.street || ''}
-                onChange={(e) => onInputChange('address', { ...(formData.address || {}), street: e.target.value })}
-                placeholder="Đường"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <input
-                type="text"
-                value={formData.address?.houseNumber || ''}
-                onChange={(e) => onInputChange('address', { ...(formData.address || {}), houseNumber: e.target.value })}
-                placeholder="Số nhà (tuỳ chọn)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-              />
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={!!formData.address?.showHouseNumber}
-                  onChange={(e) => onInputChange('address', { ...(formData.address || {}), showHouseNumber: e.target.checked })}
-                />
-                Hiển thị số nhà trên bài đăng
-              </label>
-            </div>
+            <button
+              type="button"
+              onClick={() => setAddrOpen(true)}
+              className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-between"
+            >
+              <span className={addrText ? "text-gray-900" : "text-gray-400"}>
+                {addrText ? (
+                  addrText
+                ) : (
+                  <>
+                    Chọn địa chỉ <span className="text-red-500">*</span>
+                  </>
+                )}
+              </span>
+              <span className="opacity-60">▾</span>
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -249,6 +291,25 @@ export default function PhongTroEditForm({ formData, onInputChange, onNumberChan
           </div>
         </div>
       </div>
+
+      {/* Modal địa chỉ */}
+      <AddressModal
+        open={addrOpen}
+        onClose={() => setAddrOpen(false)}
+        onSave={(a) => onInputChange('address', a || {
+          street: '',
+          ward: '',
+          city: '',
+          specificAddress: '',
+          showSpecificAddress: false,
+          provinceCode: '',
+          provinceName: '',
+          wardCode: '',
+          wardName: '',
+          additionalInfo: ''
+        })}
+        initial={formData.address}
+      />
     </div>
   );
 }

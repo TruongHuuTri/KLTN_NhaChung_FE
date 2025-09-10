@@ -32,7 +32,6 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
   }, []);
 
   const handleVerificationComplete = (data: VerificationData) => {
-    // Debug: verification data
     onVerificationComplete?.(data);
     setIsVerificationModalOpen(false);
     

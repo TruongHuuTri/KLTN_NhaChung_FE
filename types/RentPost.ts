@@ -1,10 +1,14 @@
 export type Address = {
-  city: string;
-  district: string;
+  street?: string; // Optional theo API guide
   ward: string;
-  street?: string;
-  houseNumber?: string;
-  showHouseNumber?: boolean;
+  city: string;
+  specificAddress?: string; // Thay thế houseNumber
+  showSpecificAddress?: boolean; // Thay thế showHouseNumber
+  provinceCode: string;
+  provinceName: string;
+  wardCode: string;
+  wardName: string;
+  additionalInfo?: string;
 };
 export type PhongTroData = {
   addr: Address | null;

@@ -158,9 +158,11 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
           </svg>
           <span>
             {postType === 'rent' && postData && 'address' in postData 
-              ? `${postData.address.houseNumber || ''} ${postData.address.street}, ${postData.address.ward}, ${postData.address.district}, ${postData.address.city}`.trim()
+              ? `${postData.address.specificAddress || ''} ${postData.address.street}, ${postData.address.ward}, ${postData.address.city}`.trim()
               : postType === 'roommate' && postData && 'currentRoom' in postData
-              ? (postData as any).currentRoom.address
+              ? typeof (postData as any).currentRoom.address === 'string' 
+                ? (postData as any).currentRoom.address
+                : `${(postData as any).currentRoom.address.specificAddress ? (postData as any).currentRoom.address.specificAddress + ', ' : ''}${(postData as any).currentRoom.address.street}, ${(postData as any).currentRoom.address.ward}, ${(postData as any).currentRoom.address.city}`.replace(/^,\s*/, '')
               : 'Chưa có thông tin địa chỉ'
             }
           </span>

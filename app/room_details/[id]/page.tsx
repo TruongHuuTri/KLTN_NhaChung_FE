@@ -75,7 +75,6 @@ export default function RoomDetailsPage() {
           window.scrollTo({ top: 0, behavior: 'instant' });
         }, 100);
       } catch (err: any) {
-        console.error('Failed to load post data:', err);
         setError('Không thể tải thông tin bài đăng');
       } finally {
         setLoading(false);

@@ -9,6 +9,8 @@ export async function loginService(
 }
 
 export async function logoutService() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("user");
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  }
 }

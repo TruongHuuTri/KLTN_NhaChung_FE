@@ -1,8 +1,10 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { Address, ChungCuData } from "@/types/RentPost";
+import AddressSelector from "../../common/AddressSelector";
+import { addressService } from "../../../services/address";
 
-/* Modal địa chỉ (giữ nguyên) */
+// Address Modal Component
 function AddressModal({
   open,
   onClose,
@@ -14,65 +16,50 @@ function AddressModal({
   onSave: (a: Address | null) => void;
   initial?: Partial<Address>;
 }) {
-  const [f, setF] = useState<Address>({
-    city: initial?.city || "",
-    district: initial?.district || "",
-    ward: initial?.ward || "",
-    street: initial?.street || "",
-    houseNumber: initial?.houseNumber || "",
-    showHouseNumber: initial?.showHouseNumber ?? false,
-  });
-  const set = (k: keyof Address, v: any) => setF((s) => ({ ...s, [k]: v }));
+  const [address, setAddress] = useState<Address | null>(null);
+  
+  // Update address when initial changes
+  useEffect(() => {
+    if (initial) {
+      setAddress(initial as Address);
+    } else {
+      setAddress(null);
+    }
+  }, [initial]);
+  
   if (!open) return null;
+
   const handleSave = () => {
-    const empty =
-      !f.city && !f.district && !f.ward && !f.street && !f.houseNumber;
-    onSave(empty ? null : f);
+    onSave(address);
     onClose();
   };
+
   return (
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
           <div className="px-4 py-3 border-b text-center font-semibold">
             Địa chỉ
           </div>
-          <div className="p-4 space-y-3">
-            {(
-              ["city", "district", "ward", "street", "houseNumber"] as const
-            ).map((k) => (
-              <input
-                key={k}
-                className="w-full h-11 px-3 rounded-lg border border-gray-300 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-                placeholder={
-                  k === "city"
-                    ? "Chọn tỉnh, thành phố *"
-                    : k === "district"
-                    ? "Chọn quận, huyện, thị xã *"
-                    : k === "ward"
-                    ? "Chọn phường, xã, thị trấn *"
-                    : k === "street"
-                    ? "Tên đường *"
-                    : "Số nhà"
-                }
-                value={f[k] as string}
-                onChange={(e) => set(k, e.target.value)}
-              />
-            ))}
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={f.showHouseNumber}
-                onChange={(e) => set("showHouseNumber", e.target.checked)}
-              />
-              Hiển thị số nhà trong tin rao
-            </label>
+          <div className="p-4">
+            <AddressSelector
+              value={address}
+              onChange={setAddress}
+            />
+          </div>
+          <div className="px-4 py-3 border-t flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Hủy
+            </button>
             <button
               onClick={handleSave}
-              className="w-full h-11 rounded-xl bg-teal-500 text-white"
+              className="flex-1 h-10 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
             >
-              XONG
+              Lưu
             </button>
           </div>
         </div>
@@ -81,6 +68,7 @@ function AddressModal({
   );
 }
 
+
 export default function ChungCuForm({
   data,
   setData,
@@ -88,8 +76,8 @@ export default function ChungCuForm({
   data: ChungCuData;
   setData: (next: ChungCuData) => void;
 }) {
-  const [addrOpen, setAddrOpen] = useState(false);
   const [err, setErr] = useState<{ area?: string; price?: string }>({});
+  const [addrOpen, setAddrOpen] = useState(false);
 
   const patch =
     <K extends keyof ChungCuData>(k: K) =>
@@ -106,18 +94,9 @@ export default function ChungCuForm({
   );
 
   const addrText = data.addr
-    ? [
-        data.addr.showHouseNumber && data.addr.houseNumber
-          ? data.addr.houseNumber
-          : "",
-        data.addr.street,
-        data.addr.ward,
-        data.addr.district,
-        data.addr.city,
-      ]
-        .filter(Boolean)
-        .join(", ")
+    ? addressService.formatAddressForDisplay(data.addr)
     : "";
+
 
   const onBlurRequired = (k: "area" | "price", v: number, m: string) =>
     setErr((s) => ({ ...s, [k]: v > 0 ? undefined : m }));
@@ -157,7 +136,7 @@ export default function ChungCuForm({
           onClick={() => setAddrOpen(true)}
           className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-between"
         >
-          <span className={addrText ? "text-gray-900" : "text-gray-400"}>
+          <span className={`${addrText ? "text-gray-900" : "text-gray-400"} truncate pr-2`}>
             {addrText ? (
               addrText
             ) : (
@@ -166,7 +145,7 @@ export default function ChungCuForm({
               </>
             )}
           </span>
-          <span className="opacity-60">▾</span>
+          <span className="opacity-60 flex-shrink-0">▾</span>
         </button>
 
         <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">

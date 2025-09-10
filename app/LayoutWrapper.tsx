@@ -9,13 +9,15 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const isLoginPage = pathname === '/login';
 
   return (
-    <FavoritesProvider>
-      <div className="min-h-screen">
-        {!isLoginPage && <Header />}
-        <main className={isLoginPage ? '' : 'pt-20'}>
-          {children}
-        </main>
-      </div>
-    </FavoritesProvider>
+    <div suppressHydrationWarning={true}>
+      <FavoritesProvider>
+        <div className="min-h-screen">
+          {!isLoginPage && <Header />}
+          <main className={isLoginPage ? '' : 'pt-20'}>
+            {children}
+          </main>
+        </div>
+      </FavoritesProvider>
+    </div>
   );
 }

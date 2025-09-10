@@ -19,6 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
+      if (typeof window === 'undefined') return;
+      
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
       
@@ -54,8 +56,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const { access_token, user } = await loginService(email, password);
-      localStorage.setItem("token", access_token);
-      localStorage.setItem("user", JSON.stringify(user));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem("token", access_token);
+        localStorage.setItem("user", JSON.stringify(user));
+      }
       setUser(user);
       return { success: true, message: "Đăng nhập thành công" };
     } catch (err: any) {
@@ -66,6 +70,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const refreshUser = async () => {
+    if (typeof window === 'undefined') return { success: false, message: "Server side" };
+    
     const token = localStorage.getItem("token");
     if (token) {
       try {
@@ -86,9 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, refreshUser, isLoading }}>
-      {children}
-    </AuthContext.Provider>
+    <div suppressHydrationWarning={true}>
+      <AuthContext.Provider value={{ user, login, logout, refreshUser, isLoading }}>
+        {children}
+      </AuthContext.Provider>
+    </div>
   );
 }
 

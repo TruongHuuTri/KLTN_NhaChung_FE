@@ -26,9 +26,13 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
     if (post) {
       const category = post.category as Category;
       
-      // Xác định roommate: nếu không phải 3 loại rent thì là roommate
-      const rentCategories = ['phong-tro', 'chung-cu', 'nha-nguyen-can'];
-      const isRoommatePost = !rentCategories.includes(String(category || '').toLowerCase());
+      // Xác định roommate: kiểm tra category trực tiếp
+      let isRoommatePost = String(category || '').toLowerCase() === 'roommate';
+      
+      // Fallback: nếu category không đúng, thử detect bằng structure
+      if (!isRoommatePost) {
+        isRoommatePost = 'currentRoom' in post && 'personalInfo' in post;
+      }
       
       // Common fields
       let data: any = {
@@ -39,50 +43,56 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
 
       // Initialize based on category or detected type
       if (isRoommatePost) {
+        
         // Roommate posts have different structure - match RoommateForm fields
         data = {
           ...data,
           images: [], // file uploads mới (MediaPickerLocal chỉ nhận LocalMediaItem)
           coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
+          coverLocalId: '',
           existingImages: Array.isArray(post.images) ? post.images : [],
+          videos: [], // file uploads mới
+          existingVideos: post.video ? [post.video] : [],
           // Personal info
+          fullName: post.personalInfo?.fullName || '',
           age: post.personalInfo?.age || 0,
-          gender: (() => {
-            const g = (post.personalInfo?.gender || '').toLowerCase();
-            if (g === 'male') return 'Nam';
-            if (g === 'female') return 'Nữ';
-            if (g) return 'Khác';
-            return '';
-          })(),
+          gender: post.personalInfo?.gender || '',
           occupation: post.personalInfo?.occupation || '',
-          selectedHobbies: post.personalInfo?.hobbies || [],
-          livingHabits: (post.personalInfo?.habits && post.personalInfo.habits[0]) || '',
+          selectedHobbies: Array.isArray(post.personalInfo?.hobbies) ? post.personalInfo.hobbies : 
+                          (typeof post.personalInfo?.hobbies === 'string' ? [post.personalInfo.hobbies] : []),
+          selectedHabits: Array.isArray(post.personalInfo?.habits) ? post.personalInfo.habits : 
+                         (typeof post.personalInfo?.habits === 'string' ? [post.personalInfo.habits] : []),
+          lifestyle: post.personalInfo?.lifestyle || '',
+          cleanliness: post.personalInfo?.cleanliness || '',
 
           // Current room info
-          currentAddress: post.currentRoom?.address || '',
-          area: post.currentRoom?.area || 0,
+          roomAddress: typeof post.currentRoom?.address === 'object' && post.currentRoom?.address 
+            ? post.currentRoom.address 
+            : {
+                street: '',
+                ward: '',
+                district: '',
+                city: '',
+                houseNumber: '',
+                showHouseNumber: false
+              },
+          roomPrice: post.currentRoom?.price || 0,
+          roomArea: post.currentRoom?.area || 0,
           roomDescription: post.currentRoom?.description || '',
-          // Budget/price mapping (ưu tiên requirements.maxPrice nếu có)
-          budget: post.requirements?.maxPrice || post.currentRoom?.price || 0,
+          roomType: post.currentRoom?.roomType || '',
+          currentOccupants: post.currentRoom?.currentOccupants || 0,
+          remainingDuration: post.currentRoom?.remainingDuration || '',
 
           // Requirements
-          preferredGender: (() => {
-            const g = (post.requirements?.gender || '').toLowerCase();
-            if (g === 'male') return 'Nam';
-            if (g === 'female') return 'Nữ';
-            if (g === 'any') return 'Không quan trọng';
-            return '';
-          })(),
-          preferredAge: post.requirements?.ageRange ? `${post.requirements.ageRange[0]}-${post.requirements.ageRange[1]}` : '',
-          selectedTraits: post.requirements?.traits || [],
+          ageRangeMin: Array.isArray(post.requirements?.ageRange) && post.requirements.ageRange.length > 0 ? post.requirements.ageRange[0] : 0,
+          ageRangeMax: Array.isArray(post.requirements?.ageRange) && post.requirements.ageRange.length > 1 ? post.requirements.ageRange[1] : 0,
+          preferredGender: post.requirements?.gender || '',
+          selectedTraits: Array.isArray(post.requirements?.traits) ? post.requirements.traits : 
+                         (typeof post.requirements?.traits === 'string' ? [post.requirements.traits] : []),
+          maxPrice: post.requirements?.maxPrice || 0,
 
-          // Các trường không có trong API roommate sẽ để trống (giữ tương thích UI)
-          fullName: post.fullName || '',
-          roomType: post.roomType || '',
-          currentOccupants: post.currentOccupants || '',
-          duration: post.duration || '',
-          cleanliness: post.cleanliness || '',
-          phoneNumber: post.phoneNumber || '',
+          // Contact
+          phone: post.phone || '',
           email: post.email || ''
         };
       } else {
@@ -97,6 +107,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             address: post.address || null,
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
+            coverLocalId: '',
             images: [], // Will be populated from existing images
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
             videos: []  // Will be populated from existing videos
@@ -115,13 +126,14 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             bathrooms: post.basicInfo?.bathrooms || 0,
             direction: post.basicInfo?.direction || '',
             furniture: post.basicInfo?.furniture || '',
-            legalStatus: post.chungCuInfo?.legalStatus || '',
+            legalStatus: post.basicInfo?.legalStatus || '',
             area: post.basicInfo?.area || 0,
             price: post.basicInfo?.price || 0,
             deposit: post.basicInfo?.deposit || 0,
             address: post.address || null,
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
+            coverLocalId: '',
             images: [], // Will be populated from existing images
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
             videos: []  // Will be populated from existing videos
@@ -139,17 +151,18 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             direction: post.basicInfo?.direction || '',
             totalFloors: post.nhaNguyenCanInfo?.totalFloors || 0,
             furniture: post.basicInfo?.furniture || '',
-            legalStatus: post.nhaNguyenCanInfo?.legalStatus || '',
+            legalStatus: post.basicInfo?.legalStatus || '',
             landArea: post.nhaNguyenCanInfo?.landArea || 0,
             usableArea: post.nhaNguyenCanInfo?.usableArea || 0,
             width: post.nhaNguyenCanInfo?.width || 0,
             length: post.nhaNguyenCanInfo?.length || 0,
             price: post.basicInfo?.price || 0,
             deposit: post.basicInfo?.deposit || 0,
-            features: post.nhaNguyenCanInfo?.features || [],
+            features: Array.isArray(post.nhaNguyenCanInfo?.features) ? post.nhaNguyenCanInfo.features : [],
             address: post.address || null,
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
+            coverLocalId: '',
             images: [], // Will be populated from existing images
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
             videos: []  // Will be populated from existing videos
@@ -180,9 +193,13 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
     e.preventDefault();
     const category = post?.category as Category;
     
-    // Determine roommate by category list
-    const rentCategoriesCheck = ['phong-tro', 'chung-cu', 'nha-nguyen-can'];
-    const isRoommateByCat = !rentCategoriesCheck.includes(String(category || '').toLowerCase());
+    // Determine roommate by category
+    let isRoommateByCat = String(category || '').toLowerCase() === 'roommate';
+    
+    // Fallback: nếu category không đúng, thử detect bằng structure
+    if (!isRoommateByCat) {
+      isRoommateByCat = 'currentRoom' in post && 'personalInfo' in post;
+    }
 
     // Validate required IDs (show error instead of silent return)
     if (isRoommateByCat) {
@@ -201,9 +218,8 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
       setLoading(true);
       setError(null);
 
-      // Xác định roommate: nếu không phải 3 loại rent thì là roommate
-      const rentCategories = ['phong-tro', 'chung-cu', 'nha-nguyen-can'];
-      const isRoommatePost = !rentCategories.includes(String(category || '').toLowerCase());
+      // Xác định roommate: sử dụng logic đã detect ở trên
+      const isRoommatePost = isRoommateByCat;
 
       // Construct payload based on category
       let payload: any = {
@@ -228,57 +244,80 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
           imageUrls = await uploadFiles(imageFiles, userId, 'images');
         }
 
+        let videoUrls: string[] = [];
+        if (formData.videos && formData.videos.length > 0) {
+          const videoFiles = formData.videos.map((item: LocalMediaItem) => item.file);
+          videoUrls = await uploadFiles(videoFiles, userId, 'videos');
+        }
+
+        // Combine existing videos with new videos
+        const allVideoUrls = [
+          ...(formData.existingVideos || []),
+          ...videoUrls
+        ];
+
         // Partial update per API guide: send only fields with values
         const rmPayload: any = {};
         if (formData.title && formData.title.trim()) rmPayload.title = formData.title.trim();
         if (formData.description && formData.description.trim()) rmPayload.description = formData.description.trim();
         if (imageUrls.length) rmPayload.images = imageUrls;
+        // Always send video field - empty array if no videos
+        rmPayload.video = allVideoUrls.length > 0 ? allVideoUrls[0] : null;
 
         // Map personalInfo only if has required fields
-        const mapGender = (val: string): 'male' | 'female' | 'other' | undefined => {
-          const g = (val || '').toLowerCase();
-          if (g.includes('nam')) return 'male';
-          if (g.includes('nữ') || g.includes('nu')) return 'female';
-          if (g) return 'other';
-          return undefined;
-        };
         const ageNum = Number(formData.age);
-        const genderApi = mapGender(formData.gender || '');
-        if (ageNum && ageNum >= 18 && ageNum <= 100 && genderApi) {
+        const gender = formData.gender as 'male' | 'female' | 'other';
+        if (ageNum && ageNum >= 18 && ageNum <= 100 && gender) {
           rmPayload.personalInfo = {
+            fullName: formData.fullName || '',
             age: ageNum,
-            gender: genderApi,
-            ...(formData.occupation ? { occupation: String(formData.occupation) } : {}),
-            ...(Array.isArray(formData.selectedHobbies) && formData.selectedHobbies.length
-              ? { hobbies: formData.selectedHobbies }
-              : {}),
-            ...(formData.livingHabits
-              ? { habits: [String(formData.livingHabits)] }
-              : {}),
+            gender: gender,
+            occupation: formData.occupation || '',
+            hobbies: Array.isArray(formData.selectedHobbies) ? formData.selectedHobbies : [],
+            habits: Array.isArray(formData.selectedHabits) ? formData.selectedHabits : [],
+            ...(formData.lifestyle ? { lifestyle: formData.lifestyle } : {}),
+            ...(formData.cleanliness ? { cleanliness: formData.cleanliness } : {}),
+          };
+        }
+
+        // Map currentRoom
+        if (formData.roomAddress || formData.roomPrice || formData.roomArea || formData.roomDescription) {
+          rmPayload.currentRoom = {
+            address: formData.roomAddress || {
+              street: '',
+              ward: '',
+              district: '',
+              city: '',
+              houseNumber: '',
+              showHouseNumber: false
+            },
+            price: Number(formData.roomPrice) || 0,
+            area: Number(formData.roomArea) || 0,
+            description: formData.roomDescription || '',
+            ...(formData.roomType ? { roomType: formData.roomType } : {}),
+            ...(formData.currentOccupants ? { currentOccupants: Number(formData.currentOccupants) } : {}),
+            ...(formData.remainingDuration ? { remainingDuration: formData.remainingDuration } : {}),
           };
         }
 
         // Map requirements if parseable
         const mapReqGender = (val: string): 'male' | 'female' | 'any' | undefined => {
           const g = (val || '').toLowerCase();
-          if (g.includes('không') || g.includes('any')) return 'any';
-          if (g.includes('nam')) return 'male';
-          if (g.includes('nữ') || g.includes('nu')) return 'female';
+          if (g === 'any' || g.includes('không')) return 'any';
+          if (g === 'male' || g.includes('nam')) return 'male';
+          if (g === 'female' || g.includes('nữ') || g.includes('nu')) return 'female';
           return undefined;
         };
+        
         let ageRange: [number, number] | undefined;
-        if (formData.preferredAge && typeof formData.preferredAge === 'string') {
-          const m = formData.preferredAge.match(/(\d{1,3})\s*[-–]\s*(\d{1,3})/);
-          if (m) {
-            const min = Number(m[1]);
-            const max = Number(m[2]);
-            if (min && max && min < max) {
-              ageRange = [min, max];
-            }
-          }
+        const ageMin = Number(formData.ageRangeMin);
+        const ageMax = Number(formData.ageRangeMax);
+        if (ageMin && ageMax && ageMin < ageMax) {
+          ageRange = [ageMin, ageMax];
         }
+        
         const reqGender = mapReqGender(formData.preferredGender || '');
-        const maxPrice = formData.budget ? Number(String(formData.budget).replace(/\D+/g, '')) : undefined;
+        const maxPrice = Number(formData.maxPrice) || undefined;
         const traits = Array.isArray(formData.selectedTraits) ? formData.selectedTraits : [];
         const requirements: any = {};
         if (ageRange) requirements.ageRange = ageRange;
@@ -288,6 +327,10 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         if (Object.keys(requirements).length) {
           rmPayload.requirements = requirements;
         }
+
+        // Map contact info
+        if (formData.phone) rmPayload.phone = formData.phone;
+        if (formData.email) rmPayload.email = formData.email;
         if (!Object.keys(rmPayload).length) {
           setError('Vui lòng thay đổi ít nhất 1 trường (tiêu đề/mô tả/ảnh hoặc thông tin khác)');
           setLoading(false);
@@ -317,6 +360,13 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
           const videoFiles = formData.videos.map((item: LocalMediaItem) => item.file);
           videoUrls = await uploadFiles(videoFiles, userId, 'videos');
         }
+
+        // Combine existing videos with new videos
+        const allVideoUrls = [
+          ...(formData.existingVideos || []),
+          ...videoUrls
+        ];
+
         switch (category) {
         case 'phong-tro':
           payload = {
@@ -329,7 +379,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             },
             address: formData.address,
             images: imageUrls,
-            videos: videoUrls
+            videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
           break;
 
@@ -343,19 +393,19 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
               furniture: formData.furniture,
               bedrooms: formData.bedrooms,
               bathrooms: formData.bathrooms,
-              direction: formData.direction
+              direction: formData.direction,
+              legalStatus: formData.legalStatus
             },
             chungCuInfo: {
               buildingName: formData.buildingName,
               blockOrTower: formData.blockOrTower,
               floorNumber: formData.floorNumber,
               unitCode: formData.unitCode,
-              propertyType: formData.propertyType,
-              legalStatus: formData.legalStatus
+              propertyType: formData.propertyType
             },
             address: formData.address,
             images: imageUrls,
-            videos: videoUrls
+            videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
           break;
 
@@ -369,14 +419,14 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
               furniture: formData.furniture,
               bedrooms: formData.bedrooms,
               bathrooms: formData.bathrooms,
-              direction: formData.direction
+              direction: formData.direction,
+              legalStatus: formData.legalStatus
             },
             nhaNguyenCanInfo: {
               khuLo: formData.khuLo,
               unitCode: formData.unitCode,
               propertyType: formData.propertyType,
               totalFloors: formData.totalFloors,
-              legalStatus: formData.legalStatus,
               landArea: formData.landArea,
               usableArea: formData.usableArea,
               width: formData.width,
@@ -385,7 +435,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             },
             address: formData.address,
             images: imageUrls,
-            videos: videoUrls
+            videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
           break;
 
@@ -404,7 +454,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
             },
             address: formData.address,
             images: imageUrls,
-            videos: videoUrls
+            videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
         }
       }
@@ -448,8 +498,8 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
       // Auto hide toast
       setTimeout(() => setToast((t) => (t ? { ...t, visible: false } : t)), 2200);
       setTimeout(() => {
-        onSuccess();
-        onClose();
+      onSuccess();
+      onClose();
       }, 900);
     } catch (err: any) {
       setError('Không thể cập nhật bài đăng. Vui lòng thử lại.');

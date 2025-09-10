@@ -10,7 +10,7 @@ export interface UnifiedPost {
   images: string[];
   price: number;
   area: number;
-  location: string; // district, city
+  location: string; // city
   category?: string; // chỉ có cho rent posts
   photoCount: number;
   bedrooms?: number;
@@ -32,7 +32,7 @@ export function rentPostToUnified(post: RentPostApi): UnifiedPost {
     images: post.images || ["/home/room1.png"],
     price: post.basicInfo.price,
     area: post.basicInfo.area,
-    location: `${post.address.district}, ${post.address.city}`,
+    location: post.address.city,
     category: post.category,
     photoCount: (post.images?.length || 0) + (post.videos?.length || 0),
     bedrooms: post.basicInfo.bedrooms,
@@ -52,7 +52,9 @@ export function roommatePostToUnified(post: RoommatePost): UnifiedPost {
     images: post.images || ["/home/room1.png"],
     price: post.currentRoom.price,
     area: post.currentRoom.area,
-    location: post.currentRoom.address,
+    location: typeof post.currentRoom.address === 'string' 
+      ? post.currentRoom.address 
+      : `${post.currentRoom.address.specificAddress ? post.currentRoom.address.specificAddress + ', ' : ''}${post.currentRoom.address.street}, ${post.currentRoom.address.ward}, ${post.currentRoom.address.city}`.replace(/^,\s*/, ''),
     category: 'roommate',
     photoCount: post.images?.length || 0,
     isVerified: false, // Roommate posts không có verification

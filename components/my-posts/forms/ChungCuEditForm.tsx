@@ -1,6 +1,70 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import MediaPickerLocal from "../../common/MediaPickerLocal";
+import AddressSelector from "../../common/AddressSelector";
+import { Address, addressService } from "../../../services/address";
+
+// Address Modal Component
+function AddressModal({
+  open,
+  onClose,
+  onSave,
+  initial,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onSave: (a: Address | null) => void;
+  initial?: Partial<Address>;
+}) {
+  const [address, setAddress] = useState<Address | null>(initial as Address || null);
+  
+  useEffect(() => {
+    if (open) {
+      setAddress((initial as Address) || null);
+    }
+  }, [open, initial]);
+  
+  if (!open) return null;
+
+  const handleSave = () => {
+    onSave(address);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-y-auto">
+          <div className="px-4 py-3 border-b text-center font-semibold">
+            Địa chỉ
+          </div>
+          <div className="p-4">
+            <AddressSelector
+              value={address}
+              onChange={setAddress}
+            />
+          </div>
+          <div className="px-4 py-3 border-t flex gap-2">
+            <button
+              onClick={onClose}
+              className="flex-1 h-10 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+            >
+              Hủy
+            </button>
+            <button
+              onClick={handleSave}
+              className="flex-1 h-10 rounded-lg bg-teal-600 text-white hover:bg-teal-700"
+            >
+              Lưu
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   formData: any;
@@ -9,6 +73,12 @@ interface Props {
 }
 
 export default function ChungCuEditForm({ formData, onInputChange, onNumberChange }: Props) {
+  const [addrOpen, setAddrOpen] = useState(false);
+
+  const addrText = formData.address
+    ? addressService.formatAddressForDisplay(formData.address)
+    : "";
+
   return (
     <div className="space-y-6">
       <div>
@@ -86,32 +156,22 @@ export default function ChungCuEditForm({ formData, onInputChange, onNumberChang
           {/* Địa chỉ */}
           <div>
             <h4 className="text-sm font-medium text-gray-800 mb-2">Địa chỉ</h4>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Thành phố</label>
-                <input type="text" value={formData.address?.city || ''} onChange={(e) => onInputChange('address', { ...(formData.address || {}), city: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Quận/Huyện</label>
-                <input type="text" value={formData.address?.district || ''} onChange={(e) => onInputChange('address', { ...(formData.address || {}), district: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phường/Xã</label>
-                <input type="text" value={formData.address?.ward || ''} onChange={(e) => onInputChange('address', { ...(formData.address || {}), ward: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Đường</label>
-                <input type="text" value={formData.address?.street || ''} onChange={(e) => onInputChange('address', { ...(formData.address || {}), street: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Số nhà (tuỳ chọn)</label>
-                <input type="text" value={formData.address?.houseNumber || ''} onChange={(e) => onInputChange('address', { ...(formData.address || {}), houseNumber: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
-              </div>
-              <label className="inline-flex items-center gap-2 text-sm text-gray-700 mt-6">
-                <input type="checkbox" checked={!!formData.address?.showHouseNumber} onChange={(e) => onInputChange('address', { ...(formData.address || {}), showHouseNumber: e.target.checked })} />
-                Hiển thị số nhà trên bài đăng
-              </label>
-            </div>
+            <button
+              type="button"
+              onClick={() => setAddrOpen(true)}
+              className="w-full h-11 px-3 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 flex items-center justify-between"
+            >
+              <span className={addrText ? "text-gray-900" : "text-gray-400"}>
+                {addrText ? (
+                  addrText
+                ) : (
+                  <>
+                    Chọn địa chỉ <span className="text-red-500">*</span>
+                  </>
+                )}
+              </span>
+              <span className="opacity-60">▾</span>
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Tiêu đề *</label>
@@ -158,15 +218,34 @@ export default function ChungCuEditForm({ formData, onInputChange, onNumberChang
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Hướng</label>
-              <input type="text" value={formData.direction || ''} onChange={(e) => onInputChange('direction', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <select value={formData.direction || ''} onChange={(e) => onInputChange('direction', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="">Chọn hướng</option>
+                <option value="dong">ĐÔNG</option>
+                <option value="tay">TÂY</option>
+                <option value="nam">NAM</option>
+                <option value="bac">BẮC</option>
+                <option value="dong-nam">ĐÔNG NAM</option>
+                <option value="dong-bac">ĐÔNG BẮC</option>
+                <option value="tay-nam">TÂY NAM</option>
+                <option value="tay-bac">TÂY BẮC</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nội thất</label>
-              <input type="text" value={formData.furniture || ''} onChange={(e) => onInputChange('furniture', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <select value={formData.furniture || ''} onChange={(e) => onInputChange('furniture', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="">Chọn tình trạng nội thất</option>
+                <option value="full">Nội thất đầy đủ</option>
+                <option value="co-ban">Nội thất cơ bản</option>
+                <option value="trong">Nhà trống</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Tình trạng sổ</label>
-              <input type="text" value={formData.legalStatus || ''} onChange={(e) => onInputChange('legalStatus', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+              <select value={formData.legalStatus || ''} onChange={(e) => onInputChange('legalStatus', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+                <option value="">Chọn tình trạng sổ</option>
+                <option value="co-so-hong">Có sổ hồng</option>
+                <option value="cho-so">Đang chờ sổ</option>
+              </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Diện tích (m²)</label>
@@ -183,6 +262,25 @@ export default function ChungCuEditForm({ formData, onInputChange, onNumberChang
           </div>
         </div>
       </div>
+
+      {/* Modal địa chỉ */}
+      <AddressModal
+        open={addrOpen}
+        onClose={() => setAddrOpen(false)}
+        onSave={(a) => onInputChange('address', a || {
+          street: '',
+          ward: '',
+          city: '',
+          specificAddress: '',
+          showSpecificAddress: false,
+          provinceCode: '',
+          provinceName: '',
+          wardCode: '',
+          wardName: '',
+          additionalInfo: ''
+        })}
+        initial={formData.address}
+      />
     </div>
   );
 }

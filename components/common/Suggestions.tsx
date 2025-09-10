@@ -166,8 +166,8 @@ export default function Suggestions() {
                 id="suggestions-scroll"
                 className="flex gap-6 overflow-x-hidden scroll-smooth pb-4"
               >
-                {items.map((i) => (
-                  <div key={i.id} className="flex-shrink-0 w-80">
+                {items.map((i, index) => (
+                  <div key={`${i.id}-${i.postType}-${index}`} className="flex-shrink-0 w-80">
                     <CardItem c={i} />
                   </div>
                 ))}

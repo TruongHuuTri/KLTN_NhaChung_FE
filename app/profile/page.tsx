@@ -82,7 +82,6 @@ export default function ProfilePage() {
       setIsEditing(false);
       alert("✅ Cập nhật thông tin thành công!");
     } catch (error) {
-      console.error("Error updating profile:", error);
       alert("❌ Có lỗi xảy ra khi cập nhật thông tin: " + error);
     }
   };

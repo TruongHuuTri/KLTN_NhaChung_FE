@@ -36,7 +36,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       const userFavorites = await getUserFavorites(user.userId);
       setFavorites(userFavorites || []);
     } catch (error) {
-      console.error('Failed to load favorites:', error);
       setFavorites([]);
     } finally {
       setLoading(false);
@@ -68,7 +67,6 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
         setFavorites(prev => [...prev, newFavorite]);
       }
     } catch (error: any) {
-      console.error('Failed to toggle favorite:', error);
       alert('Có lỗi xảy ra khi thêm/xóa yêu thích: ' + (error.message || ''));
     }
   };
@@ -78,17 +76,19 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <FavoritesContext.Provider 
-      value={{
-        favorites,
-        loading,
-        isFavorited: checkIsFavorited,
-        toggleFavorite,
-        refreshFavorites
-      }}
-    >
-      {children}
-    </FavoritesContext.Provider>
+    <div suppressHydrationWarning={true}>
+      <FavoritesContext.Provider 
+        value={{
+          favorites,
+          loading,
+          isFavorited: checkIsFavorited,
+          toggleFavorite,
+          refreshFavorites
+        }}
+      >
+        {children}
+      </FavoritesContext.Provider>
+    </div>
   );
 }
 

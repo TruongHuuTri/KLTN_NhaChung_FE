@@ -119,10 +119,9 @@ export function formatSpecLine(
   return parts.join(" • ");
 }
 
-/** "Quận X, TP Y" hoặc phần nào có thì hiển thị phần đó */
-export function formatAddressLine(district?: string, city?: string) {
-  if (district && city) return `${district}, ${city}`;
-  return district || city || "";
+/** "TP Y" hoặc phần nào có thì hiển thị phần đó */
+export function formatAddressLine(city?: string) {
+  return city || "";
 }
 
 /** "12 ảnh", "1 ảnh", "0 ảnh" — nếu chỉ cần số thì dùng trực tiếp photoCount */

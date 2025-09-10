@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import type { RoomCardData } from "@/types/RentPostApi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { formatPrice } from "@/utils/format";
+import { addressService } from "../../services/address";
 
 export default function RoomCard({
   rentPostId,
@@ -15,7 +16,7 @@ export default function RoomCard({
   area,
   bedrooms,
   bathrooms,
-  district,
+  address,
   city,
   price,
   isVerified,
@@ -155,7 +156,10 @@ export default function RoomCard({
               clipRule="evenodd"
             />
           </svg>
-          {district && city ? `${district}, ${city}` : district || city || ""}
+          {address 
+            ? addressService.formatAddressForDisplay(address)
+            : city || ""
+          }
         </div>
 
         {/* Giá */}

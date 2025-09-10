@@ -12,8 +12,8 @@ export function rentPostToRoomCard(p: RentPostApi): RoomCardData {
     area: p.basicInfo.area,
     bedrooms: showBedsBaths ? p.basicInfo.bedrooms : undefined,
     bathrooms: showBedsBaths ? p.basicInfo.bathrooms : undefined,
-    district: p.address.district,
-    city: p.address.city,
+    address: p.address,
+    city: p.address.city, // Backward compatibility
     price: p.basicInfo.price,
     isVerified: p.isVerified,
   };

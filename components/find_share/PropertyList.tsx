@@ -177,8 +177,7 @@ export default function RoomList() {
                 area={it.area}
                 bedrooms={it.bedrooms || 0}
                 bathrooms={it.bathrooms || 0}
-                district={it.location.split(',')[0]?.trim() || ''}
-                city={it.location.split(',')[1]?.trim() || ''}
+                city={it.location || ''}
                 price={it.price}
                 isVerified={it.isVerified || false}
               />

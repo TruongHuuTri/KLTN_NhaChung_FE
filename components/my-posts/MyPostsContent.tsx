@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Pagination from "../common/Pagination";
 import { RentPostApi } from "../../types/RentPostApi";
 import { RoommatePost } from "../../services/roommatePosts";
@@ -57,7 +57,9 @@ const normalizePost = (post: Post | RentPostApi | RoommatePost): Post => {
       category: 'roommate', // Đánh dấu là roommate post
       price: roommate.currentRoom.price,
       area: roommate.currentRoom.area,
-      address: roommate.currentRoom.address,
+      address: typeof roommate.currentRoom.address === 'string' 
+        ? roommate.currentRoom.address 
+        : `${roommate.currentRoom.address.houseNumber ? roommate.currentRoom.address.houseNumber + ', ' : ''}${roommate.currentRoom.address.street}, ${roommate.currentRoom.address.ward}, ${roommate.currentRoom.address.district}, ${roommate.currentRoom.address.city}`.replace(/^,\s*/, ''),
       status: "active", // Roommate posts default active
       views: 0, // Backend chưa có field views  
       createdAt: new Date(roommate.createdAt).toISOString().split('T')[0], // Format date
@@ -76,6 +78,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
   const [currentPage, setCurrentPage] = useState(1);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const hasRestoredRef = useRef(false);
   const itemsPerPage = 5;
 
   const filteredPosts = useMemo(() => {
@@ -135,17 +138,27 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    try { sessionStorage.setItem('myposts_current_page', String(page)); } catch {}
+    // Không lưu vào sessionStorage khi thay đổi trang thông thường
     setTimeout(scrollToTop, 80);
   };
 
   const handleEdit = (post: any) => {
-    // Find original post data (not normalized)
-    const originalPost = posts.find(p => 
-      ('rentPostId' in p && p.rentPostId === post.id) ||
-      ('roommatePostId' in p && (p as any).roommatePostId === post.id) ||
-      ('postId' in p && (p as any).postId === post.id)
-    );
+    // Find original post data (not normalized) - ưu tiên theo loại post
+    let originalPost;
+    
+    if (post.category === 'roommate') {
+      // Tìm roommate post
+      originalPost = posts.find(p => 
+        ('roommatePostId' in p && (p as any).roommatePostId === post.id) ||
+        ('postId' in p && (p as any).postId === post.id)
+      );
+    } else {
+      // Tìm rent post
+      originalPost = posts.find(p => 
+        ('rentPostId' in p && p.rentPostId === post.id)
+      );
+    }
+    
     setSelectedPost(originalPost);
     setEditModalOpen(true);
   };
@@ -156,7 +169,21 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
   };
 
   const handleEditSuccess = () => {
+    // Lưu trang hiện tại trước khi refresh
+    try { sessionStorage.setItem('myposts_current_page', String(currentPage)); } catch {}
     onRefresh(); // Refresh data from parent
+  };
+
+  const handleView = (id: number) => {
+    // Lưu trang hiện tại trước khi xem chi tiết
+    try { sessionStorage.setItem('myposts_current_page', String(currentPage)); } catch {}
+    onView(id);
+  };
+
+  const handleDelete = (id: number) => {
+    // Lưu trang hiện tại trước khi xóa
+    try { sessionStorage.setItem('myposts_current_page', String(currentPage)); } catch {}
+    onDelete(id);
   };
 
   const handleTabChange = (tab: "all" | "active" | "pending" | "inactive") => {
@@ -187,20 +214,34 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
     }
   };
 
-  // Restore current page from sessionStorage on mount
+  // Restore current page from sessionStorage on mount (chỉ khi có edit trước đó)
   useEffect(() => {
+    if (hasRestoredRef.current) return; // Chỉ restore 1 lần
+    
     try {
       const saved = Number(sessionStorage.getItem('myposts_current_page') || '1');
-      if (saved && saved > 0) setCurrentPage(saved);
-    } catch {}
-  }, []);
+      if (saved && saved > 0) {
+        // Chỉ restore nếu có dữ liệu posts
+        if (filteredPosts.length > 0) {
+          const maxPage = Math.ceil(filteredPosts.length / itemsPerPage);
+          const validPage = Math.min(saved, maxPage);
+          setCurrentPage(validPage);
+        }
+        hasRestoredRef.current = true;
+        // Xóa sessionStorage sau khi restore để lần sau vào lại sẽ về trang 1
+        sessionStorage.removeItem('myposts_current_page');
+      }
+    } catch (e) {
+      // Silent fail
+    }
+  }, [filteredPosts.length, itemsPerPage]); // Chờ filteredPosts có dữ liệu
 
   // Clamp currentPage when filtered list size changes
   useEffect(() => {
     if (currentPage > totalPages && totalPages > 0) {
       const newPage = totalPages;
       setCurrentPage(newPage);
-      try { sessionStorage.setItem('myposts_current_page', String(newPage)); } catch {}
+      // Không lưu vào sessionStorage khi clamp trang
     }
   }, [totalPages]);
 
@@ -388,13 +429,13 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
                           Chỉnh sửa
                         </button>
                         <button
-                          onClick={() => onView(post.id)}
+                          onClick={() => handleView(post.id)}
                           className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                         >
                           Xem chi tiết
                         </button>
                         <button
-                          onClick={() => onDelete(post.id)}
+                          onClick={() => handleDelete(post.id)}
                           className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                         >
                           Xóa

@@ -63,8 +63,8 @@ export type RoomCardData = {
   area?: number;
   bedrooms?: number;
   bathrooms?: number;
-  district?: string;
-  city?: string;
+  address?: Address;
+  city?: string; // Backward compatibility
   price?: number;
   isVerified?: boolean;
 };

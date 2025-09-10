@@ -9,7 +9,13 @@ interface Favorite {
   category: string;
   price: number;
   area: number;
-  address: string;
+  address: string | {
+    street?: string;
+    ward: string;
+    city: string;
+    specificAddress?: string;
+    showSpecificAddress?: boolean;
+  };
   owner: string;
   phone: string;
   addedAt: string;
@@ -181,7 +187,9 @@ export default function FavoritesContent({ favorites, onContact, onView, onRemov
                 
                 <div className="space-y-2 text-sm text-gray-600 mb-4">
                   <div className="flex items-center gap-2">
-                    <span>📍 {favorite.address}</span>
+                    <span>📍 {typeof favorite.address === 'string' 
+                      ? favorite.address 
+                      : `${favorite.address.specificAddress ? favorite.address.specificAddress + ', ' : ''}${favorite.address.street}, ${favorite.address.ward}, ${favorite.address.city}`.replace(/^,\s*/, '')}</span>
                   </div>
                   <div className="flex items-center gap-4">
                     <span>📐 {favorite.area}m²</span>

@@ -249,7 +249,6 @@ export default function FavoritesPage() {
 
         setFavoritedPosts(favoritedPostsData);
       } catch (error) {
-        console.error('Failed to load favorited posts:', error);
         // Fallback to mock data
         setFavoritedPosts(mockFavorites);
       } finally {
@@ -261,7 +260,6 @@ export default function FavoritesPage() {
   }, [userFavorites]);
 
   const handleContact = (id: number) => {
-    console.log("Contact favorite:", id);
   };
 
   const handleView = (id: number) => {

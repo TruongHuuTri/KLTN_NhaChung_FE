@@ -165,7 +165,6 @@ export default function MyPostsPage() {
         
         setPosts(allPosts);
       } catch (err: any) {
-        console.error('Failed to load user posts:', err);
         setError('Không thể tải bài đăng. Vui lòng thử lại.');
       } finally {
         setLoading(false);
@@ -177,7 +176,6 @@ export default function MyPostsPage() {
   }, [user?.userId]);
 
   const handleEdit = (id: number) => {
-    console.log("Edit post:", id);
   };
 
   const handleView = (id: number) => {
@@ -206,7 +204,6 @@ export default function MyPostsPage() {
   };
 
   const handleDelete = (id: number) => {
-    console.log("Delete post:", id);
   };
 
   return (

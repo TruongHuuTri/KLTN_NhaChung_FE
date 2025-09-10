@@ -106,6 +106,7 @@ export default function PostForm() {
   // upload
   const [images, setImages] = useState<LocalMediaItem[]>([]);
   const [videos, setVideos] = useState<LocalMediaItem[]>([]);
+  const [coverImageId, setCoverImageId] = useState<string | null>(null);
 
   // STATE CHO 3 FORM
   const [phongtroData, setPhongtroData] = useState<PhongTroData>(initPhongTro);
@@ -213,16 +214,28 @@ export default function PostForm() {
         "videos"
       );
 
+      // Move cover image to front
+      let finalImageUrls = uploadImageUrls;
+      if (coverImageId && images.length > 0) {
+        const coverIndex = images.findIndex(img => img.id === coverImageId);
+        if (coverIndex !== -1 && coverIndex < uploadImageUrls.length) {
+          const coverImage = uploadImageUrls[coverIndex];
+          finalImageUrls = [coverImage, ...uploadImageUrls.filter((_, i) => i !== coverIndex)];
+        }
+      }
+
       const basePayload = {
         userId: uid,
-        images: uploadImageUrls,
+        images: finalImageUrls,
         videos: uploadVideoUrls,
         status: "active", // chờ duyệt
       };
 
       let payload: any = {};
       if (category === "phong-tro") {
-        if (!phongtroData.addr) throw new Error("Vui lòng chọn địa chỉ");
+        if (!phongtroData.addr || !phongtroData.addr.ward || !phongtroData.addr.city || !phongtroData.addr.provinceCode) {
+          throw new Error("Vui lòng chọn địa chỉ đầy đủ");
+        }
         payload = {
           ...basePayload,
           title: phongtroData.title,
@@ -234,7 +247,9 @@ export default function PostForm() {
           furniture: phongtroData.furniture,
         };
       } else if (category === "chung-cu") {
-        if (!chungcuData.addr) throw new Error("Vui lòng chọn địa chỉ");
+        if (!chungcuData.addr || !chungcuData.addr.ward || !chungcuData.addr.city || !chungcuData.addr.provinceCode) {
+          throw new Error("Vui lòng chọn địa chỉ đầy đủ");
+        }
         payload = {
           ...basePayload,
           title: chungcuData.title,
@@ -246,18 +261,22 @@ export default function PostForm() {
             floorNumber: chungcuData.floorNumber,
             unitCode: chungcuData.unitCode,
           },
-          area: chungcuData.area,
-          price: chungcuData.price,
-          deposit: chungcuData.deposit,
-          furniture: chungcuData.furniture,
-          bedrooms: chungcuData.bedrooms,
-          bathrooms: chungcuData.bathrooms,
-          direction: chungcuData.direction,
+          basicInfo: {
+            area: chungcuData.area,
+            price: chungcuData.price,
+            deposit: chungcuData.deposit,
+            furniture: chungcuData.furniture,
+            bedrooms: chungcuData.bedrooms,
+            bathrooms: chungcuData.bathrooms,
+            direction: chungcuData.direction,
+            legalStatus: chungcuData.legalStatus,
+          },
           propertyType: chungcuData.propertyType,
-          legalStatus: chungcuData.legalStatus,
         };
       } else if (category === "nha-nguyen-can") {
-        if (!nncData.addr) throw new Error("Vui lòng chọn địa chỉ");
+        if (!nncData.addr || !nncData.addr.ward || !nncData.addr.city || !nncData.addr.provinceCode) {
+          throw new Error("Vui lòng chọn địa chỉ đầy đủ");
+        }
         payload = {
           ...basePayload,
           title: nncData.title,
@@ -274,13 +293,16 @@ export default function PostForm() {
           usableArea: nncData.usableArea,
           width: nncData.width,
           length: nncData.length,
-          price: nncData.price,
-          deposit: nncData.deposit,
-          furniture: nncData.furniture,
-          bedrooms: nncData.bedrooms,
-          bathrooms: nncData.bathrooms,
-          direction: nncData.direction,
-          legalStatus: nncData.legalStatus,
+          basicInfo: {
+            area: nncData.usableArea || nncData.landArea,
+            price: nncData.price,
+            deposit: nncData.deposit,
+            furniture: nncData.furniture,
+            bedrooms: nncData.bedrooms,
+            bathrooms: nncData.bathrooms,
+            direction: nncData.direction,
+            legalStatus: nncData.legalStatus,
+          },
         };
       }
 
@@ -377,6 +399,8 @@ export default function PostForm() {
               max={12}
               value={images}
               onChange={setImages}
+              coverLocalId={coverImageId || undefined}
+              onSetCoverLocal={setCoverImageId}
               guideTitle="Hình ảnh hợp lệ – Yêu cầu"
               guideItems={[
                 "Tối thiểu 3 ảnh, tối đa 12 ảnh.",
