@@ -10,6 +10,39 @@ export type Address = {
   wardName: string;
   additionalInfo?: string;
 };
+
+// Utilities common
+export type UtilitiesBase = {
+  electricityPricePerKwh?: number; // đ/kWh
+  waterBillingType?: "per_m3" | "per_person"; // kiểu tính nước
+  waterPrice?: number; // đ/m³ hoặc đ/người
+  internetFee?: number; // đ/tháng
+  garbageFee?: number; // đ/tháng
+  cleaningFee?: number; // đ/tháng
+  includedInRent?: {
+    electricity?: boolean;
+    water?: boolean;
+    internet?: boolean;
+    garbage?: boolean;
+    cleaning?: boolean;
+    management?: boolean; // cho CC/NNC
+  };
+};
+
+export type CondoHouseExtraUtilities = {
+  managementFee?: number; // phí QL
+  managementFeeUnit?: "per_month" | "per_m2_per_month";
+  parkingCarFee?: number;
+};
+
+export type HouseOnlyUtilities = {
+  gardeningFee?: number;
+};
+
+export type PhongTroUtilities = UtilitiesBase;
+export type ChungCuUtilities = UtilitiesBase & CondoHouseExtraUtilities;
+export type NhaNguyenCanUtilities = UtilitiesBase & CondoHouseExtraUtilities & HouseOnlyUtilities;
+
 export type PhongTroData = {
   addr: Address | null;
   furniture: "" | "full" | "co-ban" | "trong";
@@ -18,6 +51,7 @@ export type PhongTroData = {
   deposit: number;
   title: string;
   desc: string;
+  utilities?: PhongTroUtilities;
 };
 
 export type ChungCuData = {
@@ -37,6 +71,7 @@ export type ChungCuData = {
   deposit: number;
   title: string;
   desc: string;
+  utilities?: ChungCuUtilities;
 };
 
 export type NhaNguyenCanData = {
@@ -59,4 +94,5 @@ export type NhaNguyenCanData = {
   title: string;
   desc: string;
   features: string[];
+  utilities?: NhaNguyenCanUtilities;
 };

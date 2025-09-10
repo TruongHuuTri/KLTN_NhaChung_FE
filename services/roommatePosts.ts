@@ -12,12 +12,22 @@ export interface RoommatePost {
   video?: string; // Video giới thiệu bản thân
   currentRoom: {
     address: Address;
-    price: number;
+    price: number; // bắt buộc theo API Guide
     area: number;
     description: string;
     roomType?: 'single' | 'double' | 'shared';
     currentOccupants?: number;
     remainingDuration?: '1-3 months' | '3-6 months' | '6-12 months' | 'over_1_year';
+    // Utilities for roommate posts (optional)
+    shareMethod?: 'split_evenly' | 'by_usage';
+    estimatedMonthlyUtilities?: number;
+    capIncludedAmount?: number;
+    electricityPricePerKwh?: number;
+    waterPrice?: number;
+    waterBillingType?: 'per_m3' | 'per_person';
+    internetFee?: number;
+    garbageFee?: number;
+    cleaningFee?: number;
   };
   personalInfo: {
     fullName: string;

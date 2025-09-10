@@ -79,6 +79,11 @@ export default function ChungCuEditForm({ formData, onInputChange, onNumberChang
     ? addressService.formatAddressForDisplay(formData.address)
     : "";
 
+  const patchUtilities = (partial: any) => {
+    const next = { ...(formData.utilities || {}), ...partial };
+    onInputChange('utilities', next);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -259,6 +264,83 @@ export default function ChungCuEditForm({ formData, onInputChange, onNumberChang
               <label className="block text-sm font-medium text-gray-700 mb-1">Tiền cọc</label>
               <input type="number" value={formData.deposit || ''} onChange={(e) => onNumberChange('deposit', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* CHI PHÍ & DỊCH VỤ */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Chi phí & Dịch vụ</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Điện & Internet */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá điện (đ/kWh)</label>
+            <input type="number" min="0" value={formData.utilities?.electricityPricePerKwh || ''}
+              onChange={(e)=>patchUtilities({ electricityPricePerKwh: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Internet (đ/tháng)</label>
+            <input type="number" min="0" value={formData.utilities?.internetFee || ''}
+              onChange={(e)=>patchUtilities({ internetFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+
+          {/* Nước: giá + cách tính */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá nước</label>
+            <input type="number" min="0" value={formData.utilities?.waterPrice || ''}
+              onChange={(e)=>patchUtilities({ waterPrice: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Cách tính nước</label>
+            <select value={formData.utilities?.waterBillingType || ''}
+              onChange={(e)=>patchUtilities({ waterBillingType: e.target.value })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <option value="">-- Chọn --</option>
+              <option value="per_m3">Theo m³</option>
+              <option value="per_person">Theo đầu người</option>
+            </select>
+          </div>
+
+          {/* Phí quản lý & đơn vị */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Phí quản lý</label>
+            <input type="number" min="0" value={formData.utilities?.managementFee || ''}
+              onChange={(e)=>patchUtilities({ managementFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Đơn vị phí quản lý</label>
+            <select value={formData.utilities?.managementFeeUnit || ''}
+              onChange={(e)=>patchUtilities({ managementFeeUnit: e.target.value })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <option value="">-- Chọn --</option>
+              <option value="per_month">đ/tháng</option>
+              <option value="per_m2_per_month">đ/m²/tháng</option>
+            </select>
+          </div>
+
+          {/* Bãi xe ô tô */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Bãi xe ô tô (đ/tháng)</label>
+            <input type="number" min="0" value={formData.utilities?.parkingCarFee || ''}
+              onChange={(e)=>patchUtilities({ parkingCarFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          {/* Rác & Vệ sinh */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Phí rác (đ/tháng)</label>
+            <input type="number" min="0" value={formData.utilities?.garbageFee || ''}
+              onChange={(e)=>patchUtilities({ garbageFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Phí vệ sinh (đ/tháng)</label>
+            <input type="number" min="0" value={formData.utilities?.cleaningFee || ''}
+              onChange={(e)=>patchUtilities({ cleaningFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
           </div>
         </div>
       </div>

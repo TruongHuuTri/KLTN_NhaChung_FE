@@ -299,6 +299,58 @@ export default function PhongTroForm({
         <div className="text-xs text-gray-500 mt-1">{descCount}</div>
       </div>
 
+      {/* Chi phí & Dịch vụ */}
+      <div>
+        <h3 className="text-[20px] font-semibold mb-3">Chi phí & Dịch vụ</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Hàng 1: Điện & Internet */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá điện (đ/kWh)</label>
+            <input type="number" min="0" value={data.utilities?.electricityPricePerKwh || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), electricityPricePerKwh: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Internet (đ/tháng)</label>
+            <input type="number" min="0" value={data.utilities?.internetFee || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), internetFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+
+          {/* Hàng 2: Giá nước & Cách tính nước */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá nước</label>
+            <input type="number" min="0" value={data.utilities?.waterPrice || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), waterPrice: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Cách tính nước</label>
+            <select value={data.utilities?.waterBillingType || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), waterBillingType: e.target.value as any })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500">
+              <option value="">-- Chọn --</option>
+              <option value="per_m3">Theo m³</option>
+              <option value="per_person">Theo đầu người</option>
+            </select>
+          </div>
+
+          {/* Hàng 3: Rác & Vệ sinh */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Rác (đ/tháng)</label>
+            <input type="number" min="0" value={data.utilities?.garbageFee || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), garbageFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Vệ sinh (đ/tháng)</label>
+            <input type="number" min="0" value={data.utilities?.cleaningFee || ''}
+              onChange={(e)=>patch('utilities')({ ...(data.utilities||{}), cleaningFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500" />
+          </div>
+        </div>
+      </div>
+
       {/* Modal địa chỉ */}
       <AddressModal
         open={addrOpen}

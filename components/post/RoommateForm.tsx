@@ -112,6 +112,16 @@ export default function RoommateForm() {
   const [roomType, setRoomType] = useState('');
   const [currentOccupants, setCurrentOccupants] = useState('');
   const [remainingDuration, setRemainingDuration] = useState('');
+  // Utilities (ở ghép)
+  const [shareMethod, setShareMethod] = useState('');
+  const [estimatedMonthlyUtilities, setEstimatedMonthlyUtilities] = useState('');
+  const [capIncludedAmount, setCapIncludedAmount] = useState('');
+  const [electricityPricePerKwh, setElectricityPricePerKwh] = useState('');
+  const [waterPrice, setWaterPrice] = useState('');
+  const [waterBillingType, setWaterBillingType] = useState('');
+  const [internetFee, setInternetFee] = useState('');
+  const [garbageFee, setGarbageFee] = useState('');
+  const [cleaningFee, setCleaningFee] = useState('');
   
   // Requirements
   const [ageRangeMin, setAgeRangeMin] = useState('');
@@ -196,12 +206,12 @@ export default function RoommateForm() {
       showToast('error', 'Vui lòng chọn địa chỉ phòng');
       return false;
     }
-    if (!roomPrice || Number(roomPrice) <= 0) {
-      showToast('error', 'Vui lòng nhập giá thuê phòng hợp lệ');
-      return false;
-    }
     if (!roomArea || Number(roomArea) <= 0) {
       showToast('error', 'Vui lòng nhập diện tích phòng hợp lệ');
+      return false;
+    }
+    if (!roomPrice || Number(roomPrice) <= 0) {
+      showToast('error', 'Vui lòng nhập giá thuê phòng hợp lệ');
       return false;
     }
     if (!roomDescription.trim()) {
@@ -274,7 +284,16 @@ export default function RoommateForm() {
           description: roomDescription.trim(),
           roomType: (roomType as 'single' | 'double' | 'shared') || undefined,
           currentOccupants: currentOccupants ? Number(currentOccupants) : undefined,
-          remainingDuration: (remainingDuration as '1-3 months' | '3-6 months' | '6-12 months' | 'over_1_year') || undefined
+          remainingDuration: (remainingDuration as '1-3 months' | '3-6 months' | '6-12 months' | 'over_1_year') || undefined,
+          shareMethod: (shareMethod as 'split_evenly' | 'by_usage') || undefined,
+          estimatedMonthlyUtilities: estimatedMonthlyUtilities ? Number(estimatedMonthlyUtilities) : undefined,
+          capIncludedAmount: capIncludedAmount ? Number(capIncludedAmount) : undefined,
+          electricityPricePerKwh: electricityPricePerKwh ? Number(electricityPricePerKwh) : undefined,
+          waterPrice: waterPrice ? Number(waterPrice) : undefined,
+          waterBillingType: (waterBillingType as 'per_m3' | 'per_person') || undefined,
+          internetFee: internetFee ? Number(internetFee) : undefined,
+          garbageFee: garbageFee ? Number(garbageFee) : undefined,
+          cleaningFee: cleaningFee ? Number(cleaningFee) : undefined,
         },
         personalInfo: {
           fullName: fullName.trim(),
@@ -453,6 +472,7 @@ export default function RoommateForm() {
             </button>
           </div>
           
+          {/* Thời gian ở còn lại */}
           <div className="grid md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Giá thuê phòng (VNĐ/tháng) *</label>
@@ -480,6 +500,58 @@ export default function RoommateForm() {
                 <option value="2+ years">Trên 2 năm</option>
                 <option value="indefinite">Không xác định</option>
               </select>
+            </div>
+          </div>
+
+          {/* Chi phí & Dịch vụ phòng ở ghép */}
+          <div className="grid md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cách chia tiền điện nước</label>
+              <select value={shareMethod} onChange={(e)=>setShareMethod(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">-- Chọn --</option>
+                <option value="split_evenly">Chia đều</option>
+                <option value="by_usage">Theo sử dụng</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Ước tính chi phí/tháng (VNĐ)</label>
+              <input type="number" value={estimatedMonthlyUtilities} onChange={(e)=>setEstimatedMonthlyUtilities(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Mức bao gồm tối đa (VNĐ)</label>
+              <input type="number" value={capIncludedAmount} onChange={(e)=>setCapIncludedAmount(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Giá điện (đ/kWh)</label>
+              <input type="number" value={electricityPricePerKwh} onChange={(e)=>setElectricityPricePerKwh(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Giá nước</label>
+              <input type="number" value={waterPrice} onChange={(e)=>setWaterPrice(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cách tính nước</label>
+              <select value={waterBillingType} onChange={(e)=>setWaterBillingType(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">-- Chọn --</option>
+                <option value="per_m3">Theo m³</option>
+                <option value="per_person">Theo đầu người</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid md:grid-cols-3 gap-4 mt-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Internet (đ/tháng)</label>
+              <input type="number" value={internetFee} onChange={(e)=>setInternetFee(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Rác (đ/tháng)</label>
+              <input type="number" value={garbageFee} onChange={(e)=>setGarbageFee(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Vệ sinh (đ/tháng)</label>
+              <input type="number" value={cleaningFee} onChange={(e)=>setCleaningFee(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
             </div>
           </div>
           

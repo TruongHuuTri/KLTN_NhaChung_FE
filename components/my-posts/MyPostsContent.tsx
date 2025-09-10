@@ -5,6 +5,7 @@ import Pagination from "../common/Pagination";
 import { RentPostApi } from "../../types/RentPostApi";
 import { RoommatePost } from "../../services/roommatePosts";
 import EditPostModal from "./EditPostModal";
+import { addressService } from "../../services/address";
 
 // Legacy interface để tương thích với mock data
 interface Post {
@@ -33,17 +34,23 @@ interface MyPostsContentProps {
 const normalizePost = (post: Post | RentPostApi | RoommatePost): Post => {
   if ('rentPostId' in post) {
     // Đây là RentPostApi từ backend
-    const api = post as RentPostApi;
+    const api = post as any;
+    const area = api.area ?? api.basicInfo?.area ?? 0;
+    const price = api.price ?? api.basicInfo?.price ?? 0;
+    const addrObj = api.address;
+    const address = addrObj
+      ? addressService.formatAddressForDisplay(addrObj)
+      : (api.city ? String(api.city) : "");
     return {
       id: api.rentPostId,
       title: api.title,
       category: api.category,
-      price: api.basicInfo.price,
-      area: api.basicInfo.area,
-      address: `${api.address.district}, ${api.address.city}`,
-      status: api.status as "active" | "pending" | "inactive",
-      views: 0, // Backend chưa có field views
-      createdAt: new Date(api.createdAt).toISOString().split('T')[0], // Format date
+      price,
+      area,
+      address,
+      status: (api.status as any) || "active",
+      views: 0,
+      createdAt: new Date(api.createdAt).toISOString().split('T')[0],
       images: api.images || [],
       postType: 'rent'
     };
@@ -51,18 +58,18 @@ const normalizePost = (post: Post | RentPostApi | RoommatePost): Post => {
     // Đây là RoommatePost từ backend
     const roommate = post as RoommatePost;
     const roommatePostId = (roommate as any).roommatePostId || roommate.postId;
+    const addr = roommate.currentRoom.address as any;
+    const address = typeof addr === 'string' ? addr : addressService.formatAddressForDisplay(addr);
     return {
       id: roommatePostId,
       title: roommate.title,
-      category: 'roommate', // Đánh dấu là roommate post
+      category: 'roommate',
       price: roommate.currentRoom.price,
       area: roommate.currentRoom.area,
-      address: typeof roommate.currentRoom.address === 'string' 
-        ? roommate.currentRoom.address 
-        : `${roommate.currentRoom.address.houseNumber ? roommate.currentRoom.address.houseNumber + ', ' : ''}${roommate.currentRoom.address.street}, ${roommate.currentRoom.address.ward}, ${roommate.currentRoom.address.district}, ${roommate.currentRoom.address.city}`.replace(/^,\s*/, ''),
-      status: "active", // Roommate posts default active
-      views: 0, // Backend chưa có field views  
-      createdAt: new Date(roommate.createdAt).toISOString().split('T')[0], // Format date
+      address,
+      status: "active",
+      views: 0,
+      createdAt: new Date(roommate.createdAt).toISOString().split('T')[0],
       images: roommate.images || [],
       postType: 'roommate'
     };
@@ -373,7 +380,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
           </div>
         ) : (
           paginatedPosts.map((post, index) => (
-            <div key={post.id} className="p-6 hover:bg-gray-50 transition-colors">
+            <div key={`${post.postType || post.category}-${post.id}-${index}`} className="p-6 hover:bg-gray-50 transition-colors">
               <div className="flex items-start gap-4">
                 {/* Image */}
                 <div className="flex-shrink-0">

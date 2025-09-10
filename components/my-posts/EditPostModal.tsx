@@ -100,72 +100,75 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'phong-tro':
           data = {
             ...data,
-            furniture: post.basicInfo?.furniture || '',
-            area: post.basicInfo?.area || 0,
-            price: post.basicInfo?.price || 0,
-            deposit: post.basicInfo?.deposit || 0,
+            furniture: (post.furniture ?? post.basicInfo?.furniture) || '',
+            area: (post.area ?? post.basicInfo?.area) || 0,
+            price: (post.price ?? post.basicInfo?.price) || 0,
+            deposit: (post.deposit ?? post.basicInfo?.deposit) || 0,
             address: post.address || null,
+            utilities: post.utilities || {},
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
             coverLocalId: '',
-            images: [], // Will be populated from existing images
+            images: [],
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
-            videos: []  // Will be populated from existing videos
+            videos: []
           };
           break;
 
         case 'chung-cu':
           data = {
             ...data,
-            buildingName: post.chungCuInfo?.buildingName || '',
-            blockOrTower: post.chungCuInfo?.blockOrTower || '',
-            floorNumber: post.chungCuInfo?.floorNumber || 0,
-            unitCode: post.chungCuInfo?.unitCode || '',
-            propertyType: post.chungCuInfo?.propertyType || '',
-            bedrooms: post.basicInfo?.bedrooms || 0,
-            bathrooms: post.basicInfo?.bathrooms || 0,
-            direction: post.basicInfo?.direction || '',
-            furniture: post.basicInfo?.furniture || '',
-            legalStatus: post.basicInfo?.legalStatus || '',
-            area: post.basicInfo?.area || 0,
-            price: post.basicInfo?.price || 0,
-            deposit: post.basicInfo?.deposit || 0,
+            buildingName: (post.buildingInfo?.buildingName ?? post.chungCuInfo?.buildingName) || '',
+            blockOrTower: (post.buildingInfo?.blockOrTower ?? post.chungCuInfo?.blockOrTower) || '',
+            floorNumber: (post.buildingInfo?.floorNumber ?? post.chungCuInfo?.floorNumber) || 0,
+            unitCode: (post.buildingInfo?.unitCode ?? post.chungCuInfo?.unitCode) || '',
+            propertyType: (post.propertyType ?? post.buildingInfo?.propertyType ?? post.chungCuInfo?.propertyType) || '',
+            bedrooms: (post.bedrooms ?? post.basicInfo?.bedrooms) || 0,
+            bathrooms: (post.bathrooms ?? post.basicInfo?.bathrooms) || 0,
+            direction: (post.direction ?? post.basicInfo?.direction) || '',
+            furniture: (post.furniture ?? post.basicInfo?.furniture) || '',
+            legalStatus: (post.legalStatus ?? post.basicInfo?.legalStatus) || '',
+            area: (post.area ?? post.basicInfo?.area) || 0,
+            price: (post.price ?? post.basicInfo?.price) || 0,
+            deposit: (post.deposit ?? post.basicInfo?.deposit) || 0,
             address: post.address || null,
+            utilities: post.utilities || {},
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
             coverLocalId: '',
-            images: [], // Will be populated from existing images
+            images: [],
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
-            videos: []  // Will be populated from existing videos
+            videos: []
           };
           break;
 
         case 'nha-nguyen-can':
           data = {
             ...data,
-            khuLo: post.nhaNguyenCanInfo?.khuLo || '',
-            unitCode: post.nhaNguyenCanInfo?.unitCode || '',
-            propertyType: post.nhaNguyenCanInfo?.propertyType || '',
-            bedrooms: post.basicInfo?.bedrooms || 0,
-            bathrooms: post.basicInfo?.bathrooms || 0,
-            direction: post.basicInfo?.direction || '',
-            totalFloors: post.nhaNguyenCanInfo?.totalFloors || 0,
-            furniture: post.basicInfo?.furniture || '',
-            legalStatus: post.basicInfo?.legalStatus || '',
-            landArea: post.nhaNguyenCanInfo?.landArea || 0,
-            usableArea: post.nhaNguyenCanInfo?.usableArea || 0,
-            width: post.nhaNguyenCanInfo?.width || 0,
-            length: post.nhaNguyenCanInfo?.length || 0,
-            price: post.basicInfo?.price || 0,
-            deposit: post.basicInfo?.deposit || 0,
-            features: Array.isArray(post.nhaNguyenCanInfo?.features) ? post.nhaNguyenCanInfo.features : [],
+            khuLo: (post.propertyInfo?.khuLo ?? post.nhaNguyenCanInfo?.khuLo) || '',
+            unitCode: (post.propertyInfo?.unitCode ?? post.nhaNguyenCanInfo?.unitCode) || '',
+            propertyType: (post.propertyInfo?.propertyType ?? post.nhaNguyenCanInfo?.propertyType) || '',
+            bedrooms: (post.bedrooms ?? post.basicInfo?.bedrooms) || 0,
+            bathrooms: (post.bathrooms ?? post.basicInfo?.bathrooms) || 0,
+            direction: (post.direction ?? post.basicInfo?.direction) || '',
+            totalFloors: (post.propertyInfo?.totalFloors ?? post.nhaNguyenCanInfo?.totalFloors) || 0,
+            furniture: (post.furniture ?? post.basicInfo?.furniture) || '',
+            legalStatus: (post.legalStatus ?? post.basicInfo?.legalStatus) || '',
+            landArea: (post.propertyInfo?.landArea ?? post.nhaNguyenCanInfo?.landArea) || 0,
+            usableArea: (post.propertyInfo?.usableArea ?? post.nhaNguyenCanInfo?.usableArea) || 0,
+            width: (post.propertyInfo?.width ?? post.nhaNguyenCanInfo?.width) || 0,
+            length: (post.propertyInfo?.length ?? post.nhaNguyenCanInfo?.length) || 0,
+            price: (post.price ?? post.basicInfo?.price) || 0,
+            deposit: (post.deposit ?? post.basicInfo?.deposit) || 0,
+            features: Array.isArray(post.propertyInfo?.features) ? post.propertyInfo.features : (Array.isArray(post.nhaNguyenCanInfo?.features) ? post.nhaNguyenCanInfo.features : []),
             address: post.address || null,
+            utilities: post.utilities || {},
             existingImages: Array.isArray(post.images) ? post.images : [],
             coverImageUrl: Array.isArray(post.images) && post.images.length ? post.images[0] : '',
             coverLocalId: '',
-            images: [], // Will be populated from existing images
+            images: [],
             existingVideos: Array.isArray(post.videos) ? post.videos : [],
-            videos: []  // Will be populated from existing videos
+            videos: []
           };
           break;
 
@@ -371,13 +374,12 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'phong-tro':
           payload = {
             ...payload,
-            basicInfo: {
-              area: formData.area,
-              price: formData.price,
-              deposit: formData.deposit,
-              furniture: formData.furniture
-            },
+            area: formData.area,
+            price: formData.price,
+            deposit: formData.deposit,
+            furniture: formData.furniture,
             address: formData.address,
+            utilities: formData.utilities,
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
@@ -386,24 +388,24 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'chung-cu':
           payload = {
             ...payload,
-            basicInfo: {
-              area: formData.area,
-              price: formData.price,
-              deposit: formData.deposit,
-              furniture: formData.furniture,
-              bedrooms: formData.bedrooms,
-              bathrooms: formData.bathrooms,
-              direction: formData.direction,
-              legalStatus: formData.legalStatus
-            },
-            chungCuInfo: {
+            // Trường cơ bản ở ROOT
+            area: formData.area,
+            price: formData.price,
+            deposit: formData.deposit,
+            furniture: formData.furniture,
+            bedrooms: formData.bedrooms,
+            bathrooms: formData.bathrooms,
+            direction: formData.direction,
+            legalStatus: formData.legalStatus,
+            propertyType: formData.propertyType,
+            buildingInfo: {
               buildingName: formData.buildingName,
               blockOrTower: formData.blockOrTower,
               floorNumber: formData.floorNumber,
-              unitCode: formData.unitCode,
-              propertyType: formData.propertyType
+              unitCode: formData.unitCode
             },
             address: formData.address,
+            utilities: formData.utilities,
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };
@@ -412,20 +414,19 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
         case 'nha-nguyen-can':
           payload = {
             ...payload,
-            basicInfo: {
-              area: (formData.area || formData.usableArea || formData.landArea || 0),
-              price: formData.price,
-              deposit: formData.deposit,
-              furniture: formData.furniture,
-              bedrooms: formData.bedrooms,
-              bathrooms: formData.bathrooms,
-              direction: formData.direction,
-              legalStatus: formData.legalStatus
-            },
-            nhaNguyenCanInfo: {
+            // Trường cơ bản ở ROOT
+            area: (formData.area || formData.usableArea || formData.landArea || 0),
+            price: formData.price,
+            deposit: formData.deposit,
+            furniture: formData.furniture,
+            bedrooms: formData.bedrooms,
+            bathrooms: formData.bathrooms,
+            direction: formData.direction,
+            legalStatus: formData.legalStatus,
+            propertyType: formData.propertyType,
+            propertyInfo: {
               khuLo: formData.khuLo,
               unitCode: formData.unitCode,
-              propertyType: formData.propertyType,
               totalFloors: formData.totalFloors,
               landArea: formData.landArea,
               usableArea: formData.usableArea,
@@ -434,6 +435,7 @@ export default function EditPostModal({ isOpen, onClose, post, onSuccess }: Edit
               features: formData.features
             },
             address: formData.address,
+            utilities: formData.utilities,
             images: imageUrls,
             videos: allVideoUrls.length > 0 ? allVideoUrls : []
           };

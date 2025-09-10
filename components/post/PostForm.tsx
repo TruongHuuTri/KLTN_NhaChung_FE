@@ -245,6 +245,7 @@ export default function PostForm() {
           price: phongtroData.price,
           deposit: phongtroData.deposit,
           furniture: phongtroData.furniture,
+          utilities: phongtroData.utilities,
         };
       } else if (category === "chung-cu") {
         if (!chungcuData.addr || !chungcuData.addr.ward || !chungcuData.addr.city || !chungcuData.addr.provinceCode) {
@@ -261,17 +262,17 @@ export default function PostForm() {
             floorNumber: chungcuData.floorNumber,
             unitCode: chungcuData.unitCode,
           },
-          basicInfo: {
-            area: chungcuData.area,
-            price: chungcuData.price,
-            deposit: chungcuData.deposit,
-            furniture: chungcuData.furniture,
-            bedrooms: chungcuData.bedrooms,
-            bathrooms: chungcuData.bathrooms,
-            direction: chungcuData.direction,
-            legalStatus: chungcuData.legalStatus,
-          },
+          // ĐƯA CÁC TRƯỜNG CƠ BẢN RA ROOT THEO API GUIDE
+          area: chungcuData.area,
+          price: chungcuData.price,
+          deposit: chungcuData.deposit,
+          furniture: chungcuData.furniture,
+          bedrooms: chungcuData.bedrooms,
+          bathrooms: chungcuData.bathrooms,
+          direction: chungcuData.direction,
+          legalStatus: chungcuData.legalStatus,
           propertyType: chungcuData.propertyType,
+          utilities: chungcuData.utilities,
         };
       } else if (category === "nha-nguyen-can") {
         if (!nncData.addr || !nncData.addr.ward || !nncData.addr.city || !nncData.addr.provinceCode) {
@@ -293,16 +294,16 @@ export default function PostForm() {
           usableArea: nncData.usableArea,
           width: nncData.width,
           length: nncData.length,
-          basicInfo: {
-            area: nncData.usableArea || nncData.landArea,
-            price: nncData.price,
-            deposit: nncData.deposit,
-            furniture: nncData.furniture,
-            bedrooms: nncData.bedrooms,
-            bathrooms: nncData.bathrooms,
-            direction: nncData.direction,
-            legalStatus: nncData.legalStatus,
-          },
+          // ĐƯA CÁC TRƯỜNG CƠ BẢN RA ROOT THEO API GUIDE
+          area: nncData.usableArea || nncData.landArea,
+          price: nncData.price,
+          deposit: nncData.deposit,
+          furniture: nncData.furniture,
+          bedrooms: nncData.bedrooms,
+          bathrooms: nncData.bathrooms,
+          direction: nncData.direction,
+          legalStatus: nncData.legalStatus,
+          utilities: nncData.utilities,
         };
       }
 

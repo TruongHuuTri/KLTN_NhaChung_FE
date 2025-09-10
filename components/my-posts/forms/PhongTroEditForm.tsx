@@ -80,6 +80,12 @@ export default function PhongTroEditForm({ formData, onInputChange, onNumberChan
     ? addressService.formatAddressForDisplay(formData.address)
     : "";
 
+  // Helper cập nhật utilities
+  const patchUtilities = (partial: any) => {
+    const next = { ...(formData.utilities || {}), ...partial };
+    onInputChange('utilities', next);
+  };
+
   return (
     <div className="space-y-6">
       {/* Hình ảnh và video */}
@@ -288,6 +294,80 @@ export default function PhongTroEditForm({ formData, onInputChange, onNumberChan
                 <option value="full">Đầy đủ</option>
               </select>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Chi phí & Dịch vụ */}
+      <div>
+        <h3 className="text-lg font-medium text-gray-900 mb-4">Chi phí & Dịch vụ</h3>
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* Điện & Internet */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá điện (đ/kWh)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.utilities?.electricityPricePerKwh || ''}
+              onChange={(e)=>patchUtilities({ electricityPricePerKwh: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Internet (đ/tháng)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.utilities?.internetFee || ''}
+              onChange={(e)=>patchUtilities({ internetFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
+
+          {/* Nước: giá & cách tính */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Giá nước</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.utilities?.waterPrice || ''}
+              onChange={(e)=>patchUtilities({ waterPrice: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Cách tính nước</label>
+            <select
+              value={formData.utilities?.waterBillingType || ''}
+              onChange={(e)=>patchUtilities({ waterBillingType: e.target.value })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            >
+              <option value="">-- Chọn --</option>
+              <option value="per_m3">Theo m³</option>
+              <option value="per_person">Theo đầu người</option>
+            </select>
+          </div>
+
+          {/* Rác & Vệ sinh */}
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Rác (đ/tháng)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.utilities?.garbageFee || ''}
+              onChange={(e)=>patchUtilities({ garbageFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-gray-700 mb-1">Vệ sinh (đ/tháng)</label>
+            <input
+              type="number"
+              min="0"
+              value={formData.utilities?.cleaningFee || ''}
+              onChange={(e)=>patchUtilities({ cleaningFee: Number(e.target.value)||0 })}
+              className="w-full h-10 px-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+            />
           </div>
         </div>
       </div>
