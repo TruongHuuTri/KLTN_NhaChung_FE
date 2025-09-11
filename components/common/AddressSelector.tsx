@@ -7,9 +7,24 @@ interface AddressSelectorProps {
   value: Address | null;
   onChange: (address: Address | null) => void;
   className?: string;
+  // Cho phép ẩn bớt các phần để dùng ở survey: chỉ cần Tỉnh/Thành + Phường
+  fields?: {
+    street?: boolean;
+    specificAddress?: boolean;
+    additionalInfo?: boolean;
+    preview?: boolean;
+    province?: boolean;
+    ward?: boolean;
+  };
 }
 
-export default function AddressSelector({ value, onChange, className = "" }: AddressSelectorProps) {
+export default function AddressSelector({ value, onChange, className = "", fields }: AddressSelectorProps) {
+  const showStreet = fields?.street ?? true;
+  const showSpecific = fields?.specificAddress ?? true;
+  const showAdditional = fields?.additionalInfo ?? true;
+  const showPreview = fields?.preview ?? true;
+  const showProvince = fields?.province ?? true;
+  const showWard = fields?.ward ?? true;
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
   const [loading, setLoading] = useState(false);
@@ -205,6 +220,7 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
   return (
     <div className={`space-y-4 address-selector ${className}`}>
       {/* Province Selection */}
+      {showProvince && (
       <div className="relative">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Tỉnh/Thành phố <span className="text-red-500">*</span>
@@ -240,8 +256,10 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
           </div>
         )}
       </div>
+      )}
 
       {/* Ward Selection */}
+      {showWard && (
       <div className="relative">
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Phường/Xã <span className="text-red-500">*</span>
@@ -277,8 +295,10 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
           </div>
         )}
       </div>
+      )}
 
       {/* Street */}
+      {showStreet && (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Tên đường
@@ -291,8 +311,10 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
         />
       </div>
+      )}
 
       {/* Specific Address */}
+      {showSpecific && (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Địa chỉ cụ thể
@@ -316,8 +338,10 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
           </label>
         </div>
       </div>
+      )}
 
       {/* Additional Info */}
+      {showAdditional && (
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Thông tin bổ sung
@@ -330,9 +354,10 @@ export default function AddressSelector({ value, onChange, className = "" }: Add
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent"
         />
       </div>
+      )}
 
       {/* Preview */}
-      {value && (
+      {showPreview && value && (
         <div className="p-3 bg-gray-50 rounded-md">
           <p className="text-sm text-gray-600">
             <strong>Địa chỉ:</strong> {addressService.formatAddressForDisplay(value)}

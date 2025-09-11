@@ -93,3 +93,24 @@ export const apiPut = <T = any>(p: string, body?: any, o?: RequestInit) =>
 
 export const apiDel = <T = any>(p: string, o?: RequestInit) =>
   api<T>(p, { ...o, method: "DELETE" });
+
+export const apiPatch = <T = any>(p: string, body?: any, o?: RequestInit) =>
+  api<T>(p, {
+    ...o,
+    method: "PATCH",
+    body: body instanceof FormData ? body : JSON.stringify(body),
+  });
+
+// Helper: trích xuất thông báo lỗi thân thiện từ ApiError/Fetch error
+export function extractApiErrorMessage(err: any): string {
+  if (!err) return "Đã xảy ra lỗi không xác định";
+  // ApiError từ api.ts
+  if (typeof err === "object" && "status" in err && (err as any).status) {
+    const body = (err as any).body;
+    const msg = Array.isArray(body?.message) ? body.message.join("; ") : (body?.message ?? String(err.message ?? err.statusText ?? "Lỗi API"));
+    return msg;
+  }
+  // Lỗi mạng
+  if (String(err?.message || "").includes("Failed to fetch")) return "Không thể kết nối máy chủ. Kiểm tra API URL hoặc mạng.";
+  return String(err?.message || err);
+}

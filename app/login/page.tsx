@@ -131,6 +131,15 @@ export default function LoginPage() {
             </button>
           </div>
         </form>
+        <div className="text-center">
+          <button
+            type="button"
+            onClick={() => router.push("/register")}
+            className="mt-4 text-teal-600 hover:text-teal-700 hover:underline"
+          >
+            Chưa có tài khoản? Đăng ký
+          </button>
+        </div>
       </div>
     </div>
   );
