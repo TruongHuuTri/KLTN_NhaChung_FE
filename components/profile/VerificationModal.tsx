@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { submitVerification } from "../../services/verification";
-import { VerificationData } from "../../types/User";
-// import { X, Upload, CheckCircle, AlertCircle } from 'lucide-react';
+import { VerificationData, FaceMatchResult } from "../../types/User";
+import { compareFaces, getStatusMessage, validateFaceMatchResult } from "../../services/faceMatch";
+import { processOCRWithFPT } from "../../services/ocr";
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -11,133 +12,34 @@ interface VerificationModalProps {
   onVerify: (data: VerificationData) => void;
 }
 
-// Remove local interface since we import from types/User.ts
-
-// Real OCR processing using FPT.AI Reader API
-const processOCRWithFPT = async (frontImage: string, backImage: string) => {
-  try {
-    // Convert image URLs to base64
-    const frontBase64 = await convertImageToBase64(frontImage);
-    const backBase64 = await convertImageToBase64(backImage);
-    
-    // Call FPT.AI Reader API for front image
-    const frontFormData = new FormData();
-    frontFormData.append('image', await base64ToBlob(frontBase64), 'front.jpg');
-    
-    const frontResponse = await fetch('https://api.fpt.ai/vision/idr/vnm', {
-      method: 'POST',
-      headers: {
-        'api-key': process.env.NEXT_PUBLIC_FPT_AI_API_KEY || 'FpwWCzDI8aMcEoLLAuZVeqwvLguAeNCB',
-      },
-      body: frontFormData
-    });
-    
-    const frontData = await frontResponse.json();
-    
-    // Call FPT.AI Reader API for back image
-    const backFormData = new FormData();
-    backFormData.append('image', await base64ToBlob(backBase64), 'back.jpg');
-    
-    const backResponse = await fetch('https://api.fpt.ai/vision/idr/vnm', {
-      method: 'POST',
-      headers: {
-        'api-key': process.env.NEXT_PUBLIC_FPT_AI_API_KEY || 'FpwWCzDI8aMcEoLLAuZVeqwvLguAeNCB',
-      },
-      body: backFormData
-    });
-    
-    const backData = await backResponse.json();
-    
-    // Extract and combine data from both images
-    return extractDataFromFPTResponse(frontData, backData);
-    
-  } catch (error) {
-    // OCR processing failed
-    throw error; // Re-throw error instead of using mock data
-  }
-};
-
-// Convert image URL to base64
-const convertImageToBase64 = async (imageUrl: string): Promise<string> => {
-  const response = await fetch(imageUrl);
-  const blob = await response.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const base64 = reader.result as string;
-      resolve(base64.split(',')[1]); // Remove data:image/jpeg;base64, prefix
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
-};
-
-// Convert base64 to Blob for FormData
-const base64ToBlob = async (base64: string): Promise<Blob> => {
-  const response = await fetch(`data:image/jpeg;base64,${base64}`);
-  return response.blob();
-};
-
-// Extract data from FPT.AI response
-const extractDataFromFPTResponse = (frontData: any, backData: any) => {
-  // Preview OCR data in UI if needed
-  
-  // FPT.AI response structure based on the API documentation
-  const frontInfo = frontData.data?.[0] || {};
-  const backInfo = backData.data?.[0] || {};
-  
-  return {
-    idNumber: frontInfo.Số || frontInfo.id || '',
-    fullName: frontInfo.Tên || frontInfo.name || '',
-    dateOfBirth: formatDate(frontInfo['Ngày sinh'] || frontInfo.dob) || '',
-    issueDate: formatDate(backInfo['Ngày cấp'] || backInfo.issue_date) || '',
-    issuePlace: backInfo['Nơi cấp'] || backInfo.issue_place || '',
-    gender: (frontInfo['Giới tính'] === 'Nam' || frontInfo.sex === 'Nam' ? 'male' : 'female') as 'male' | 'female'
-  };
-};
-
-// Format date from various formats to YYYY-MM-DD
-const formatDate = (dateStr: string): string => {
-  if (!dateStr) return '';
-  
-  // Handle Vietnamese date format: DD/MM/YYYY
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      const day = parts[0].padStart(2, '0');
-      const month = parts[1].padStart(2, '0');
-      const year = parts[2];
-      return `${year}-${month}-${day}`;
-    }
-  }
-  
-  // Handle other date formats
-  const date = new Date(dateStr);
-  if (isNaN(date.getTime())) return '';
-  
-  return date.toISOString().split('T')[0];
-};
 
 
 export default function VerificationModal({ isOpen, onClose, onVerify }: VerificationModalProps) {
-  const [step, setStep] = useState<'upload' | 'review' | 'success'>('upload');
+  const [step, setStep] = useState<'upload' | 'face' | 'review' | 'success'>('upload');
   const [formData, setFormData] = useState<Partial<VerificationData>>({});
   const [frontImage, setFrontImage] = useState<string>('');
   const [backImage, setBackImage] = useState<string>('');
+  const [faceImage, setFaceImage] = useState<string>('');
+  const [faceMatchResult, setFaceMatchResult] = useState<FaceMatchResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isFaceMatching, setIsFaceMatching] = useState(false);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back') => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back' | 'face') => {
     const file = e.target.files?.[0];
-    // Uploading file
-    if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      if (type === 'front') {
+    if (!file) return;
+
+    const imageUrl = URL.createObjectURL(file);
+    
+    switch (type) {
+      case 'front':
         setFrontImage(imageUrl);
-        // Set front image
-      } else {
+        break;
+      case 'back':
         setBackImage(imageUrl);
-        // Set back image
-      }
+        break;
+      case 'face':
+        setFaceImage(imageUrl);
+        break;
     }
   };
 
@@ -148,8 +50,32 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
     }));
   };
 
+  const handleFaceMatch = async () => {
+    if (!frontImage || !faceImage) {
+      alert('⚠️ Vui lòng tải lên đầy đủ ảnh CCCD và ảnh khuôn mặt');
+      return;
+    }
+
+    setIsFaceMatching(true);
+    try {
+      const result = await compareFaces(frontImage, faceImage);
+      setFaceMatchResult(result);
+      
+      const statusMessage = getStatusMessage(result);
+      const message = result.similarity >= 50 
+        ? `✅ ${statusMessage}\n\nBạn sẽ được tự động xác thực!`
+        : `⚠️ ${statusMessage}\n\nHồ sơ của bạn sẽ được admin xem xét.`;
+      
+      alert(message);
+      setStep('review');
+    } catch (error: any) {
+      alert('❌ Lỗi khi so sánh khuôn mặt: ' + error.message);
+    } finally {
+      setIsFaceMatching(false);
+    }
+  };
+
   const handleSubmit = async () => {
-    // Chuẩn hóa dữ liệu và gán giá trị mặc định cho nơi cấp nếu chưa nhập
     const normalized: VerificationData | null = (() => {
       const idNumber = (formData.idNumber || '').trim();
       const fullName = (formData.fullName || '').trim();
@@ -157,35 +83,50 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
       const issueDate = (formData.issueDate || '').trim();
       const issuePlace = (formData.issuePlace || 'Cục cảnh sát quản lý hành chính về trật tự xã hội').trim();
       const gender = formData.gender as 'male' | 'female' | undefined;
-      if (!idNumber || !fullName || !dateOfBirth || !issueDate || !issuePlace || !gender) return null;
-      return { idNumber, fullName, dateOfBirth, issueDate, issuePlace, gender };
+      
+      if (!idNumber || !fullName || !dateOfBirth || !issueDate || !issuePlace || !gender) {
+        return null;
+      }
+      
+      return { 
+        idNumber, 
+        fullName, 
+        dateOfBirth, 
+        issueDate, 
+        issuePlace, 
+        gender,
+        faceMatchResult: faceMatchResult || undefined
+      };
     })();
 
-    if (normalized) {
-      
-      try {
-        // Gọi API thật từ Backend
-        const response = await submitVerification(normalized as VerificationData);
-        // Success
-        
-        // Thông báo cho parent component
-        onVerify(normalized as VerificationData);
-        
-        setStep('success');
-        setTimeout(() => {
-          onClose();
-          setStep('upload');
-          setFormData({});
-          setFrontImage('');
-          setBackImage('');
-        }, 2000);
-        
-      } catch (error: any) {
-        // Failed to submit verification
-        alert('❌ Gửi yêu cầu xác thực thất bại: ' + (error.message || 'Vui lòng thử lại'));
-      }
-    } else {
+    if (!normalized) {
       alert('⚠️ Vui lòng điền đầy đủ thông tin bắt buộc');
+      return;
+    }
+
+    try {
+      const response = await submitVerification(normalized);
+      
+      const message = response.verification.status === 'approved'
+        ? '✅ Hồ sơ đã được xác thực thành công!\n\nBạn đã được tự động xác thực nhờ AI so sánh khuôn mặt.'
+        : '✅ Gửi yêu cầu xác thực thành công!\n\nHồ sơ của bạn đang chờ admin xem xét.';
+      
+      alert(message);
+      onVerify(normalized);
+      
+      setStep('success');
+      setTimeout(() => {
+        onClose();
+        setStep('upload');
+        setFormData({});
+        setFrontImage('');
+        setBackImage('');
+        setFaceImage('');
+        setFaceMatchResult(null);
+      }, 2000);
+      
+    } catch (error: any) {
+      alert('❌ Gửi yêu cầu xác thực thất bại: ' + (error.message || 'Vui lòng thử lại'));
     }
   };
 
@@ -359,7 +300,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
                           frontImage: frontImage,
                           backImage: backImage
                         }));
-                        setStep('review');
+                        setStep('face'); // Chuyển sang step upload ảnh khuôn mặt
                       } catch (error) {
                         // OCR processing failed
                         // Show error message to user
@@ -374,6 +315,119 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
                   </button>
                 </div>
               )}
+            </div>
+          )}
+
+          {step === 'face' && (
+            <div className="space-y-6">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <span className="text-blue-600 text-2xl">📷</span>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Tải lên ảnh khuôn mặt
+                </h3>
+                <p className="text-gray-600 mb-4">
+                  Vui lòng tải lên ảnh khuôn mặt của bạn để so sánh với ảnh trên CCCD/CMND
+                </p>
+                
+                <div className="space-y-3 mb-4">
+                  <div className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <span className="text-blue-600">ℹ</span>
+                    <span className="text-sm text-blue-700 font-medium">
+                      Ảnh khuôn mặt sẽ được AI so sánh để xác thực danh tính
+                    </span>
+                  </div>
+                  
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p className="font-medium">📸 Hướng dẫn chụp ảnh tốt nhất:</p>
+                    <ul className="list-disc list-inside space-y-1 text-xs text-gray-500 ml-2">
+                      <li>Chụp thẳng mặt, nhìn vào camera</li>
+                      <li>Đảm bảo ánh sáng đủ, rõ nét</li>
+                      <li>Không đeo kính râm, khẩu trang</li>
+                      <li>Khuôn mặt chiếm 70-80% khung hình</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="max-w-lg mx-auto">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ảnh khuôn mặt của bạn
+                </label>
+                <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-blue-400 transition-colors">
+                  {faceImage ? (
+                    <div className="space-y-2">
+                      <div className="relative w-full h-64 bg-gray-50 rounded-lg overflow-hidden">
+                        <img
+                          src={faceImage}
+                          alt="Ảnh khuôn mặt"
+                          className="w-full h-full object-contain rounded-lg"
+                        />
+                      </div>
+                      <div className="flex items-center justify-between relative z-10">
+                        <p className="text-sm text-green-600 font-medium">✓ Đã tải lên</p>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setFaceImage('');
+                          }}
+                          className="text-red-500 hover:text-red-700 text-sm font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                        >
+                          Xóa
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <span className="text-gray-400 text-2xl">📷</span>
+                      <p className="text-sm text-gray-600">Tải lên ảnh khuôn mặt</p>
+                      <p className="text-xs text-gray-500">Chụp ảnh selfie hoặc tải từ thư viện</p>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    capture="user" // Cho phép chụp ảnh trực tiếp
+                    onChange={(e) => handleImageUpload(e, 'face')}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              {isFaceMatching && (
+                <div className="text-center py-4">
+                  <div className="space-y-3">
+                    <div className="inline-flex items-center space-x-2 text-blue-600">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                      <span>Đang so sánh khuôn mặt...</span>
+                    </div>
+                    <div className="text-sm text-gray-600 space-y-1">
+                      <p>• Đang gửi ảnh đến FPT.AI FaceMatch API</p>
+                      <p>• Đang phân tích khuôn mặt trên CCCD</p>
+                      <p>• Đang so sánh với ảnh khuôn mặt của bạn</p>
+                      <p>• Đang tính toán độ tương đồng</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setStep('upload')}
+                  className="flex-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Quay lại
+                </button>
+                <button
+                  onClick={handleFaceMatch}
+                  disabled={!faceImage || isFaceMatching}
+                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isFaceMatching ? 'Đang xử lý...' : 'So sánh khuôn mặt'}
+                </button>
+              </div>
             </div>
           )}
 
@@ -400,6 +454,29 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
                     Được xử lý bởi FPT.AI OCR API • Độ chính xác cao • Thời gian xử lý nhanh
                   </div>
                 </div>
+
+                {/* FaceMatch Result */}
+                {faceMatchResult && (
+                  <div className="mt-4">
+                    <div className={`inline-flex items-center space-x-2 px-4 py-2 rounded-lg border ${
+                      faceMatchResult.similarity >= 50 
+                        ? 'bg-green-50 border-green-200' 
+                        : 'bg-amber-50 border-amber-200'
+                    }`}>
+                      <span className={faceMatchResult.similarity >= 50 ? 'text-green-600' : 'text-amber-600'}>
+                        {faceMatchResult.similarity >= 50 ? '✅' : '⚠️'}
+                      </span>
+                      <span className={`text-sm font-medium ${
+                        faceMatchResult.similarity >= 50 ? 'text-green-700' : 'text-amber-700'
+                      }`}>
+                        {getStatusMessage(faceMatchResult)}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Được xử lý bởi FPT.AI FaceMatch API • AI sẽ tự động quyết định xác thực
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
