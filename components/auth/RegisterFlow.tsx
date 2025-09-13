@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useEffect, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useRegister } from "@/hooks/useRegister";
 import { resendRegistrationOtp, verifyRegistration, loginService } from "@/services/auth";
@@ -34,6 +34,7 @@ export default function RegisterFlow() {
   const [error, setError] = useState("");
   const [step, setStep] = useState<"form" | "otp">("form");
   const [otpDigits, setOtpDigits] = useState<string[]>(Array(6).fill(""));
+  const [backgroundVideo, setBackgroundVideo] = useState("");
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const [form, setForm] = useState({
     name: "",
@@ -43,6 +44,13 @@ export default function RegisterFlow() {
     phone: "",
     avatar: "",
   });
+
+  useEffect(() => {
+    // Random chọn video nền
+    const videos = ["/videopanel.mp4", "/videopanel1.mp4"];
+    const randomVideo = videos[Math.floor(Math.random() * videos.length)];
+    setBackgroundVideo(randomVideo);
+  }, []);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,67 +121,99 @@ export default function RegisterFlow() {
   const currentRoleInfo = roleInfo[form.role];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen relative flex items-center justify-center py-12 px-4">
+      {/* Video Background */}
+      <div className="absolute inset-0 -z-10">
+        {backgroundVideo && (
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="w-full h-full object-cover"
+          >
+            <source src={backgroundVideo} type="video/mp4" />
+          </video>
+        )}
+        <div className="absolute inset-0 bg-black/40" />
+      </div>
+
       {step === "form" ? (
-        <div className="w-full max-w-4xl">
+        <div className="w-full max-w-4xl relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Left: Form */}
-            <div className="bg-white rounded-2xl shadow p-6 space-y-4">
-              <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold mb-2">Tạo tài khoản</h1>
-                <p className="text-gray-600">Đăng ký để bắt đầu hành trình tìm nhà</p>
-              </div>
-              
-              {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>}
+            <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 space-y-4 border border-white/20 relative overflow-hidden">
+              {/* Glass effect overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+              <div className="relative z-10 space-y-4">
+                <div className="text-center mb-6">
+                  <h1 className="text-2xl font-bold mb-2 text-white">Tạo tài khoản</h1>
+                  <p className="text-white/80">Đăng ký để bắt đầu hành trình tìm nhà</p>
+                </div>
+                
+                {error && <div className="text-red-100 text-sm bg-red-500/20 backdrop-blur-sm border border-red-400/30 p-3 rounded-lg">{error}</div>}
 
-              <form onSubmit={onSubmit} className="space-y-4">
-                <FieldBox label="Họ tên" required>
+                <form onSubmit={onSubmit} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Họ tên <span className="text-red-400">*</span>
+                  </label>
                   <input 
-                    className="w-full px-2 py-1.5 text-sm outline-none" 
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all duration-300 text-white placeholder-white/60 hover:bg-white/15" 
                     value={form.name} 
                     onChange={e=>setForm(f=>({...f, name:e.target.value}))} 
                     placeholder="Nhập họ và tên"
                   />
-                </FieldBox>
+                </div>
 
-                <FieldBox label="Email" required>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Email <span className="text-red-400">*</span>
+                  </label>
                   <input 
                     type="email" 
-                    className="w-full px-2 py-1.5 text-sm outline-none" 
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all duration-300 text-white placeholder-white/60 hover:bg-white/15" 
                     value={form.email} 
                     onChange={e=>setForm(f=>({...f, email:e.target.value}))} 
                     placeholder="example@email.com"
                   />
-                </FieldBox>
+                </div>
 
-                <FieldBox label="Mật khẩu" required>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Mật khẩu <span className="text-red-400">*</span>
+                  </label>
                   <input 
                     type="password" 
-                    className="w-full px-2 py-1.5 text-sm outline-none" 
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all duration-300 text-white placeholder-white/60 hover:bg-white/15" 
                     value={form.password} 
                     onChange={e=>setForm(f=>({...f, password:e.target.value}))} 
                     placeholder="Tối thiểu 6 ký tự"
                   />
-                </FieldBox>
+                </div>
 
-                <FieldBox label="Vai trò" required>
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Vai trò <span className="text-red-400">*</span>
+                  </label>
                   <select 
-                    className="w-full px-2 py-1.5 text-sm outline-none" 
+                    className="w-full px-4 py-3 bg-white/10 backdrop-blur-sm border border-white/30 rounded-xl focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all duration-300 text-white hover:bg-white/15" 
                     value={form.role} 
                     onChange={e=>setForm(f=>({...f, role: e.target.value as "user" | "landlord"}))}
                   >
-                    <option value="user">Người dùng</option>
-                    <option value="landlord">Chủ nhà</option>
+                    <option value="user" className="bg-gray-800 text-white">Người dùng</option>
+                    <option value="landlord" className="bg-gray-800 text-white">Chủ nhà</option>
                   </select>
-                </FieldBox>
+                </div>
 
                 <button 
                   disabled={loading} 
-                  className="w-full h-10 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 disabled:opacity-50 transition-colors"
+                  className="w-full h-12 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold hover:from-teal-600 hover:to-teal-700 disabled:opacity-50 transition-all duration-300 hover:shadow-lg hover:scale-105"
                 >
                   {loading ? "Đang đăng ký..." : "Đăng ký"}
                 </button>
-              </form>
+                </form>
+              </div>
             </div>
 
             {/* Right: Role Info */}
@@ -194,21 +234,25 @@ export default function RegisterFlow() {
                   </div>
                 </div>
                 
-                <div className="bg-white rounded-2xl border p-4">
-                  <h3 className="font-semibold text-gray-900 mb-3">Mẹo nhanh</h3>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    {currentRoleInfo.tips.map((tip, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <span className="w-1.5 h-1.5 bg-teal-500 rounded-full mt-2 flex-shrink-0" />
-                        <span>{tip}</span>
-                      </li>
-                    ))}
-                  </ul>
+                <div className="bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-4 relative overflow-hidden">
+                  {/* Glass effect overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+                  <div className="relative z-10">
+                    <h3 className="font-semibold text-white mb-3">Mẹo nhanh</h3>
+                    <ul className="space-y-2 text-sm text-white/80">
+                      {currentRoleInfo.tips.map((tip, idx) => (
+                        <li key={idx} className="flex items-start gap-2">
+                          <span className="w-1.5 h-1.5 bg-teal-400 rounded-full mt-2 flex-shrink-0" />
+                          <span>{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
 
-                <div className="bg-teal-50 rounded-2xl p-4 text-sm">
-                  <div className="font-medium text-teal-800 mb-1">Lưu ý</div>
-                  <div className="text-teal-700">
+                <div className="bg-teal-500/20 backdrop-blur-sm rounded-2xl border border-teal-400/30 p-4 text-sm">
+                  <div className="font-medium text-teal-200 mb-1">Lưu ý</div>
+                  <div className="text-teal-100">
                     Sau khi đăng ký, bạn sẽ được chuyển đến trang khảo sát để hoàn thiện hồ sơ.
                   </div>
                 </div>
@@ -217,13 +261,16 @@ export default function RegisterFlow() {
           </div>
         </div>
       ) : (
-        <div className="w-full max-w-md bg-white rounded-2xl shadow p-6 space-y-4">
-          <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold mb-2">Xác thực OTP</h1>
-            <p className="text-sm text-gray-600">Nhập mã OTP 6 số đã được gửi tới email của bạn</p>
-          </div>
-          
-          {error && <div className="text-red-600 text-sm bg-red-50 p-3 rounded-lg">{error}</div>}
+        <div className="w-full max-w-md bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 space-y-4 border border-white/20 relative z-10 overflow-hidden">
+          {/* Glass effect overlay */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+          <div className="relative z-10 space-y-4">
+            <div className="text-center mb-6">
+              <h1 className="text-2xl font-bold mb-2 text-white">Xác thực OTP</h1>
+              <p className="text-sm text-white/80">Nhập mã OTP 6 số đã được gửi tới email của bạn</p>
+            </div>
+            
+            {error && <div className="text-red-100 text-sm bg-red-500/20 backdrop-blur-sm border border-red-400/30 p-3 rounded-lg">{error}</div>}
           
           <div className="flex gap-2 justify-center">
             {otpDigits.map((d, idx) => (
@@ -256,7 +303,7 @@ export default function RegisterFlow() {
                   e.preventDefault();
                 }}
                 inputMode="numeric"
-                className="w-12 h-12 border rounded-lg text-center text-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+                className="w-12 h-12 bg-white/10 backdrop-blur-sm border border-white/30 rounded-lg text-center text-lg text-white placeholder-white/60 focus:ring-2 focus:ring-teal-400 focus:border-teal-400 transition-all duration-300 hover:bg-white/15"
                 maxLength={1}
               />
             ))}
@@ -264,7 +311,7 @@ export default function RegisterFlow() {
           
           <button 
             onClick={onVerify} 
-            className="w-full h-10 rounded-lg bg-teal-600 text-white font-semibold hover:bg-teal-700 transition-colors"
+            className="w-full h-12 rounded-xl bg-gradient-to-r from-teal-500 to-teal-600 text-white font-semibold hover:from-teal-600 hover:to-teal-700 transition-all duration-300 hover:shadow-lg hover:scale-105"
           >
             Xác thực
           </button>
@@ -272,16 +319,17 @@ export default function RegisterFlow() {
           <div className="space-y-2">
             <button 
               onClick={onResend} 
-              className="w-full h-10 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="w-full h-10 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all duration-300"
             >
               Gửi lại OTP
             </button>
             <button 
               onClick={()=>setStep("form")} 
-              className="w-full h-10 rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+              className="w-full h-10 rounded-xl border border-white/30 text-white hover:bg-white/10 transition-all duration-300"
             >
               Quay lại
             </button>
+          </div>
           </div>
         </div>
       )}

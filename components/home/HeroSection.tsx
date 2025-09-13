@@ -54,9 +54,17 @@ export default function HeroSection() {
 
   return (
     <section className="relative min-h-[500px] flex items-center">
-      {/* Background with gradient overlay */}
+      {/* Background with video and gradient overlay */}
       <div className="absolute inset-0 -z-10">
-        <img src="/home/hero-pg.jpg" alt="hero" className="w-full h-full object-cover" />
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="w-full h-full object-cover"
+        >
+          <source src="/video2.mp4" type="video/mp4" />
+        </video>
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
       </div>
 

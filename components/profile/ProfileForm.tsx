@@ -82,32 +82,41 @@ export default function ProfileForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FieldBox label="Họ và tên">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Họ và tên
+          </label>
           <input
             type="text"
             name="name"
             value={formData.name}
             onChange={onInputChange}
             disabled={!isEditing}
-            className="w-full px-2 py-1.5 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
           />
-        </FieldBox>
+        </div>
 
-        <FieldBox label="Email">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Email
+          </label>
           <input
             type="email"
             name="email"
             value={formData.email}
             disabled={true}
-            className="w-full px-2 py-1.5 text-sm outline-none bg-gray-100 text-gray-500 cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
           />
           <p className="text-xs text-gray-500 mt-1">
             Email không thể thay đổi. Liên hệ admin nếu cần hỗ trợ.
           </p>
-        </FieldBox>
+        </div>
 
-        <FieldBox label="Số điện thoại">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Số điện thoại
+          </label>
           <input
             type="tel"
             name="phone"
@@ -115,11 +124,14 @@ export default function ProfileForm({
             onChange={onInputChange}
             disabled={!isEditing}
             placeholder="Nhập số điện thoại"
-            className="w-full px-2 py-1.5 text-sm outline-none disabled:bg-gray-50 disabled:text-gray-500"
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500"
           />
-        </FieldBox>
+        </div>
 
-        <FieldBox label="Ảnh đại diện">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Ảnh đại diện
+          </label>
           <div className="flex items-center gap-4">
             <div className="flex-shrink-0">
               <img
@@ -140,14 +152,14 @@ export default function ProfileForm({
                 accept="image/*"
                 onChange={onAvatarChange}
                 disabled={!isEditing}
-                className="w-full text-sm disabled:bg-gray-50 disabled:text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors disabled:bg-gray-50 disabled:text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100"
               />
               <p className="text-xs text-gray-500 mt-1">
                 Chọn ảnh từ máy tính của bạn (JPG, PNG, GIF)
               </p>
             </div>
           </div>
-        </FieldBox>
+        </div>
       </div>
     </div>
   );
