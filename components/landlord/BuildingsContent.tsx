@@ -189,7 +189,7 @@ export default function BuildingsContent({
             </div>
           ) : (
             buildings.map((building) => (
-              <div key={building.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div key={building.buildingId} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start gap-4">
                   {/* Image */}
                   <div className="flex-shrink-0">
@@ -246,19 +246,19 @@ export default function BuildingsContent({
                       <div className="flex-shrink-0">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => onView(building.id)}
+                            onClick={() => onView(building.buildingId)}
                             className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                           >
                             Xem chi tiết
                           </button>
                           <button
-                            onClick={() => onEdit(building.id)}
+                            onClick={() => onEdit(building.buildingId)}
                             className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                           >
                             Chỉnh sửa
                           </button>
                           <button
-                            onClick={() => onDelete(building.id)}
+                            onClick={() => onDelete(building.buildingId)}
                             className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                           >
                             Xóa

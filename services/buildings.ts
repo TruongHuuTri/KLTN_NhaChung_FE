@@ -3,25 +3,22 @@ import {
   Building, 
   CreateBuildingPayload, 
   UpdateBuildingPayload, 
-  BuildingListResponse 
+  BuildingsArrayResponse 
 } from "@/types/Building";
 
 // Lấy danh sách dãy của landlord
-export async function getBuildings(
-  page: number = 1,
-  limit: number = 10,
-  search?: string
-): Promise<BuildingListResponse> {
-  const params = new URLSearchParams({
-    page: page.toString(),
-    limit: limit.toString(),
-  });
-  
-  if (search) {
-    params.append('search', search);
-  }
-  
-  return apiGet(`landlord/buildings?${params.toString()}`);
+export async function getBuildings(page?: number, limit?: number, search?: string): Promise<BuildingsArrayResponse | { buildings: Building[]; total: number; page: number; limit: number }> {
+  // Hỗ trợ cả 2 format: [] hoặc { buildings, total, page, limit }
+  const params = new URLSearchParams();
+  if (page) params.append("page", String(page));
+  if (limit) params.append("limit", String(limit));
+  if (search) params.append("search", search);
+  const qs = params.toString();
+  const path = qs ? `landlord/buildings?${qs}` : `landlord/buildings`;
+  const res = await apiGet<any>(path, { cache: 'no-store' });
+  if (Array.isArray(res)) return res as BuildingsArrayResponse;
+  if (res && Array.isArray(res.buildings)) return res.buildings as BuildingsArrayResponse;
+  return [];
 }
 
 // Lấy chi tiết dãy

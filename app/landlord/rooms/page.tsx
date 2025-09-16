@@ -35,8 +35,8 @@ export default function RoomsPage() {
     if (!user?.userId) return;
     
     try {
-      const response = await getBuildings(1, 100); // Load tất cả dãy
-      setBuildings(response.buildings);
+      const list = await getBuildings(); // Load tất cả dãy
+      setBuildings(list);
     } catch (err) {
       console.error('Error loading buildings:', err);
     }

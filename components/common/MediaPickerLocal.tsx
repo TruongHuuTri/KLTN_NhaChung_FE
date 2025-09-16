@@ -14,8 +14,13 @@ type Props = {
   helper?: string; // "BẮT BUỘC ĐĂNG 03–12 HÌNH"
   accept?: string; // "image/*" | "video/*"
   max?: number; // 12 ảnh, 2 video...
-  value: LocalMediaItem[];
-  onChange: (items: LocalMediaItem[]) => void;
+  value?: LocalMediaItem[]; // legacy
+  onChange?: (items: LocalMediaItem[]) => void; // legacy
+  // New aliases to tương thích với form khác
+  mediaItems?: LocalMediaItem[];
+  onMediaChange?: (items: LocalMediaItem[]) => void;
+  maxImages?: number;
+  maxVideos?: number;
   guideTitle?: string; // tiêu đề modal
   guideItems?: string[]; // bullet modal
   className?: string;
@@ -33,6 +38,10 @@ export default function MediaPickerPanel({
   max = 12,
   value,
   onChange,
+  mediaItems,
+  onMediaChange,
+  maxImages,
+  maxVideos,
   guideTitle,
   guideItems,
   className = "",
@@ -42,27 +51,34 @@ export default function MediaPickerPanel({
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
-  const canAdd = value.length < max;
+  const items = Array.isArray(mediaItems)
+    ? mediaItems
+    : Array.isArray(value)
+    ? value
+    : [];
+  const effectiveMax = typeof maxImages === "number" ? maxImages : max;
+  const changeFn = onMediaChange || onChange || (() => {});
+  const canAdd = items.length < effectiveMax;
 
   // thu hồi preview url khi unmount/remove
   useEffect(() => {
-    return () => value.forEach((v) => URL.revokeObjectURL(v.previewUrl));
-  }, [value]);
+    return () => items.forEach((v) => URL.revokeObjectURL(v.previewUrl));
+  }, [items]);
 
   const pickFiles = useCallback(
     (filesLike: FileList | File[]) => {
       const files = Array.from(filesLike || []);
       if (!files.length) return;
-      const slots = Math.max(0, max - value.length);
+      const slots = Math.max(0, effectiveMax - items.length);
       if (!slots) return;
       const picked = files.slice(0, slots).map((f) => ({
         id: uid(),
         file: f,
         previewUrl: URL.createObjectURL(f),
       }));
-      onChange([...value, ...picked]);
+      changeFn([...items, ...picked]);
     },
-    [max, onChange, value]
+    [changeFn, effectiveMax, items]
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,25 +118,25 @@ export default function MediaPickerPanel({
     const from = dragIdx.current;
     dragIdx.current = null;
     if (from === null || from === i) return;
-    const items = [...value];
-    const [moved] = items.splice(from, 1);
-    items.splice(i, 0, moved);
-    onChange(items);
+    const itemsCloned = [...items];
+    const [moved] = itemsCloned.splice(from, 1);
+    itemsCloned.splice(i, 0, moved);
+    changeFn(itemsCloned);
   };
 
   const removeAt = (i: number) => {
-    const items = [...value];
-    const [rm] = items.splice(i, 1);
+    const next = [...items];
+    const [rm] = next.splice(i, 1);
     URL.revokeObjectURL(rm.previewUrl);
-    onChange(items);
+    changeFn(next);
   };
 
   const countText = useMemo(
     () =>
-      `Đã chọn ${value.length}/${max} ${
+      `Đã chọn ${items.length}/${effectiveMax} ${
         accept.includes("video") ? "media" : "ảnh"
       }`,
-    [accept, max, value.length]
+    [accept, effectiveMax, items.length]
   );
 
   const [showGuide, setShowGuide] = React.useState(false);
@@ -188,10 +204,10 @@ export default function MediaPickerPanel({
         />
 
         {/* Gallery preview 3:4 */}
-        {value.length > 0 && (
+        {items.length > 0 && (
           <div className="mt-4">
             <div className="grid grid-cols-3 gap-3">
-              {value.map((it, idx) => (
+              {items.map((it, idx) => (
                 <div
                   key={it.id}
                   className="relative rounded-2xl overflow-hidden border bg-white"

@@ -3,7 +3,7 @@ import { Address } from "./RentPost";
 export type BuildingType = "chung-cu" | "nha-nguyen-can" | "phong-tro";
 
 export type Building = {
-  id: number;
+  buildingId: number;
   name: string;
   address: Address;
   totalFloors: number;
@@ -29,9 +29,5 @@ export type CreateBuildingPayload = {
 
 export type UpdateBuildingPayload = Partial<CreateBuildingPayload>;
 
-export type BuildingListResponse = {
-  buildings: Building[];
-  total: number;
-  page: number;
-  limit: number;
-};
+// Nếu BE trả mảng đơn giản cho danh sách, bỏ type phân trang cũ
+export type BuildingsArrayResponse = Building[];

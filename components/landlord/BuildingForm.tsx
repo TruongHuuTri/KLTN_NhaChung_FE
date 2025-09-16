@@ -1,11 +1,63 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { CreateBuildingPayload, UpdateBuildingPayload, BuildingType } from "../../types/Building";
-import { Address } from "../../types/RentPost";
-import { addressService } from "../../services/address";
 import { uploadFiles } from "../../utils/upload";
+import { useAuth } from "../../contexts/AuthContext";
 import MediaPickerPanel, { LocalMediaItem } from "../common/MediaPickerLocal";
+import AddressSelector from "../common/AddressSelector";
+import { addressService } from "../../services/address";
+import type { Address } from "../../services/address";
+
+function Modal({ open, onClose, onSave, children, title }: { open: boolean; onClose: () => void; onSave: () => void; children: React.ReactNode; title?: string }) {
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100]">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-2xl">
+          <div className="px-5 py-3 border-b font-semibold">{title || "Chọn địa chỉ"}</div>
+          <div className="p-5">{children}</div>
+          <div className="px-5 pb-4 flex justify-end gap-3">
+            <button onClick={onClose} className="h-10 px-4 rounded-lg border border-gray-300">Hủy</button>
+            <button onClick={onSave} className="h-10 px-4 rounded-lg bg-teal-500 text-white">Lưu</button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
+
+// Modal cảnh báo đơn giản, có nút X đóng ở góc phải, không có footer
+function AlertModal({ open, onClose, children, title }: { open: boolean; onClose: () => void; children: React.ReactNode; title?: string }) {
+  if (!open) return null;
+
+  return createPortal(
+    <div className="fixed inset-0 z-[100]">
+      <div className="fixed inset-0 bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-2xl border">
+          <div className="px-5 py-4 border-b flex items-center justify-between">
+            <div className="text-lg font-semibold">{title || "Thông báo"}</div>
+            <button
+              onClick={onClose}
+              aria-label="Đóng"
+              className="h-8 w-8 grid place-items-center rounded-full bg-red-50 text-red-600 hover:bg-red-100"
+              title="Đóng"
+            >
+              ×
+            </button>
+          </div>
+          <div className="p-5">{children}</div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+}
 
 interface BuildingFormProps {
   initialData?: Partial<CreateBuildingPayload>;
@@ -26,6 +78,7 @@ export default function BuildingForm({
   onCancel, 
   loading = false 
 }: BuildingFormProps) {
+  const { user } = useAuth();
   const [formData, setFormData] = useState<CreateBuildingPayload>({
     name: "",
     address: {
@@ -51,19 +104,14 @@ export default function BuildingForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [mediaItems, setMediaItems] = useState<LocalMediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [openAddressModal, setOpenAddressModal] = useState(false);
+  const [addressDraft, setAddressDraft] = useState<Address | null>(null);
+  const [warnOpen, setWarnOpen] = useState(false);
+  const [warnList, setWarnList] = useState<string[]>([]);
 
-  // Initialize media items from existing images
+  // Với form tạo mới, bỏ qua ảnh có sẵn (nếu có) vì chỉ chọn local
   useEffect(() => {
-    if (formData.images && formData.images.length > 0) {
-      const items: LocalMediaItem[] = formData.images.map((url, index) => ({
-        id: `existing-${index}`,
-        type: "image",
-        url,
-        file: null,
-        isUploaded: true,
-      }));
-      setMediaItems(items);
-    }
+    // no-op for create
   }, [formData.images]);
 
   const handleInputChange = (field: string, value: any) => {
@@ -81,14 +129,12 @@ export default function BuildingForm({
     }
   };
 
-  const handleAddressChange = (field: keyof Address, value: any) => {
-    setFormData(prev => ({
-      ...prev,
-      address: {
-        ...prev.address,
-        [field]: value,
-      },
-    }));
+  const commitAddress = () => {
+    if (addressDraft) {
+      setFormData(prev => ({ ...prev, address: addressDraft }));
+      if (errors.city || errors.ward) setErrors(prev => ({ ...prev, city: "", ward: "" }));
+    }
+    setOpenAddressModal(false);
   };
 
   const handleMediaChange = (items: LocalMediaItem[]) => {
@@ -97,32 +143,43 @@ export default function BuildingForm({
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
+    const warnings: string[] = [];
 
     if (!formData.name.trim()) {
       newErrors.name = "Tên dãy là bắt buộc";
+      warnings.push("Vui lòng nhập Tên dãy");
     }
 
     if (!formData.address.city) {
       newErrors.city = "Thành phố là bắt buộc";
+      warnings.push("Vui lòng chọn Thành phố (địa chỉ)");
     }
 
     if (!formData.address.ward) {
       newErrors.ward = "Phường/xã là bắt buộc";
+      warnings.push("Vui lòng chọn Phường/Xã (địa chỉ)");
     }
 
     if (formData.totalFloors < 1) {
       newErrors.totalFloors = "Số tầng phải lớn hơn 0";
+      warnings.push("Số tầng phải ≥ 1");
     }
 
     if (formData.totalRooms < 1) {
       newErrors.totalRooms = "Số phòng phải lớn hơn 0";
+      warnings.push("Số phòng phải ≥ 1");
     }
 
     if (mediaItems.length < 1) {
       newErrors.images = "Cần ít nhất 1 ảnh";
+      warnings.push("Vui lòng chọn ít nhất 1 ảnh");
     }
 
     setErrors(newErrors);
+    if (warnings.length) {
+      setWarnList(warnings);
+      setWarnOpen(true);
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -135,27 +192,18 @@ export default function BuildingForm({
 
     try {
       setUploading(true);
-      
-      // Upload new images
-      const newImages = mediaItems
-        .filter(item => !item.isUploaded && item.file)
-        .map(item => item.file!);
-      
-      let uploadedUrls: string[] = [];
-      if (newImages.length > 0) {
-        uploadedUrls = await uploadFiles(newImages);
+      if (!user?.userId || user.userId <= 0) {
+        setErrors({ images: "Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại." });
+        return;
       }
-
-      // Combine existing and new images
-      const existingImages = mediaItems
-        .filter(item => item.isUploaded)
-        .map(item => item.url);
       
-      const allImages = [...existingImages, ...uploadedUrls];
+      // Upload tất cả ảnh local đã chọn
+      const files = mediaItems.map((item) => item.file);
+      const uploadedUrls: string[] = files.length ? await uploadFiles(files, user.userId, "images") : [];
 
       const submitData = {
         ...formData,
-        images: allImages,
+        images: uploadedUrls,
       };
 
       onSubmit(submitData);
@@ -168,216 +216,177 @@ export default function BuildingForm({
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <form onSubmit={handleSubmit} className="space-y-8">
-        {/* Basic Information */}
-        <div className="px-6 py-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Thông tin cơ bản</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Building Name */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tên dãy <span className="text-red-500">*</span>
-              </label>
+    <div className="bg-white/80 backdrop-blur rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+      <div className="px-6 py-5 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
+        <h1 className="text-2xl font-semibold">Thông tin dãy</h1>
+        <p className="text-white/90 text-sm mt-1">Điền các thông tin dưới đây để tạo dãy mới</p>
+      </div>
+      <form onSubmit={handleSubmit} className="px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Cột trái: Hình ảnh */}
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900 mb-3">Hình ảnh</h2>
+            <p className="text-sm text-gray-500 mb-4">Tải lên tối thiểu 1 ảnh rõ nét, ưu tiên 3:4</p>
+            <MediaPickerPanel
+              mediaItems={mediaItems}
+              onMediaChange={handleMediaChange}
+              maxImages={10}
+              maxVideos={0}
+            />
+          </div>
+
+          {/* Cột phải: Trường nhập */}
+          <div className="space-y-5">
+            <h2 className="text-xl font-semibold text-gray-900">Thông tin</h2>
+
+            {/* Tên dãy - floating label */}
+            <div className="relative">
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                placeholder=" "
+                className={`peer w-full rounded-2xl border-2 px-4 pt-6 pb-3 outline-none transition-colors focus:border-teal-500 ${
                   errors.name ? "border-red-300" : "border-gray-300"
                 }`}
-                placeholder="Nhập tên dãy nhà"
               />
-              {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+              <label className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 bg-white px-1 text-gray-500 transition-all peer-focus:top-3.5 peer-focus:text-xs peer-focus:text-teal-600 peer-[&:not(:placeholder-shown)]:top-3.5 peer-[&:not(:placeholder-shown)]:text-xs">
+                Tên dãy <span className="text-red-500">*</span>
+              </label>
             </div>
 
-            {/* Building Type */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Loại dãy <span className="text-red-500">*</span>
-              </label>
+            {/* Loại dãy */}
+            <div className="relative">
               <select
                 value={formData.buildingType}
                 onChange={(e) => handleInputChange("buildingType", e.target.value as BuildingType)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                className="peer w-full rounded-2xl border-2 border-gray-300 bg-white px-4 pt-6 pb-3 outline-none transition-colors focus:border-teal-500"
               >
                 {BUILDING_TYPES.map(type => (
-                  <option key={type.id} value={type.id}>
-                    {type.label}
-                  </option>
+                  <option key={type.id} value={type.id}>{type.label}</option>
                 ))}
               </select>
+              <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-xs text-gray-500">
+                Loại dãy <span className="text-red-500">*</span>
+              </label>
             </div>
 
-            {/* Total Floors */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Số tầng <span className="text-red-500">*</span>
-              </label>
+            {/* Số tầng */}
+            <div className="relative">
               <input
                 type="number"
                 min="1"
-                value={formData.totalFloors}
-                onChange={(e) => handleInputChange("totalFloors", parseInt(e.target.value))}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                value={Number.isFinite(formData.totalFloors) && formData.totalFloors >= 1 ? formData.totalFloors : 1}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const val = raw === "" ? 1 : parseInt(raw, 10);
+                  const safe = Number.isNaN(val) ? 1 : Math.max(1, val);
+                  handleInputChange("totalFloors", safe);
+                }}
+                placeholder=" "
+                className={`peer w-full rounded-2xl border-2 px-4 pt-6 pb-3 outline-none transition-colors focus:border-teal-500 ${
                   errors.totalFloors ? "border-red-300" : "border-gray-300"
                 }`}
               />
-              {errors.totalFloors && <p className="mt-1 text-sm text-red-600">{errors.totalFloors}</p>}
+              <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-xs text-gray-500">
+                Số tầng <span className="text-red-500">*</span>
+              </label>
             </div>
 
-            {/* Total Rooms */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Số phòng <span className="text-red-500">*</span>
-              </label>
+            {/* Số phòng */}
+            <div className="relative">
               <input
                 type="number"
                 min="1"
-                value={formData.totalRooms}
-                onChange={(e) => handleInputChange("totalRooms", parseInt(e.target.value))}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
+                value={Number.isFinite(formData.totalRooms) && formData.totalRooms >= 1 ? formData.totalRooms : 1}
+                onChange={(e) => {
+                  const raw = e.target.value;
+                  const val = raw === "" ? 1 : parseInt(raw, 10);
+                  const safe = Number.isNaN(val) ? 1 : Math.max(1, val);
+                  handleInputChange("totalRooms", safe);
+                }}
+                placeholder=" "
+                className={`peer w-full rounded-2xl border-2 px-4 pt-6 pb-3 outline-none transition-colors focus:border-teal-500 ${
                   errors.totalRooms ? "border-red-300" : "border-gray-300"
                 }`}
               />
-              {errors.totalRooms && <p className="mt-1 text-sm text-red-600">{errors.totalRooms}</p>}
-            </div>
-          </div>
-        </div>
-
-        {/* Address Information */}
-        <div className="px-6 py-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Thông tin địa chỉ</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* City */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thành phố <span className="text-red-500">*</span>
+              <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-xs text-gray-500">
+                Số phòng <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                value={formData.address.city}
-                onChange={(e) => handleAddressChange("city", e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                  errors.city ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Nhập thành phố"
-              />
-              {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city}</p>}
             </div>
 
-            {/* Ward */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Phường/Xã <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={formData.address.ward}
-                onChange={(e) => handleAddressChange("ward", e.target.value)}
-                className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent ${
-                  errors.ward ? "border-red-300" : "border-gray-300"
-                }`}
-                placeholder="Nhập phường/xã"
-              />
-              {errors.ward && <p className="mt-1 text-sm text-red-600">{errors.ward}</p>}
+            {/* Địa chỉ (mở modal chọn) */}
+            <div
+              className="relative rounded-2xl border-2 border-gray-300 bg-white px-4 pt-6 pb-3 cursor-pointer transition-colors hover:border-teal-500"
+              onClick={() => { setAddressDraft(formData.address as Address); setOpenAddressModal(true); }}
+              aria-label="Địa chỉ"
+            >
+              <div className="pointer-events-none absolute left-4 top-2 text-xs text-gray-500 bg-white px-1">Địa chỉ <span className="text-red-500">*</span></div>
+              <div className="text-gray-800 min-h-[24px]">
+                {formData.address.city && formData.address.ward
+                  ? addressService.formatAddressForDisplay(formData.address as any)
+                  : ''}
+              </div>
             </div>
 
-            {/* Street */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tên đường
-              </label>
-              <input
-                type="text"
-                value={formData.address.street || ""}
-                onChange={(e) => handleAddressChange("street", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Nhập tên đường"
-              />
-            </div>
-
-            {/* Specific Address */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Địa chỉ cụ thể
-              </label>
-              <input
-                type="text"
-                value={formData.address.specificAddress || ""}
-                onChange={(e) => handleAddressChange("specificAddress", e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Số nhà, tên đường..."
-              />
-            </div>
-
-            {/* Additional Info */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thông tin bổ sung
-              </label>
+            {/* Mô tả */}
+            <div className="relative">
               <textarea
-                value={formData.address.additionalInfo || ""}
-                onChange={(e) => handleAddressChange("additionalInfo", e.target.value)}
-                rows={3}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-                placeholder="Hướng dẫn đường đi, địa điểm nổi bật gần đó..."
+                value={formData.description}
+                onChange={(e) => handleInputChange("description", e.target.value)}
+                rows={4}
+                placeholder=" "
+                className="peer w-full px-4 pt-6 pb-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
               />
+              <label className="pointer-events-none absolute left-3 top-2 bg-white px-1 text-xs text-gray-500">Mô tả</label>
             </div>
           </div>
         </div>
 
-        {/* Images */}
-        <div className="px-6 py-6 border-b border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Hình ảnh</h2>
-          
-          <MediaPickerPanel
-            mediaItems={mediaItems}
-            onMediaChange={handleMediaChange}
-            maxImages={10}
-            maxVideos={0}
-          />
-          {errors.images && <p className="mt-2 text-sm text-red-600">{errors.images}</p>}
-        </div>
+        {/* Modals */}
+        <Modal
+          open={openAddressModal}
+          onClose={() => setOpenAddressModal(false)}
+          onSave={commitAddress}
+          title="Chọn địa chỉ dãy"
+        >
+          <AddressSelector value={addressDraft} onChange={setAddressDraft as any} />
+        </Modal>
 
-        {/* Description */}
-        <div className="px-6 py-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Mô tả</h2>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Mô tả dãy nhà
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => handleInputChange("description", e.target.value)}
-              rows={4}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
-              placeholder="Mô tả chi tiết về dãy nhà, tiện ích, vị trí..."
-            />
+        {/* Warning Modal */}
+        <AlertModal
+          open={warnOpen}
+          onClose={() => setWarnOpen(false)}
+          title="Thiếu thông tin bắt buộc"
+        >
+          <div className="text-[15px] text-gray-700">
+            <ul className="space-y-2">
+              {warnList.map((w, i) => (
+                <li key={i} className="flex items-start gap-2">
+                  <span className="mt-1 inline-block h-2 w-2 rounded-full bg-teal-500" />
+                  <span>{w}</span>
+                </li>
+              ))}
+            </ul>
           </div>
-        </div>
+        </AlertModal>
 
         {/* Actions */}
-        <div className="px-6 py-6 bg-gray-50 border-t border-gray-100">
-          <div className="flex justify-end gap-4">
-            <button
-              type="button"
-              onClick={onCancel}
-              className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Hủy
-            </button>
-            <button
-              type="submit"
-              disabled={loading || uploading}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading || uploading ? "Đang xử lý..." : "Lưu dãy"}
-            </button>
-          </div>
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            Hủy
+          </button>
+          <button
+            type="submit"
+            disabled={loading || uploading}
+            className="px-6 py-2 bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-lg hover:from-teal-700 hover:to-teal-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading || uploading ? "Đang xử lý..." : "Lưu dãy"}
+          </button>
         </div>
       </form>
     </div>

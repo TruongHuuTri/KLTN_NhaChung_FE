@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../../contexts/AuthContext";
 import Footer from "../../../components/common/Footer";
 import BuildingsContent from "../../../components/landlord/BuildingsContent";
-import { getBuildings } from "../../../services/buildings";
+import BuildingForm from "../../../components/landlord/BuildingForm";
+import { getBuildings, createBuilding } from "../../../services/buildings";
 import { Building } from "../../../types/Building";
 
 export default function BuildingsPage() {
@@ -17,6 +18,7 @@ export default function BuildingsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
 
   // Kiểm tra quyền landlord
   useEffect(() => {
@@ -34,9 +36,15 @@ export default function BuildingsPage() {
       setLoading(true);
       setError(null);
       
-      const response = await getBuildings(page, 10, search);
-      setBuildings(response.buildings);
-      setTotalPages(Math.ceil(response.total / 10));
+      const res = await getBuildings();
+      // Hỗ trợ cả 2 format trả về từ service
+      if (Array.isArray(res)) {
+        setBuildings(res);
+        setTotalPages(1);
+      } else {
+        setBuildings(res.buildings || []);
+        setTotalPages(Math.max(1, Math.ceil((res.total ?? 0) / 10)));
+      }
       setCurrentPage(page);
     } catch (err: any) {
       setError('Không thể tải danh sách dãy. Vui lòng thử lại.');
@@ -50,7 +58,7 @@ export default function BuildingsPage() {
     if (user?.userId && user.role === "landlord") {
       loadBuildings(1, searchQuery);
     }
-  }, [user?.userId, user?.role]);
+  }, [user?.userId, user?.role, searchQuery]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -62,7 +70,7 @@ export default function BuildingsPage() {
   };
 
   const handleCreateBuilding = () => {
-    router.push("/landlord/buildings/create");
+    setShowCreate(true);
   };
 
   const handleEditBuilding = (id: number) => {
@@ -165,6 +173,46 @@ export default function BuildingsPage() {
           />
         )}
       </div>
+
+      {/* Create Modal inline để không rời trang */}
+      {showCreate && (
+        <div className="fixed inset-0 z-[100]">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setShowCreate(false)} />
+          <div className="absolute inset-0 flex items-center justify-center p-4">
+            <div className="w-full max-w-4xl bg-white rounded-2xl shadow-2xl max-h-[90vh] overflow-auto">
+              <div className="px-6 py-4 border-b flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Tạo dãy mới</h2>
+                <button
+                  onClick={() => setShowCreate(false)}
+                  className="h-8 w-8 grid place-items-center rounded-full bg-red-50 text-red-600 hover:bg-red-100"
+                  aria-label="Đóng"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="p-6">
+                <BuildingForm
+                  onSubmit={async (data) => {
+                    try {
+                      setLoading(true);
+                      await createBuilding(data as any);
+                      setShowCreate(false);
+                      await loadBuildings(currentPage, searchQuery);
+                    } catch (err) {
+                      console.error(err);
+                      setError("Không thể tạo dãy. Vui lòng thử lại.");
+                    } finally {
+                      setLoading(false);
+                    }
+                  }}
+                  onCancel={() => setShowCreate(false)}
+                  loading={loading}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

@@ -47,7 +47,7 @@ export default function RoomForm({
   loading = false 
 }: RoomFormProps) {
   const [formData, setFormData] = useState<CreateRoomPayload>({
-    buildingId: buildings[0]?.id || 0,
+    buildingId: buildings[0]?.buildingId || 0,
     roomNumber: "",
     floor: 1,
     area: 0,
@@ -85,23 +85,11 @@ export default function RoomForm({
   const [mediaItems, setMediaItems] = useState<LocalMediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  // Initialize media items from existing images
-  useEffect(() => {
-    if (formData.images && formData.images.length > 0) {
-      const items: LocalMediaItem[] = formData.images.map((url, index) => ({
-        id: `existing-${index}`,
-        type: "image",
-        url,
-        file: null,
-        isUploaded: true,
-      }));
-      setMediaItems(items);
-    }
-  }, [formData.images]);
+  // mediaItems chỉ chứa file local mới chọn; ảnh đã có sẽ hiển thị riêng qua extraTop
 
   // Update building info when building changes
   useEffect(() => {
-    const selectedBuilding = buildings.find(b => b.id === formData.buildingId);
+    const selectedBuilding = buildings.find(b => b.buildingId === formData.buildingId);
     if (selectedBuilding) {
       setFormData(prev => ({
         ...prev,
@@ -182,7 +170,9 @@ export default function RoomForm({
       newErrors.sharePrice = "Giá ở ghép phải lớn hơn 0 khi cho phép ở ghép";
     }
 
-    if (mediaItems.length < 1) {
+    const existingCount = Array.isArray(formData.images) ? formData.images.length : 0;
+    const totalImages = existingCount + mediaItems.length;
+    if (totalImages < 1) {
       newErrors.images = "Cần ít nhất 1 ảnh";
     }
 
@@ -200,21 +190,12 @@ export default function RoomForm({
     try {
       setUploading(true);
       
-      // Upload new images
-      const newImages = mediaItems
-        .filter(item => !item.isUploaded && item.file)
-        .map(item => item.file!);
-      
-      let uploadedUrls: string[] = [];
-      if (newImages.length > 0) {
-        uploadedUrls = await uploadFiles(newImages);
-      }
+      // Upload toàn bộ ảnh local mới chọn
+      const filesToUpload = mediaItems.map(item => item.file);
+      const uploadedUrls: string[] = filesToUpload.length > 0 ? await uploadFiles(filesToUpload) : [];
 
-      // Combine existing and new images
-      const existingImages = mediaItems
-        .filter(item => item.isUploaded)
-        .map(item => item.url);
-      
+      // Gộp với ảnh đã có trong form (nếu có)
+      const existingImages = Array.isArray(formData.images) ? formData.images : [];
       const allImages = [...existingImages, ...uploadedUrls];
 
       const submitData = {
@@ -253,7 +234,7 @@ export default function RoomForm({
               >
                 <option value={0}>Chọn dãy nhà</option>
                 {buildings.map(building => (
-                  <option key={building.id} value={building.id}>
+                  <option key={building.buildingId} value={building.buildingId}>
                     {building.name} - {building.buildingType}
                   </option>
                 ))}
@@ -551,6 +532,21 @@ export default function RoomForm({
             onMediaChange={handleMediaChange}
             maxImages={10}
             maxVideos={0}
+            extraTop={
+              Array.isArray(formData.images) && formData.images.length > 0 ? (
+                <div className="mb-4">
+                  <div className="grid grid-cols-3 gap-3">
+                    {formData.images.map((imgUrl, idx) => (
+                      <div key={`existing-${idx}`} className="relative rounded-2xl overflow-hidden border bg-white">
+                        <div className="relative pb-[133%]">
+                          <img src={imgUrl} className="absolute inset-0 w-full h-full object-cover" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null
+            }
           />
           {errors.images && <p className="mt-2 text-sm text-red-600">{errors.images}</p>}
         </div>

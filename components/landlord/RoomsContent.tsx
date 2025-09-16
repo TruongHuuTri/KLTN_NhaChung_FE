@@ -102,7 +102,7 @@ export default function RoomsContent({
   };
 
   const getBuildingName = (buildingId: number) => {
-    const building = buildings.find(b => b.id === buildingId);
+    const building = buildings.find(b => b.buildingId === buildingId);
     return building ? building.name : `Dãy ${buildingId}`;
   };
 
@@ -194,7 +194,7 @@ export default function RoomsContent({
               >
                 <option value="">Tất cả dãy</option>
                 {buildings.map(building => (
-                  <option key={building.id} value={building.id}>
+                  <option key={building.buildingId} value={building.buildingId}>
                     {building.name}
                   </option>
                 ))}

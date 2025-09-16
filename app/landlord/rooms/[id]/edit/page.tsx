@@ -41,11 +41,11 @@ export default function EditRoomPage() {
         
         const [roomData, buildingsResponse] = await Promise.all([
           getRoomById(roomId),
-          getBuildings(1, 100)
+          getBuildings()
         ]);
         
         setRoom(roomData);
-        setBuildings(buildingsResponse.buildings);
+        setBuildings(buildingsResponse);
       } catch (err: any) {
         setError(err.message || "Không thể tải thông tin phòng. Vui lòng thử lại.");
       } finally {

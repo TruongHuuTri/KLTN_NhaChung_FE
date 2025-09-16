@@ -28,7 +28,7 @@ export default function CreateBuildingPage() {
       setError(null);
       
       await createBuilding(data);
-      router.push("/landlord/buildings");
+      router.push("/landlord/service/housing");
     } catch (err: any) {
       setError(err.message || "Có lỗi xảy ra khi tạo dãy. Vui lòng thử lại.");
     } finally {
@@ -78,7 +78,9 @@ export default function CreateBuildingPage() {
         )}
 
         <BuildingForm
-          onSubmit={handleSubmit}
+          onSubmit={(data) => {
+            handleSubmit(data as CreateBuildingPayload);
+          }}
           onCancel={handleCancel}
           loading={loading}
         />

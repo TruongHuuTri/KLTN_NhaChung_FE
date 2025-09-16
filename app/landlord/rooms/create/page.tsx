@@ -33,8 +33,9 @@ export default function CreateRoomPage() {
       
       try {
         setLoadingBuildings(true);
-        const response = await getBuildings(1, 100); // Load tất cả dãy
-        setBuildings(response.buildings);
+        const res = await getBuildings();
+        const list = Array.isArray(res) ? res : (res.buildings ?? []);
+        setBuildings(list);
       } catch (err) {
         console.error('Error loading buildings:', err);
         setError('Không thể tải danh sách dãy. Vui lòng thử lại.');
@@ -48,18 +49,24 @@ export default function CreateRoomPage() {
     }
   }, [user?.userId, user?.role]);
 
-  const handleSubmit = async (data: CreateRoomPayload) => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      await createRoom(data);
-      router.push("/landlord/rooms");
-    } catch (err: any) {
-      setError(err.message || "Có lỗi xảy ra khi tạo phòng. Vui lòng thử lại.");
-    } finally {
-      setLoading(false);
+  const handleSubmit = (data: CreateRoomPayload | Partial<CreateRoomPayload>) => {
+    const payload = data as CreateRoomPayload;
+    if (!payload?.buildingId) {
+      setError("Vui lòng chọn dãy nhà hợp lệ.");
+      return;
     }
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        await createRoom(payload);
+        router.push("/landlord/rooms");
+      } catch (err: any) {
+        setError(err.message || "Có lỗi xảy ra khi tạo phòng. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   const handleCancel = () => {
