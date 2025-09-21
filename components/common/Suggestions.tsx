@@ -102,7 +102,9 @@ export default function Suggestions() {
             id: post.id,
             title: post.title,
             price: formatPrice(post.price),
-            specs: `${post.area}m² • ${post.bedrooms || '01'} PN • ${post.bathrooms || '01'} WC`,
+            specs: post.category === 'phong-tro' 
+              ? `${post.area}m²` 
+              : `${post.area}m² • ${post.bedrooms || '01'} PN • ${post.bathrooms || '01'} WC`,
             area: post.location,
             img: post.images?.[0] || "/home/room1.png",
             postType: post.type

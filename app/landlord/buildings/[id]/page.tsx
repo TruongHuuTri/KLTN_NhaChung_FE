@@ -5,41 +5,66 @@ import { useParams, useRouter } from "next/navigation";
 import Footer from "@/components/common/Footer";
 import BuildingDetails from "@/components/landlord/BuildingDetails";
 import RoomCardVertical from "@/components/landlord/RoomCardVertical";
+import RoomCardHorizontal from "@/components/landlord/RoomCardHorizontal";
 import RoomForm from "@/components/landlord/RoomForm";
 import ChungCuForm from "@/components/landlord/forms/ChungCuForm";
+import NotificationModal from "@/components/common/NotificationModal";
+import ConfirmModal from "@/components/common/ConfirmModal";
 import { getBuildingById } from "@/services/buildings";
-import { getRooms, createRoom, deleteRoom } from "@/services/rooms";
+import { getRooms, createRoom, deleteRoom, softDeleteRoom } from "@/services/rooms";
 import { Building } from "@/types/Building";
 import { Room, CreateRoomPayload, RoomListParams } from "@/types/Room";
+import { extractApiErrorMessage } from "@/utils/api";
+import { useNotification } from "@/hooks/useNotification";
+import { useConfirm } from "@/hooks/useConfirm";
 
 export default function BuildingDetailsPage() {
   const params = useParams();
   const router = useRouter();
   const id = Number(params.id);
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
+  const { confirm, showConfirm, hideConfirm, setLoading: setConfirmLoading, handleConfirm, handleCancel } = useConfirm();
   const [building, setBuilding] = useState<Building | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [search, setSearch] = useState("");
   const [showCreate, setShowCreate] = useState(false);
-  const [layout, setLayout] = useState<"grid" | "list">("grid");
+  const [layout, setLayout] = useState<"vertical" | "horizontal">("vertical");
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const [b, list] = await Promise.all([
+        getBuildingById(id),
+        getRooms({ buildingId: id } as RoomListParams),
+      ]);
+      setBuilding(b);
+      const roomsData = list.rooms ?? list;
+      
+      // Debug: log để kiểm tra building info
+      console.log('Building data:', b);
+      console.log('Rooms data:', roomsData);
+      
+      // Fallback: nếu room không có building info, thêm từ building hiện tại
+      const roomsWithBuilding = Array.isArray(roomsData) 
+        ? roomsData.map(room => ({
+            ...room,
+              building: room.building || { id: b.buildingId, name: b.name, buildingType: b.buildingType }
+          }))
+        : [];
+      
+      setRooms(roomsWithBuilding);
+    } catch (e: any) {
+      console.error("Error loading data:", e);
+      setError(e?.message || "Không thể tải dữ liệu");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const [b, list] = await Promise.all([
-          getBuildingById(id),
-          getRooms({ buildingId: id } as RoomListParams),
-        ]);
-        setBuilding(b);
-        setRooms(list.rooms ?? list);
-      } catch (e: any) {
-        setError(e?.message || "Không thể tải dữ liệu");
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadData();
   }, [id]);
   useEffect(() => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" });
@@ -69,15 +94,101 @@ export default function BuildingDetailsPage() {
 
   const handleEdit = (roomId: number) => router.push(`/landlord/rooms/${roomId}/edit`);
   const handleView = (roomId: number) => router.push(`/landlord/rooms/${roomId}`);
-  const handleDelete = async (roomId: number) => {
-    if (!confirm("Xóa phòng này?")) return;
+  const handleDelete = (roomId: number) => {
+    // Tìm room để lấy roomNumber
+    const roomToDelete = rooms.find(room => {
+      const id = (room as any).roomId || room.id;
+      return id === roomId;
+    });
+    
+    if (!roomToDelete) {
+      showError(
+        "Không tìm thấy phòng",
+        "Phòng này có thể đã bị xóa hoặc không tồn tại."
+      );
+      return;
+    }
+    
+    // Hiển thị confirm modal
+    showConfirm(
+      "Xác nhận xóa phòng",
+      `Bạn có chắc chắn muốn xóa phòng ${roomToDelete.roomNumber}? Hành động này không thể hoàn tác.`,
+      () => performDelete(roomId, roomToDelete.roomNumber),
+      {
+        confirmText: "Xóa phòng",
+        cancelText: "Hủy",
+        type: "danger"
+      }
+    );
+  };
+
+  const performDelete = async (roomId: number, roomNumber: string) => {
+    // Validate roomId
+    const validRoomId = Number(roomId);
+    if (!validRoomId || isNaN(validRoomId) || validRoomId <= 0) {
+      console.error("❌ Invalid room ID:", roomId, typeof roomId);
+      showError(
+        "ID phòng không hợp lệ",
+        "Vui lòng thử lại hoặc liên hệ hỗ trợ."
+      );
+      hideConfirm();
+      return;
+    }
+    
+    console.log("🗑️ Deleting room:", {
+      originalId: roomId,
+      originalType: typeof roomId,
+      validId: validRoomId,
+      validType: typeof validRoomId,
+      roomNumber: roomNumber
+    });
+    
     try {
-      setLoading(true);
-      await deleteRoom(roomId);
-      const list = await getRooms({ buildingId: id } as RoomListParams);
-      setRooms(list.rooms ?? list);
+      setConfirmLoading(true);
+      
+      // Sử dụng deleteRoom service function (theo integration guide)
+      const result = await deleteRoom(validRoomId);
+      console.log("✅ Delete successful:", result);
+      
+      // Cập nhật state ngay lập tức (theo integration guide)
+      setRooms(prev => prev.filter(room => {
+        const id = (room as any).roomId || room.id;
+        return id !== validRoomId;
+      }));
+      
+      // Đóng confirm modal
+      hideConfirm();
+      
+      // Hiển thị thông báo thành công
+      showSuccess(
+        "Xóa phòng thành công!",
+        `Phòng ${roomNumber} đã được xóa khỏi danh sách.`
+      );
+      
+    } catch (error: any) {
+      console.error("❌ Error deleting room:", error);
+      
+      // Xử lý lỗi theo integration guide
+      let errorMessage = "Có lỗi xảy ra khi xóa phòng";
+      if (error?.status === 404) {
+        errorMessage = "Không tìm thấy phòng để xóa";
+      } else if (error?.status === 403) {
+        errorMessage = "Bạn không có quyền xóa phòng này";
+      } else if (error?.status === 500) {
+        errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Đóng confirm modal
+      hideConfirm();
+      
+      showError(
+        "Không thể xóa phòng",
+        errorMessage
+      );
     } finally {
-      setLoading(false);
+      setConfirmLoading(false);
     }
   };
 
@@ -126,12 +237,12 @@ export default function BuildingDetailsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  title={layout === "grid" ? "Chuyển sang dạng danh sách" : "Chuyển sang dạng lưới"}
-                  onClick={() => setLayout(layout === "grid" ? "list" : "grid")}
-                  className={`h-11 w-11 grid place-items-center rounded-xl border ${layout === "grid" ? "border-teal-300 bg-teal-50 text-teal-600" : "border-teal-300 bg-teal-50 text-teal-600"}`}
+                  title={layout === "vertical" ? "Chuyển sang dạng ngang" : "Chuyển sang dạng đứng"}
+                  onClick={() => setLayout(layout === "vertical" ? "horizontal" : "vertical")}
+                  className={`h-11 w-11 grid place-items-center rounded-xl border ${layout === "vertical" ? "border-teal-300 bg-teal-50 text-teal-600" : "border-teal-300 bg-teal-50 text-teal-600"}`}
                   aria-label="Toggle layout"
                 >
-                  {layout === "grid" ? "≡" : "▦"}
+                  {layout === "vertical" ? "▦" : "≡"}
                 </button>
                 <button onClick={() => setShowCreate(true)} className="h-11 px-5 rounded-xl bg-teal-600 text-white hover:bg-teal-700">Thêm phòng</button>
               </div>
@@ -146,16 +257,26 @@ export default function BuildingDetailsPage() {
                 </div>
               </div>
             ) : (
-              <div className={`grid ${layout === "grid" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"} gap-5`}>
-                {filteredRooms.map((room, idx) => (
-                  <RoomCardVertical
-                    key={`${room?.id ?? 'no-id'}-${room?.roomNumber ?? 'no-num'}-${idx}`}
-                    room={room}
-                    onClick={handleView}
-                    onEdit={handleEdit}
-                    onDelete={handleDelete}
-                  />
-                ))}
+              <div className={`grid ${layout === "vertical" ? "grid-cols-1 sm:grid-cols-2 xl:grid-cols-3" : "grid-cols-1"} gap-5`}>
+                {filteredRooms.map((room, idx) => 
+                  layout === "vertical" ? (
+                    <RoomCardVertical
+                      key={`${room?.id ?? 'no-id'}-${room?.roomNumber ?? 'no-num'}-${idx}`}
+                      room={room}
+                      onClick={handleView}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  ) : (
+                    <RoomCardHorizontal
+                      key={`${room?.id ?? 'no-id'}-${room?.roomNumber ?? 'no-num'}-${idx}`}
+                      room={room}
+                      onClick={handleView}
+                      onEdit={handleEdit}
+                      onDelete={handleDelete}
+                    />
+                  )
+                )}
               </div>
             )}
           </div>
@@ -175,6 +296,10 @@ export default function BuildingDetailsPage() {
                   onSubmit={handleCreate}
                   onCancel={() => setShowCreate(false)}
                   loading={loading}
+                  existingRooms={rooms.map(r => ({ 
+                    roomNumber: r.roomNumber, 
+                    id: (r as any).roomId || r.id 
+                  }))}
                 />
               ) : (
                 <RoomForm
@@ -183,6 +308,10 @@ export default function BuildingDetailsPage() {
                   onSubmit={handleCreate}
                   onCancel={() => setShowCreate(false)}
                   loading={loading}
+                  existingRooms={rooms.map(r => ({ 
+                    roomNumber: r.roomNumber, 
+                    id: (r as any).roomId || r.id 
+                  }))}
                 />
               )}
             </div>
@@ -191,6 +320,29 @@ export default function BuildingDetailsPage() {
       )}
 
       <Footer />
+      
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        duration={notification.duration}
+      />
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirm.isOpen}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={confirm.title}
+        message={confirm.message}
+        confirmText={confirm.confirmText}
+        cancelText={confirm.cancelText}
+        type={confirm.type}
+        loading={confirm.loading}
+      />
     </div>
   );
 }

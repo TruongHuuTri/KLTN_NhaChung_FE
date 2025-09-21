@@ -3,6 +3,7 @@ import {
   Room, 
   CreateRoomPayload, 
   UpdateRoomPayload, 
+  SoftDeletePayload,
   RoomListResponse,
   RoomListParams 
 } from "@/types/Room";
@@ -37,9 +38,77 @@ export async function updateRoom(id: number, payload: UpdateRoomPayload): Promis
   return apiPut(`landlord/rooms/${id}`, payload);
 }
 
-// Xóa phòng (soft delete)
+// Soft delete phòng (ẩn khỏi danh sách)
+export async function softDeleteRoom(id: number): Promise<Room> {
+  return apiPut(`landlord/rooms/${id}`, { isActive: false });
+}
+
+// Xóa phòng (theo integration guide)
 export async function deleteRoom(id: number): Promise<{ message: string }> {
-  return apiDel(`landlord/rooms/${id}`);
+  // Validate roomId
+  if (!id || isNaN(id) || id <= 0) {
+    throw new Error(`Invalid room ID: ${id}`);
+  }
+  
+  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/landlord/rooms/${id}`;
+  
+  console.log("🔗 DELETE API call:", {
+    roomId: id,
+    roomIdType: typeof id,
+    url: apiUrl,
+    method: 'DELETE',
+    hasToken: !!token,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
+  });
+  
+  const response = await fetch(apiUrl, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    }
+  });
+
+  console.log("📡 Response:", {
+    status: response.status,
+    statusText: response.statusText,
+    ok: response.ok,
+    headers: Object.fromEntries(response.headers.entries())
+  });
+
+  if (!response.ok) {
+    let errorData;
+    try {
+      errorData = await response.json();
+    } catch {
+      errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+    }
+    console.error("❌ Error response:", errorData);
+    throw new Error(errorData.message || 'Failed to delete room');
+  }
+
+  // Kiểm tra xem response có content không
+  const contentType = response.headers.get('content-type');
+  console.log("📄 Response content-type:", contentType);
+  
+  let result;
+  if (contentType && contentType.includes('application/json')) {
+    try {
+      result = await response.json();
+      console.log("✅ Success response (JSON):", result);
+    } catch (error) {
+      console.log("⚠️ JSON parse failed, treating as success");
+      result = { message: "Room deleted successfully" };
+    }
+  } else {
+    // Response không phải JSON (có thể là empty hoặc text)
+    const text = await response.text();
+    console.log("✅ Success response (text):", text);
+    result = { message: text || "Room deleted successfully" };
+  }
+  
+  return result;
 }
 
 // Upload hình ảnh phòng

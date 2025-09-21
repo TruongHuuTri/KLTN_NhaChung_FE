@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
-import { getRooms, createRoom, deleteRoom } from "@/services/rooms";
+import { getRooms, createRoom, deleteRoom, softDeleteRoom } from "@/services/rooms";
 import { getBuildingById } from "@/services/buildings";
 import { Room, RoomListParams, CreateRoomPayload } from "@/types/Room";
 import { Building } from "@/types/Building";
+import { extractApiErrorMessage } from "@/utils/api";
 import RoomCardVertical from "@/components/landlord/RoomCardVertical";
+import NotificationModal from "@/components/common/NotificationModal";
+import ConfirmModal from "@/components/common/ConfirmModal";
+import { useNotification } from "@/hooks/useNotification";
+import { useConfirm } from "@/hooks/useConfirm";
 import RoomForm from "@/components/landlord/RoomForm";
 import ChungCuForm from "@/components/landlord/forms/ChungCuForm";
 
@@ -16,6 +21,8 @@ export default function BuildingRoomsPage() {
   const router = useRouter();
   const { user } = useAuth();
   const buildingId = Number(params.id);
+  const { notification, showSuccess, showError, hideNotification } = useNotification();
+  const { confirm, showConfirm, hideConfirm, setLoading: setConfirmLoading, handleConfirm, handleCancel } = useConfirm();
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [building, setBuilding] = useState<Building | null>(null);
@@ -73,14 +80,98 @@ export default function BuildingRoomsPage() {
 
   const handleEdit = (id: number) => router.push(`/landlord/rooms/${id}/edit`);
   const handleView = (id: number) => router.push(`/landlord/rooms/${id}`);
-  const handleDelete = async (id: number) => {
-    if (!confirm("Xóa phòng này?")) return;
+  const handleDelete = (id: number) => {
+    // Tìm room để lấy roomNumber
+    const roomToDelete = rooms.find(room => {
+      const roomId = (room as any).roomId || room.id;
+      return roomId === id;
+    });
+    
+    if (!roomToDelete) {
+      showError(
+        "Không tìm thấy phòng",
+        "Phòng này có thể đã bị xóa hoặc không tồn tại."
+      );
+      return;
+    }
+    
+    // Hiển thị confirm modal
+    showConfirm(
+      "Xác nhận xóa phòng",
+      `Bạn có chắc chắn muốn xóa phòng ${roomToDelete.roomNumber}? Hành động này không thể hoàn tác.`,
+      () => performDelete(id, roomToDelete.roomNumber),
+      {
+        confirmText: "Xóa phòng",
+        cancelText: "Hủy",
+        type: "danger"
+      }
+    );
+  };
+
+  const performDelete = async (id: number, roomNumber: string) => {
+    // Validate roomId
+    const validRoomId = Number(id);
+    if (!validRoomId || isNaN(validRoomId) || validRoomId <= 0) {
+      console.error("❌ Invalid room ID:", id, typeof id);
+      showError(
+        "ID phòng không hợp lệ",
+        "Vui lòng thử lại hoặc liên hệ hỗ trợ."
+      );
+      hideConfirm();
+      return;
+    }
+    
+    console.log("🗑️ Deleting room:", {
+      originalId: id,
+      originalType: typeof id,
+      validId: validRoomId,
+      validType: typeof validRoomId,
+      roomNumber: roomNumber
+    });
+    
     try {
-      setLoading(true);
-      await deleteRoom(id);
-      await loadData();
+      setConfirmLoading(true);
+      await deleteRoom(validRoomId);
+      
+      // Cập nhật state ngay lập tức (theo integration guide)
+      setRooms(prev => prev.filter(room => {
+        const roomId = (room as any).roomId || room.id;
+        return roomId !== validRoomId;
+      }));
+      
+      // Đóng confirm modal
+      hideConfirm();
+      
+      // Hiển thị thông báo thành công
+      showSuccess(
+        "Xóa phòng thành công!",
+        `Phòng ${roomNumber} đã được xóa khỏi danh sách.`
+      );
+      
+    } catch (error: any) {
+      console.error("Error deleting room:", error);
+      
+      // Xử lý lỗi theo integration guide
+      let errorMessage = "Có lỗi xảy ra khi xóa phòng";
+      if (error?.status === 404) {
+        errorMessage = "Không tìm thấy phòng để xóa";
+      } else if (error?.status === 403) {
+        errorMessage = "Bạn không có quyền xóa phòng này";
+      } else if (error?.status === 500) {
+        errorMessage = "Lỗi máy chủ. Vui lòng thử lại sau";
+      } else if (error?.message) {
+        errorMessage = error.message;
+      }
+      
+      // Đóng confirm modal
+      hideConfirm();
+      
+      showError(
+        "Không thể xóa phòng",
+        errorMessage
+      );
     } finally {
-      setLoading(false);
+      setConfirmLoading(false);
     }
   };
 
@@ -146,6 +237,10 @@ export default function BuildingRoomsPage() {
                   onSubmit={handleCreate}
                   onCancel={() => setShowCreate(false)}
                   loading={loading}
+                  existingRooms={rooms.map(r => ({ 
+                    roomNumber: r.roomNumber, 
+                    id: (r as any).roomId || r.id 
+                  }))}
                 />
               ) : (
                 <RoomForm
@@ -154,12 +249,39 @@ export default function BuildingRoomsPage() {
                   onSubmit={handleCreate}
                   onCancel={() => setShowCreate(false)}
                   loading={loading}
+                  existingRooms={rooms.map(r => ({ 
+                    roomNumber: r.roomNumber, 
+                    id: (r as any).roomId || r.id 
+                  }))}
                 />
               )}
             </div>
           </div>
         </div>
       )}
+      
+      {/* Notification Modal */}
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={hideNotification}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+        duration={notification.duration}
+      />
+      
+      {/* Confirm Modal */}
+      <ConfirmModal
+        isOpen={confirm.isOpen}
+        onClose={handleCancel}
+        onConfirm={handleConfirm}
+        title={confirm.title}
+        message={confirm.message}
+        confirmText={confirm.confirmText}
+        cancelText={confirm.cancelText}
+        type={confirm.type}
+        loading={confirm.loading}
+      />
     </div>
   );
 }

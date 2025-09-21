@@ -44,21 +44,39 @@ export async function api<T = any>(
     ...(token && !init.skipAuth ? { Authorization: `Bearer ${token}` } : {}),
   };
 
-  // Debug logging
-  if (init.skipAuth) {
-    console.log("API call with skipAuth:", { path, headers, body: init.body });
-  }
+  const fullUrl = join(API_BASE, path);
+  console.log("🌐 API call:", { 
+    method: init.method, 
+    url: fullUrl, 
+    headers, 
+    hasToken: !!token,
+    skipAuth: init.skipAuth 
+  });
 
-  const res = await fetch(join(API_BASE, path), { ...init, headers });
+  const res = await fetch(fullUrl, { ...init, headers });
+
+  console.log("📡 API response:", { 
+    status: res.status, 
+    statusText: res.statusText, 
+    ok: res.ok,
+    url: res.url 
+  });
 
   if (res.status === 204) return undefined as T;
 
   const raw = await res.text();
   const data = safeParse(raw);
+  
+  console.log("📄 API response data:", { raw, parsed: data });
 
   if (res.status === 401) {
-    // Không tự động xóa token ở đây để tránh UI bị đá khỏi phiên khi gặp 401 do thiếu quyền.
-    // Trang gọi API sẽ tự quyết định xử lý (redirect/login/thông báo...).
+    // Token hết hạn hoặc không hợp lệ - tự động logout
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      // Dispatch event để AuthContext cập nhật state
+      window.dispatchEvent(new CustomEvent('app:logout'));
+    }
     throw new ApiError(
       typeof data === "string" ? data : data?.message ?? "Unauthorized",
       401,
@@ -95,8 +113,10 @@ export const apiPut = <T = any>(p: string, body?: any, o?: RequestInit) =>
     body: body instanceof FormData ? body : JSON.stringify(body),
   });
 
-export const apiDel = <T = any>(p: string, o?: RequestInit) =>
-  api<T>(p, { ...o, method: "DELETE" });
+export const apiDel = <T = any>(p: string, o?: RequestInit) => {
+  console.log("🔗 apiDel called with:", { path: p, options: o });
+  return api<T>(p, { ...o, method: "DELETE" });
+};
 
 export const apiPatch = <T = any>(p: string, body?: any, o?: RequestInit) =>
   api<T>(p, {

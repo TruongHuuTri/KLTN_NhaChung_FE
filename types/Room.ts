@@ -10,6 +10,8 @@ export type ChungCuInfo = {
   floorNumber: number;
   unitCode: string;
   propertyType: string;
+  bedrooms?: number;
+  bathrooms?: number;
 };
 
 export type NhaNguyenCanInfo = {
@@ -22,6 +24,10 @@ export type NhaNguyenCanInfo = {
   width: number;
   length: number;
   features: string[];
+  bedrooms?: number;
+  bathrooms?: number;
+  direction?: DirectionType;
+  legalStatus?: LegalStatusType;
 };
 
 export type Utilities = {
@@ -50,18 +56,20 @@ export type Utilities = {
 };
 
 export type Room = {
-  id: number;
+  id?: number;
+  roomId?: number; // Backend trả về roomId
   buildingId: number;
   roomNumber: string;
-  floor: number;
+  category: "phong-tro" | "chung-cu" | "nha-nguyen-can";
+  floor?: number;
   area: number;
   price: number;
   deposit: number;
   furniture: FurnitureType;
-  bedrooms: number;
-  bathrooms: number;
-  direction: DirectionType;
-  legalStatus: LegalStatusType;
+  bedrooms?: number;
+  bathrooms?: number;
+  direction?: DirectionType;
+  legalStatus?: LegalStatusType;
   address: Address;
   maxOccupancy: number;
   canShare: boolean;
@@ -86,15 +94,16 @@ export type Room = {
 export type CreateRoomPayload = {
   buildingId: number;
   roomNumber: string;
-  floor: number;
+  category?: "phong-tro" | "chung-cu" | "nha-nguyen-can";
+  floor?: number;
   area: number;
   price: number;
   deposit: number;
   furniture: FurnitureType;
-  bedrooms: number;
-  bathrooms: number;
-  direction: DirectionType;
-  legalStatus: LegalStatusType;
+  bedrooms?: number;
+  bathrooms?: number;
+  direction?: DirectionType;
+  legalStatus?: LegalStatusType;
   address: Address;
   maxOccupancy: number;
   canShare: boolean;
@@ -108,6 +117,10 @@ export type CreateRoomPayload = {
 };
 
 export type UpdateRoomPayload = Partial<CreateRoomPayload>;
+
+export type SoftDeletePayload = {
+  isActive: boolean;
+};
 
 export type RoomListResponse = {
   rooms: Room[];

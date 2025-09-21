@@ -135,8 +135,11 @@ export default function RoomCard({
         <div className="text-gray-700 text-sm mb-2 group-hover:text-gray-800 transition-colors duration-300">
           {[
             area != null ? `${area} m²` : null,
-            bedrooms != null ? `${bedrooms} phòng ngủ` : null,
-            bathrooms != null ? `${bathrooms} phòng tắm` : null,
+            // Chỉ hiển thị phòng ngủ/phòng tắm cho chung cư và nhà nguyên căn
+            ...(category !== 'phong-tro' ? [
+              bedrooms != null ? `${bedrooms} phòng ngủ` : null,
+              bathrooms != null ? `${bathrooms} phòng tắm` : null,
+            ] : []),
           ]
             .filter(Boolean)
             .join(" • ")}

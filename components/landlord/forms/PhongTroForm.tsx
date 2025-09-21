@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
-import MediaPickerPanel, { LocalMediaItem } from "@/components/common/MediaPickerLocal";
+"use client";
+
+import { useState, useEffect } from "react";
 import { Building } from "@/types/Building";
 import { Address } from "@/types/RentPost";
 import { CreateRoomPayload, DirectionType, FurnitureType, LegalStatusType } from "@/types/Room";
 import { uploadFiles } from "@/utils/upload";
 import { useAuth } from "@/contexts/AuthContext";
+import MediaPickerPanel, { LocalMediaItem } from "../../common/MediaPickerLocal";
 
-export default function ChungCuForm({
+export default function PhongTroForm({
   building,
   initialData,
   onSubmit,
@@ -34,14 +36,6 @@ export default function ChungCuForm({
       form.area > 0 &&
       form.price > 0 &&
       form.deposit > 0 &&
-      (form.bedrooms || 0) > 0 &&
-      (form.bathrooms || 0) > 0 &&
-      form.direction !== undefined &&
-      form.legalStatus !== undefined &&
-      form.chungCuInfo?.blockOrTower?.trim() !== "" &&
-      form.chungCuInfo?.unitCode?.trim() !== "" &&
-      form.chungCuInfo?.propertyType !== "" &&
-      (form.chungCuInfo?.floorNumber || 0) > 0 &&
       roomNumberError === ""
     );
   };
@@ -49,15 +43,32 @@ export default function ChungCuForm({
   const [form, setForm] = useState<CreateRoomPayload>({
     buildingId: building.buildingId,
     roomNumber: "",
-    floor: 1,
-    area: 30,
+    area: 0,
     price: 0,
     deposit: 0,
-    furniture: "co-ban",
-    bedrooms: 1,
-    bathrooms: 1,
-    direction: "dong",
-    legalStatus: "co-so-hong",
+    furniture: "full",
+    utilities: {
+      electricityPricePerKwh: 0,
+      waterPrice: 0,
+      waterBillingType: "per_person",
+      internetFee: 0,
+      garbageFee: 0,
+      cleaningFee: 0,
+      parkingMotorbikeFee: 0,
+      parkingCarFee: 0,
+      managementFee: 0,
+      managementFeeUnit: "per_month",
+      includedInRent: {
+        electricity: false,
+        water: false,
+        internet: false,
+        garbage: false,
+        cleaning: false,
+        parkingMotorbike: false,
+        parkingCar: false,
+        managementFee: false
+      }
+    },
     address: {
       street: building.address.street || "",
       ward: building.address.ward || "",
@@ -73,107 +84,30 @@ export default function ChungCuForm({
     maxOccupancy: 2,
     canShare: false,
     sharePrice: undefined,
-    chungCuInfo: {
-      buildingName: building.name,
-      blockOrTower: "",
-      floorNumber: 1,
-      unitCode: "",
-      propertyType: "chung-cu",
-    },
-    nhaNguyenCanInfo: undefined,
-    utilities: {
-      electricityPricePerKwh: 0,
-      waterPrice: 0,
-      waterBillingType: "per_person" as const,
-      internetFee: 0,
-      garbageFee: 0,
-      cleaningFee: 0,
-      parkingMotorbikeFee: 0,
-      parkingCarFee: 0,
-      managementFee: 0,
-      managementFeeUnit: "per_month" as const,
-      includedInRent: {
-        electricity: false,
-        water: false,
-        internet: false,
-        garbage: false,
-        cleaning: false,
-        parkingMotorbike: false,
-        parkingCar: false,
-        managementFee: false,
-      },
-    },
-    images: initialData?.images || [],
-    videos: initialData?.videos || [],
-    description: initialData?.description || "",
-    ...initialData,
+    images: [],
+    videos: [],
+    description: "",
+    ...initialData
   });
 
-  // Helpers chuẩn hóa hiển thị số: 0 -> '', loại bỏ 0 đầu vào
-  const numberToDisplay = (n: any) => {
-    if (n === null || n === undefined) return "";
-    const num = Number(n);
-    return Number.isFinite(num) && num !== 0 ? String(num) : "";
-  };
-  const stripLeadingZeros = (s: string) => s.replace(/^0+(?=\d)/, "");
-  // number input hiển thị dạng chuỗi để cho phép xóa
-  const [nums, setNums] = useState<Record<string, string>>({
+  const [nums, setNums] = useState({
     area: numberToDisplay(form.area) || String(form.area),
     price: numberToDisplay(form.price),
     deposit: numberToDisplay(form.deposit),
-    bedrooms: numberToDisplay(form.bedrooms) || String(form.bedrooms),
-    bathrooms: numberToDisplay(form.bathrooms) || String(form.bathrooms),
     maxOccupancy: numberToDisplay(form.maxOccupancy) || String(form.maxOccupancy),
     sharePrice: numberToDisplay(form.sharePrice),
-    chungcu_floorNumber: String(form.chungCuInfo?.floorNumber ?? 1),
-    electricityPricePerKwh: numberToDisplay(form.utilities?.electricityPricePerKwh ?? ''),
-    waterPrice: numberToDisplay(form.utilities?.waterPrice ?? ''),
-    internetFee: numberToDisplay(form.utilities?.internetFee ?? ''),
-    garbageFee: numberToDisplay(form.utilities?.garbageFee ?? ''),
-    cleaningFee: numberToDisplay(form.utilities?.cleaningFee ?? ''),
-    managementFee: numberToDisplay(form.utilities?.managementFee ?? ''),
-    parkingCarFee: numberToDisplay(form.utilities?.parkingCarFee ?? ''),
-    parkingMotorbikeFee: numberToDisplay(form.utilities?.parkingMotorbikeFee ?? ''),
-    estimatedMonthlyUtilities: numberToDisplay((form as any).estimatedMonthlyUtilities ?? ''),
-    capIncludedAmount: numberToDisplay((form as any).capIncludedAmount ?? ''),
+    electricityPricePerKwh: numberToDisplay(form.utilities?.electricityPricePerKwh),
+    waterPrice: numberToDisplay(form.utilities?.waterPrice),
+    internetFee: numberToDisplay(form.utilities?.internetFee),
+    garbageFee: numberToDisplay(form.utilities?.garbageFee),
+    cleaningFee: numberToDisplay(form.utilities?.cleaningFee),
+    parkingMotorbikeFee: numberToDisplay(form.utilities?.parkingMotorbikeFee),
+    parkingCarFee: numberToDisplay(form.utilities?.parkingCarFee),
+    managementFee: numberToDisplay(form.utilities?.managementFee),
   });
 
   const setField = (key: keyof CreateRoomPayload, value: any) => {
     setForm((p) => ({ ...p, [key]: value }));
-  };
-
-  // Kiểm tra mã phòng trùng
-  const checkRoomNumberDuplicate = (roomNumber: string) => {
-    if (!roomNumber.trim()) {
-      setRoomNumberError("");
-      return true;
-    }
-    
-    const isDuplicate = existingRooms.some(room => 
-      room.roomNumber.toLowerCase() === roomNumber.toLowerCase() && 
-      room.id !== (initialData as any)?.id // Không tính phòng hiện tại khi edit
-    );
-    
-    if (isDuplicate) {
-      setRoomNumberError("Mã phòng này đã tồn tại trong dãy");
-      return false;
-    } else {
-      setRoomNumberError("");
-      return true;
-    }
-  };
-  const setChungCu = (key: keyof NonNullable<CreateRoomPayload["chungCuInfo"]>, value: any) => {
-    setForm((p) => ({ ...p, chungCuInfo: { ...(p.chungCuInfo || { buildingName: building.name, blockOrTower: "", floorNumber: 1, unitCode: "", propertyType: "chung-cu" }), [key]: value } }));
-  };
-
-  const setNumDisp = (k: string, v: string) => setNums((p) => ({ ...p, [k]: stripLeadingZeros(v) }));
-  const commitNum = (k: string, parse: (s: string) => number, min?: number, sink?: (n: number) => void) => {
-    const raw = nums[k];
-    if (raw === "") return;
-    let n = parse(raw);
-    if (Number.isNaN(n)) return;
-    if (typeof min === "number" && n < min) n = min;
-    if (sink) sink(n);
   };
 
   // Map includedInRent -> fee field
@@ -214,6 +148,36 @@ export default function ChungCuForm({
     });
   };
 
+  // Kiểm tra mã phòng trùng
+  const checkRoomNumberDuplicate = (roomNumber: string) => {
+    if (!roomNumber.trim()) {
+      setRoomNumberError("");
+      return true;
+    }
+    
+    const isDuplicate = existingRooms.some(room => 
+      room.roomNumber.toLowerCase() === roomNumber.toLowerCase() && 
+      room.id !== (initialData as any)?.id // Không tính phòng hiện tại khi edit
+    );
+    
+    if (isDuplicate) {
+      setRoomNumberError("Mã phòng này đã tồn tại trong dãy");
+      return false;
+    } else {
+      setRoomNumberError("");
+      return true;
+    }
+  };
+
+  const setNumDisp = (k: string, v: string) => setNums((p) => ({ ...p, [k]: stripLeadingZeros(v) }));
+
+  const commitNum = (k: string, parse: (s: string) => number, min: number, setter: (n: number) => void) => {
+    const v = parse(nums[k as keyof typeof nums] as string);
+    const next = isNaN(v) ? min : Math.max(min, v);
+    setter(next);
+    setNumDisp(k, String(next));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -227,8 +191,7 @@ export default function ChungCuForm({
       const uid = user?.userId;
       const imgUrls = mediaImages.length ? await uploadFiles(mediaImages.map((m) => m.file), uid as any) : [];
       const vidUrls = mediaVideos.length ? await uploadFiles(mediaVideos.map((m) => m.file), uid as any, "videos") : [];
-      // Chuẩn hóa: dùng tầng từ chung cư làm floor
-      const floorFromChungCu = form.chungCuInfo?.floorNumber ?? form.floor;
+      
       // Nếu includedInRent true thì đảm bảo phí = 0
       const normalizedUtilities = (() => {
         const u = { ...(form.utilities || {}) } as any;
@@ -238,27 +201,17 @@ export default function ChungCuForm({
         });
         return u;
       })();
-
-      // đảm bảo unitCode có giá trị mặc định theo roomNumber nếu người dùng không nhập
-      // và copy bedrooms/bathrooms từ root level vào chungCuInfo
-      const ensuredChungCuInfo = {
-        ...(form.chungCuInfo || {}),
-        unitCode: (form.chungCuInfo?.unitCode && form.chungCuInfo.unitCode.trim()) ? form.chungCuInfo.unitCode : form.roomNumber,
-        bedrooms: form.bedrooms,
-        bathrooms: form.bathrooms,
-        direction: form.direction,
-        legalStatus: form.legalStatus,
-      } as NonNullable<CreateRoomPayload["chungCuInfo"]>;
-
-      const data: CreateRoomPayload = {
+      
+      const payload: CreateRoomPayload = {
         ...form,
-        floor: floorFromChungCu as number,
-        chungCuInfo: ensuredChungCuInfo,
         images: [...(form.images || []), ...imgUrls],
         videos: [...(form.videos || []), ...vidUrls],
-        utilities: normalizedUtilities,
+        utilities: normalizedUtilities
       };
-      onSubmit(data);
+      
+      onSubmit(payload);
+    } catch (error) {
+      console.error("Error creating room:", error);
     } finally {
       setUploading(false);
     }
@@ -270,7 +223,7 @@ export default function ChungCuForm({
       <div className="sticky top-0 z-20 bg-white border-b border-gray-200">
         <div className="px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-gray-900">Phòng chung cư</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Phòng trọ</h2>
             <p className="text-sm text-gray-500">{building?.name ? `Dãy: ${building.name}` : "Thêm mới phòng"}</p>
           </div>
           <button type="button" onClick={onCancel} aria-label="Đóng" className="inline-flex items-center justify-center w-9 h-9 rounded-lg border border-gray-300 hover:bg-gray-50">
@@ -304,10 +257,9 @@ export default function ChungCuForm({
 
           {/* Fields right */}
           <div className="lg:col-span-2 p-6 space-y-10 max-h-[70vh] overflow-y-auto pr-2 nice-scrollbar">
-
-            {/* Thông tin chung cư */}
+            {/* Thông tin phòng trọ */}
             <section className="space-y-4">
-              <h3 className="text-base font-semibold text-gray-900">Thông tin chung cư</h3>
+              <h3 className="text-base font-semibold text-gray-900">Thông tin phòng trọ</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Dãy</label>
@@ -322,8 +274,7 @@ export default function ChungCuForm({
                     value={form.roomNumber} 
                     onChange={(e) => { 
                       const v = e.target.value; 
-                      setField("roomNumber", v); 
-                      setChungCu("unitCode", v);
+                      setField("roomNumber", v);
                       checkRoomNumberDuplicate(v);
                     }} 
                     onBlur={(e) => checkRoomNumberDuplicate(e.target.value)}
@@ -334,26 +285,8 @@ export default function ChungCuForm({
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Block/Tháp <span className="text-red-500">*</span>
-                  </label>
-                  <input className="w-full px-4 py-2 border rounded-lg" value={form.chungCuInfo?.blockOrTower || ""} onChange={(e) => setChungCu("blockOrTower", e.target.value)} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tầng số <span className="text-red-500">*</span>
-                  </label>
-                  <input type="number" min={1} className="w-full px-4 py-2 border rounded-lg" value={nums.chungcu_floorNumber} onChange={(e) => setNumDisp("chungcu_floorNumber", e.target.value)} onBlur={() => commitNum("chungcu_floorNumber", (s) => parseInt(s, 10), 1, (n) => setChungCu("floorNumber", n))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Mã căn <span className="text-red-500">*</span>
-                  </label>
-                  <input className="w-full px-4 py-2 border rounded-lg" value={form.chungCuInfo?.unitCode || ""} onChange={(e) => setChungCu("unitCode", e.target.value)} />
-                </div>
-                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Loại BĐS</label>
-                  <input className="w-full px-4 py-2 border rounded-lg bg-gray-50" value="Chung cư" disabled />
+                  <input className="w-full px-4 py-2 border rounded-lg bg-gray-50" value="Phòng trọ" disabled />
                 </div>
                 {/* Địa chỉ (gộp thành 1 input) */}
                 <div className="md:col-span-2">
@@ -367,9 +300,9 @@ export default function ChungCuForm({
               </div>
             </section>
 
-            {/* Diện tích sử dụng & bố cục */}
+            {/* Diện tích & bố cục */}
             <section className="space-y-4">
-              <h3 className="text-base font-semibold text-gray-900">Diện tích sử dụng</h3>
+              <h3 className="text-base font-semibold text-gray-900">Diện tích & bố cục</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -385,43 +318,49 @@ export default function ChungCuForm({
                     <option value="trong">Trống</option>
                   </select>
                 </div>
+              </div>
+            </section>
+
+            {/* Ở ghép */}
+            <section className="space-y-4">
+              <h3 className="text-base font-semibold text-gray-900">Ở ghép</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phòng ngủ <span className="text-red-500">*</span>
-                  </label>
-                  <input type="number" min={1} className="w-full px-4 py-2 border rounded-lg" value={nums.bedrooms} onChange={(e) => setNumDisp("bedrooms", e.target.value)} onBlur={() => commitNum("bedrooms", (s) => parseInt(s, 10), 1, (n) => setField("bedrooms", n))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Phòng tắm <span className="text-red-500">*</span>
-                  </label>
-                  <input type="number" min={1} className="w-full px-4 py-2 border rounded-lg" value={nums.bathrooms} onChange={(e) => setNumDisp("bathrooms", e.target.value)} onBlur={() => commitNum("bathrooms", (s) => parseInt(s, 10), 1, (n) => setField("bathrooms", n))} />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Hướng <span className="text-red-500">*</span>
-                  </label>
-                  <select className="w-full px-4 py-2 border rounded-lg" value={form.direction} onChange={(e) => setField("direction", e.target.value as DirectionType)}>
-                    <option value="dong">Đông</option>
-                    <option value="tay">Tây</option>
-                    <option value="nam">Nam</option>
-                    <option value="bac">Bắc</option>
-                    <option value="dong-bac">Đông Bắc</option>
-                    <option value="dong-nam">Đông Nam</option>
-                    <option value="tay-bac">Tây Bắc</option>
-                    <option value="tay-nam">Tây Nam</option>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Cho phép ở ghép</label>
+                  <select className="w-full px-4 py-2 border rounded-lg" value={form.canShare ? "true" : "false"} onChange={(e) => {
+                    const canShare = e.target.value === "true";
+                    setField("canShare", canShare);
+                    // Reset maxOccupancy về 1 khi tắt ở ghép
+                    if (!canShare) {
+                      setField("maxOccupancy", 1);
+                      setNumDisp("maxOccupancy", "1");
+                    }
+                  }}>
+                    <option value="false">Không</option>
+                    <option value="true">Có</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pháp lý <span className="text-red-500">*</span>
-                  </label>
-                  <select className="w-full px-4 py-2 border rounded-lg" value={form.legalStatus} onChange={(e) => setField("legalStatus", e.target.value as LegalStatusType)}>
-                    <option value="co-so-hong">Có sổ hồng</option>
-                    <option value="dang-ky">Đang đăng ký</option>
-                    <option value="chua-dang-ky">Chưa đăng ký</option>
-                  </select>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Số người tối đa</label>
+                  <input 
+                    type="number" 
+                    min={1} 
+                    className={`w-full px-4 py-2 border rounded-lg ${!form.canShare ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    value={nums.maxOccupancy} 
+                    onChange={(e) => setNumDisp("maxOccupancy", e.target.value)} 
+                    onBlur={() => commitNum("maxOccupancy", (s) => parseInt(s, 10), 1, (n) => setField("maxOccupancy", n))}
+                    disabled={!form.canShare}
+                  />
                 </div>
+
+                {form.canShare && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Giá mỗi người (đ)</label>
+                      <input type="number" min={0} className="w-full px-4 py-2 border rounded-lg" value={nums.sharePrice} onChange={(e) => setNumDisp("sharePrice", e.target.value)} onBlur={() => commitNum("sharePrice", (s) => parseInt(s, 10), 0, (n) => setField("sharePrice", n))} />
+                    </div>
+                  </>
+                )}
               </div>
             </section>
 
@@ -599,67 +538,6 @@ export default function ChungCuForm({
               </div>
             </section>
 
-            {/* Ở ghép */}
-            <section className="space-y-4">
-              <h3 className="text-base font-semibold text-gray-900">Ở ghép</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cho phép ở ghép</label>
-                  <select className="w-full px-4 py-2 border rounded-lg" value={form.canShare ? "true" : "false"} onChange={(e) => {
-                    const canShare = e.target.value === "true";
-                    setField("canShare", canShare);
-                    // Reset maxOccupancy về 1 khi tắt ở ghép
-                    if (!canShare) {
-                      setField("maxOccupancy", 1);
-                      setNumDisp("maxOccupancy", "1");
-                    }
-                  }}>
-                    <option value="false">Không</option>
-                    <option value="true">Có</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số người tối đa</label>
-                  <input 
-                    type="number" 
-                    min={1} 
-                    className={`w-full px-4 py-2 border rounded-lg ${!form.canShare ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    value={nums.maxOccupancy} 
-                    onChange={(e) => setNumDisp("maxOccupancy", e.target.value)} 
-                    onBlur={() => commitNum("maxOccupancy", (s) => parseInt(s, 10), 1, (n) => setField("maxOccupancy", n))}
-                    disabled={!form.canShare}
-                  />
-                </div>
-
-                {form.canShare && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Giá mỗi người (đ)</label>
-                      <input type="number" min={0} className="w-full px-4 py-2 border rounded-lg" value={nums.sharePrice} onChange={(e) => setNumDisp("sharePrice", e.target.value)} onBlur={() => commitNum("sharePrice", (s) => parseInt(s, 10), 0, (n) => setField("sharePrice", n))} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Cách chia sẻ</label>
-                      <select className="w-full px-4 py-2 border rounded-lg" value={(form as any).shareMethod || "split_evenly"} onChange={(e) => setForm((p) => ({ ...(p as any), shareMethod: e.target.value }))}>
-                        <option value="split_evenly">Chia đều</option>
-                        <option value="by_usage">Theo sử dụng</option>
-                        <option value="included">Đã bao gồm</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Ước tính tiện ích/tháng</label>
-                      <input type="number" min={0} className="w-full px-4 py-2 border rounded-lg" value={nums.estimatedMonthlyUtilities} onChange={(e) => setNumDisp("estimatedMonthlyUtilities", e.target.value)} onBlur={() => commitNum("estimatedMonthlyUtilities", (s) => parseInt(s, 10), 0, (n) => setForm((p: any) => ({ ...(p as any), estimatedMonthlyUtilities: n })))} />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Mức free tối đa</label>
-                      <input type="number" min={0} className="w-full px-4 py-2 border rounded-lg" value={nums.capIncludedAmount} onChange={(e) => setNumDisp("capIncludedAmount", e.target.value)} onBlur={() => commitNum("capIncludedAmount", (s) => parseInt(s, 10), 0, (n) => setForm((p: any) => ({ ...(p as any), capIncludedAmount: n })))} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </section>
-
-            {/* Địa chỉ: đã đưa lên phần Thông tin chung cư */}
-
             {/* Thông tin khác */}
             <section className="space-y-4">
               <h3 className="text-base font-semibold text-gray-900">Thông tin khác</h3>
@@ -695,3 +573,13 @@ export default function ChungCuForm({
     </div>
   );
 }
+
+// Helper functions
+function numberToDisplay(n: number | undefined): string {
+  return n ? String(n) : "";
+}
+
+function stripLeadingZeros(s: string): string {
+  return s.replace(/^0+/, "") || "0";
+}
+

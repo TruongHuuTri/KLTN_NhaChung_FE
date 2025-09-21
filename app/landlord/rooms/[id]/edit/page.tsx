@@ -5,9 +5,9 @@ import { useRouter, useParams } from "next/navigation";
 import { useAuth } from "../../../../../contexts/AuthContext";
 import Footer from "../../../../../components/common/Footer";
 import RoomForm from "../../../../../components/landlord/RoomForm";
-import { getRoomById, updateRoom } from "../../../../../services/rooms";
+import { getRoomById, updateRoom, getRooms } from "../../../../../services/rooms";
 import { getBuildings } from "../../../../../services/buildings";
-import { Room, UpdateRoomPayload } from "../../../../../types/Room";
+import { Room, UpdateRoomPayload, RoomListParams } from "../../../../../types/Room";
 import { Building } from "../../../../../types/Building";
 
 export default function EditRoomPage() {
@@ -18,6 +18,7 @@ export default function EditRoomPage() {
   
   const [room, setRoom] = useState<Room | null>(null);
   const [buildings, setBuildings] = useState<Building[]>([]);
+  const [existingRooms, setExistingRooms] = useState<Array<{ roomNumber: string; id?: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +47,13 @@ export default function EditRoomPage() {
         
         setRoom(roomData);
         setBuildings(buildingsResponse);
+        
+        // Load existing rooms in the same building for validation
+        if (roomData?.buildingId) {
+          const roomsResponse = await getRooms({ buildingId: roomData.buildingId } as RoomListParams);
+          const roomsList = Array.isArray(roomsResponse) ? roomsResponse : (roomsResponse.rooms ?? []);
+          setExistingRooms(roomsList.map(r => ({ roomNumber: r.roomNumber, id: r.id })));
+        }
       } catch (err: any) {
         setError(err.message || "Không thể tải thông tin phòng. Vui lòng thử lại.");
       } finally {
@@ -164,6 +172,7 @@ export default function EditRoomPage() {
           onSubmit={handleSubmit}
           onCancel={handleCancel}
           loading={submitting}
+          existingRooms={existingRooms}
         />
       </div>
 
