@@ -1,9 +1,16 @@
 "use client";
 
 import { Building } from "@/types/Building";
+import { Room } from "@/types/Room";
 import { addressService } from "@/services/address";
 
-export default function BuildingDetails({ building }: { building: Building }) {
+export default function BuildingDetails({ 
+  building, 
+  rooms = [] 
+}: { 
+  building: Building; 
+  rooms?: Room[]; 
+}) {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
       <div className="px-6 py-5 bg-gradient-to-r from-teal-600 to-teal-500 text-white">
@@ -24,7 +31,7 @@ export default function BuildingDetails({ building }: { building: Building }) {
         <div className="text-gray-700 space-y-2">
           <div>📍 {addressService.formatAddressForDisplay(building.address as any)}</div>
           <div className="flex gap-6 text-sm">
-            <span>🏠 {building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}</span>
+            <span>🏠 {rooms && rooms.length > 0 ? rooms.length : building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}</span>
           </div>
         </div>
 

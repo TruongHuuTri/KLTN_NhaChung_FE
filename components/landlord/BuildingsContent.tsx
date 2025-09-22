@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Pagination from "../common/Pagination";
 import { Building } from "../../types/Building";
+import { Room } from "../../types/Room";
 import { addressService } from "../../services/address";
+import { getRooms } from "../../services/rooms";
 import BuildingCard from "./BuildingCard";
 
 interface BuildingsContentProps {
   buildings: Building[];
+  rooms?: Room[]; // Thêm prop rooms để tính tổng phòng thực tế
   currentPage: number;
   totalPages: number;
   searchQuery: string;
@@ -22,6 +25,7 @@ interface BuildingsContentProps {
 
 export default function BuildingsContent({
   buildings,
+  rooms = [],
   currentPage,
   totalPages,
   searchQuery,
@@ -34,6 +38,38 @@ export default function BuildingsContent({
   onRefresh
 }: BuildingsContentProps) {
   const [searchInput, setSearchInput] = useState(searchQuery);
+  const [allRooms, setAllRooms] = useState<Room[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+
+  // Load tất cả rooms để tính số phòng thực tế cho mỗi dãy
+  const loadAllRooms = async () => {
+    if (rooms.length > 0) {
+      setAllRooms(rooms);
+      return;
+    }
+    
+    try {
+      setRoomsLoading(true);
+      const response = await getRooms({ limit: 1000 }); // Load tất cả rooms
+      const roomsData = response.rooms ?? response;
+      setAllRooms(Array.isArray(roomsData) ? roomsData : []);
+    } catch (error) {
+      console.error('Error loading rooms:', error);
+      setAllRooms([]);
+    } finally {
+      setRoomsLoading(false);
+    }
+  };
+
+  // Load rooms khi component mount
+  React.useEffect(() => {
+    loadAllRooms();
+  }, []);
+
+  // Tính số phòng thực tế cho mỗi dãy
+  const getActualRoomCount = (buildingId: number) => {
+    return allRooms.filter(room => room.buildingId === buildingId).length;
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -107,7 +143,7 @@ export default function BuildingsContent({
             <div>
               <p className="text-amber-600 text-sm font-medium">Tổng phòng</p>
               <p className="text-3xl font-bold text-amber-700">
-                {buildings.reduce((sum, b) => sum + b.totalRooms, 0)}
+                {roomsLoading ? '...' : (allRooms.length > 0 ? allRooms.length : buildings.reduce((sum, b) => sum + b.totalRooms, 0))}
               </p>
             </div>
             <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
@@ -181,6 +217,7 @@ export default function BuildingsContent({
               <BuildingCard
                 key={building.buildingId}
                 building={building}
+                actualRoomCount={getActualRoomCount(building.buildingId)}
                 onClick={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}

@@ -42,9 +42,6 @@ export default function BuildingDetailsPage() {
       setBuilding(b);
       const roomsData = list.rooms ?? list;
       
-      // Debug: log để kiểm tra building info
-      console.log('Building data:', b);
-      console.log('Rooms data:', roomsData);
       
       // Fallback: nếu room không có building info, thêm từ building hiện tại
       const roomsWithBuilding = Array.isArray(roomsData) 
@@ -219,7 +216,7 @@ export default function BuildingDetailsPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left: Building info */}
         <div className="lg:col-span-1 lg:sticky lg:top-6 self-start">
-          <BuildingDetails building={building} />
+          <BuildingDetails building={building} rooms={rooms} />
         </div>
 
         {/* Right: Rooms management */}

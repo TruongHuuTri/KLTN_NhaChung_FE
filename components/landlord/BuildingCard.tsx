@@ -36,11 +36,13 @@ function getBuildingTypeColor(type: string) {
 
 export default function BuildingCard({
   building,
+  actualRoomCount,
   onClick,
   onEdit,
   onDelete,
 }: {
   building: Building;
+  actualRoomCount?: number;
   onClick: (id: number) => void;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
@@ -97,7 +99,7 @@ export default function BuildingCard({
                 </span>
                 <span className="flex items-center gap-6">
                   <span className="flex items-center gap-1">
-                    🏠 {building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}
+                    🏠 {actualRoomCount !== undefined ? actualRoomCount : building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}
                   </span>
                 </span>
               </div>
