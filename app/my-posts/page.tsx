@@ -5,10 +5,8 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "../../contexts/AuthContext";
 import Footer from "../../components/common/Footer";
 import MyPostsContent from "../../components/my-posts/MyPostsContent";
-import { getUserRentPosts } from "../../services/rentPosts";
-import { listRoommatePosts } from "../../services/roommatePosts";
-import { RentPostApi } from "../../types/RentPostApi";
-import { RoommatePost } from "../../services/roommatePosts";
+import { getUserPosts } from "../../services/posts";
+import { Post } from "../../types/Post";
 
 // Mock data cho bài đăng
 const mockPosts = [
@@ -121,7 +119,7 @@ const mockPosts = [
 export default function MyPostsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [posts, setPosts] = useState<(RentPostApi | RoommatePost)[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,37 +131,9 @@ export default function MyPostsPage() {
         setLoading(true);
         setError(null);
         
-        // Fetch cả rent posts và roommate posts của user
-        const [rentResponse, roommateResponse] = await Promise.allSettled([
-          getUserRentPosts(user.userId),
-          listRoommatePosts({ userId: user.userId })
-        ]);
-        
-        const allPosts: (RentPostApi | RoommatePost)[] = [];
-        
-        // Process rent posts
-        if (rentResponse.status === 'fulfilled') {
-          const rentData = rentResponse.value;
-          const rentPosts = Array.isArray((rentData as any)?.data) 
-            ? (rentData as any).data 
-            : Array.isArray(rentData) 
-            ? rentData 
-            : [];
-          allPosts.push(...rentPosts);
-        }
-        
-        // Process roommate posts
-        if (roommateResponse.status === 'fulfilled') {
-          const roommateData = roommateResponse.value;
-          const roommatePosts = Array.isArray((roommateData as any)?.data) 
-            ? (roommateData as any).data 
-            : Array.isArray(roommateData) 
-            ? roommateData 
-            : [];
-          allPosts.push(...roommatePosts);
-        }
-        
-        setPosts(allPosts);
+        // Fetch user posts using new unified API
+        const userPosts = await getUserPosts();
+        setPosts(userPosts);
       } catch (err: any) {
         setError('Không thể tải bài đăng. Vui lòng thử lại.');
       } finally {
@@ -180,22 +150,14 @@ export default function MyPostsPage() {
 
   const handleView = (id: number) => {
     // Tìm post gốc để xác định loại
-    const post = posts.find(p => 
-      ('rentPostId' in p && p.rentPostId === id) ||
-      (('roommatePostId' in p || 'postId' in p) && ((p as any).roommatePostId === id || (p as any).postId === id)) ||
-      ((p as any).id === id) // For mock data
-    );
+    const post = posts.find(p => p.postId === id);
     
     if (post) {
-      // Xác định postType dựa trên cấu trúc dữ liệu
+      // Xác định postType dựa trên postType từ API
       let postType = 'rent';
-      if ('rentPostId' in post) {
+      if (post.postType === 'rent' || (post.postType as any) === 'cho-thue') {
         postType = 'rent';
-      } else if ('currentRoom' in post) {
-        postType = 'roommate';
-      } else if ((post as any).postType) {
-        postType = (post as any).postType;
-      } else if ((post as any).category === 'roommate') {
+      } else if (post.postType === 'roommate' || (post.postType as any) === 'tim-o-ghep') {
         postType = 'roommate';
       }
       

@@ -9,11 +9,9 @@ import AreaDropdown from "../home/AreaDropdown";
 export default function Header() {
   const [isAreaDropdownOpen, setIsAreaDropdownOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isPostMenuOpen, setIsPostMenuOpen] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
-  const postMenuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
 
   // Auto detect current page based on pathname
@@ -36,9 +34,6 @@ export default function Header() {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setIsUserMenuOpen(false);
       }
-      if (postMenuRef.current && !postMenuRef.current.contains(event.target as Node)) {
-        setIsPostMenuOpen(false);
-      }
     }
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -50,7 +45,7 @@ export default function Header() {
   const menuItems = [
     { id: "trang-chu", label: "Trang chủ", href: "/" },
     { id: "tim-phong", label: "Tìm phòng/Ở ghép", href: "/find_share" },
-    { id: "dang-tin", label: "Đăng tin", href: "/post", hasDropdown: true },
+    { id: "dang-tin", label: "Đăng tin", href: "/post" },
     { id: "blog", label: "Blog", href: "/blog" },
     { id: "ho-tro", label: "Hỗ trợ", href: "/support" },
   ];
@@ -95,81 +90,20 @@ export default function Header() {
         {/* Navigation */}
         <nav className="hidden lg:flex items-center gap-8">
           {menuItems.map((item) => (
-            item.hasDropdown ? (
-              <div key={item.id} className="relative" ref={postMenuRef}>
-                <button
-                  onClick={() => setIsPostMenuOpen(!isPostMenuOpen)}
-                  className={`transition-all duration-300 font-medium relative group flex items-center gap-1 ${
-                    getCurrentPage() === item.id 
-                      ? 'text-white font-bold' 
-                      : 'text-white/90 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                  <svg className={`w-4 h-4 transition-transform duration-300 ${isPostMenuOpen ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                  <span className={`absolute -bottom-1 left-0 h-0.5 bg-teal-400 transition-all duration-300 ${
-                    getCurrentPage() === item.id ? 'w-full' : 'w-0 group-hover:w-full'
-                  }`}></span>
-                </button>
-
-                {/* Post Dropdown Menu */}
-                {isPostMenuOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-2 z-50">
-                    <Link
-                      href="/post/rent"
-                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsPostMenuOpen(false)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-medium">Cho thuê phòng</p>
-                          <p className="text-xs text-gray-500">Đăng tin cho thuê</p>
-                        </div>
-                      </div>
-                    </Link>
-                    <Link
-                      href="/post/roommate"
-                      className="block px-4 py-3 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
-                      onClick={() => setIsPostMenuOpen(false)}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
-                          <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
-                          </svg>
-                        </div>
-                        <div>
-                          <p className="font-medium">Tìm ở ghép</p>
-                          <p className="text-xs text-gray-500">Tìm người ở ghép với mình</p>
-                        </div>
-                      </div>
-                    </Link>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Link 
-                key={item.id}
-                className={`transition-all duration-300 font-medium relative group ${
-                  getCurrentPage() === item.id 
-                    ? 'text-white font-bold' 
-                    : 'text-white/90 hover:text-white'
-                }`} 
-                href={item.href}
-              >
-                {item.label}
-                <span className={`absolute -bottom-1 left-0 h-0.5 bg-teal-400 transition-all duration-300 ${
-                  getCurrentPage() === item.id ? 'w-full' : 'w-0 group-hover:w-full'
-                }`}></span>
-              </Link>
-            )
+            <Link 
+              key={item.id}
+              className={`transition-all duration-300 font-medium relative group ${
+                getCurrentPage() === item.id 
+                  ? 'text-white font-bold' 
+                  : 'text-white/90 hover:text-white'
+              }`} 
+              href={item.href}
+            >
+              {item.label}
+              <span className={`absolute -bottom-1 left-0 h-0.5 bg-teal-400 transition-all duration-300 ${
+                getCurrentPage() === item.id ? 'w-full' : 'w-0 group-hover:w-full'
+              }`}></span>
+            </Link>
           ))}
         </nav>
 

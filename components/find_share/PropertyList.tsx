@@ -2,11 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import RoomCard from "@/components/common/RoomCard";
-import { listRentPosts } from "@/services/rentPosts";
-import { listRoommatePosts } from "@/services/roommatePosts";
+import { searchPosts } from "@/services/posts";
+import { getRoomById } from "@/services/rooms";
 import { rentPostToUnified, roommatePostToUnified, shuffleArray, UnifiedPost } from "@/types/MixedPosts";
-import type { RentPostApi } from "@/types/RentPostApi";
-import type { RoommatePost } from "@/services/roommatePosts";
 
 type SortKey = "random" | "newest" | "priceAsc" | "priceDesc" | "areaDesc";
 
@@ -27,44 +25,73 @@ export default function RoomList() {
         setLoading(true);
         setErr("");
 
-        // Gọi cả 2 APIs đồng thời
-        const [rentResponse, roommateResponse] = await Promise.allSettled([
-          listRentPosts(),
-          listRoommatePosts()
-        ]);
-
-        const rentPosts: RentPostApi[] = [];
-        const roommatePosts: RoommatePost[] = [];
-
-        // Xử lý kết quả rent posts
-        if (rentResponse.status === 'fulfilled') {
-          const rentData = rentResponse.value;
-          const rentRaw = Array.isArray((rentData as any)?.data)
-            ? (rentData as any).data
-            : Array.isArray(rentData)
-            ? (rentData as any)
-            : [];
-          rentPosts.push(...rentRaw);
-        }
-
-        // Xử lý kết quả roommate posts
-        if (roommateResponse.status === 'fulfilled') {
-          const roommateData = roommateResponse.value;
-          const roommateRaw = Array.isArray((roommateData as any)?.data)
-            ? (roommateData as any).data
-            : Array.isArray(roommateData)
-            ? (roommateData as any)
-            : [];
-          roommatePosts.push(...roommateRaw);
-        }
-
-        // Convert to unified format và mix ngẫu nhiên
-        const unifiedRentPosts = rentPosts.map(rentPostToUnified);
-        const unifiedRoommatePosts = roommatePosts.map(roommatePostToUnified);
+        // Gọi unified search API để lấy tất cả posts
+        const searchResponse = await searchPosts();
         
-        // Kết hợp và shuffle
-        const allPosts = [...unifiedRentPosts, ...unifiedRoommatePosts];
-        const shuffledPosts = shuffleArray(allPosts);
+        // Xử lý kết quả từ search API
+        const allPosts = Array.isArray(searchResponse)
+          ? searchResponse
+          : Array.isArray(searchResponse?.posts)
+          ? searchResponse.posts
+          : [];
+        
+        // Convert to unified format và fetch room data
+        const unifiedPosts: UnifiedPost[] = await Promise.all(
+          allPosts.map(async (post: any) => {
+            // Map backend postType to frontend format
+            const mappedPostType = post.postType === 'cho-thue' ? 'rent' : 
+                                   post.postType === 'tim-o-ghep' ? 'roommate' : post.postType;
+            
+            // Try to get room data if post has roomId
+            let roomData = null;
+            let price = 0;
+            let area = 0;
+            let location = 'Chưa xác định';
+            let address = undefined;
+            let bedrooms = undefined;
+            let bathrooms = undefined;
+            let images = post.images || [];
+            
+            if (post.roomId) {
+              try {
+                roomData = await getRoomById(post.roomId);
+                price = roomData.price || 0;
+                area = roomData.area || 0;
+                location = roomData.address ? 
+                  `${roomData.address.ward}, ${roomData.address.city}` : 
+                  'Chưa xác định';
+                address = roomData.address;
+                bedrooms = roomData.chungCuInfo?.bedrooms || roomData.nhaNguyenCanInfo?.bedrooms;
+                bathrooms = roomData.chungCuInfo?.bathrooms || roomData.nhaNguyenCanInfo?.bathrooms;
+                images = roomData.images?.length > 0 ? roomData.images : (post.images || []);
+              } catch (error) {
+                console.warn(`Failed to fetch room data for roomId ${post.roomId}:`, error);
+              }
+            }
+            
+            // Convert new API format to UnifiedPost format
+            return {
+              id: post.postId,
+              type: mappedPostType as 'rent' | 'roommate',
+              title: post.title || 'Không có tiêu đề',
+              description: post.description || 'Không có mô tả',
+              images: images,
+              price: price,
+              area: area,
+              location: location,
+              address: address,
+              category: post.category || mappedPostType,
+              photoCount: images.length + (post.videos?.length || 0),
+              bedrooms: bedrooms,
+              bathrooms: bathrooms,
+              isVerified: false,
+              createdAt: post.createdAt,
+              originalData: post
+            };
+          })
+        );
+        
+        const shuffledPosts = shuffleArray(unifiedPosts);
 
         if (!cancelled) {
           setItems(shuffledPosts);
@@ -90,16 +117,20 @@ export default function RoomList() {
         return a;
       case "priceAsc":
         a.sort(
-          (x, y) =>
-            (x.price ?? Number.POSITIVE_INFINITY) -
-            (y.price ?? Number.POSITIVE_INFINITY)
+          (x, y) => {
+            const xPrice = x?.price || 0;
+            const yPrice = y?.price || 0;
+            return xPrice - yPrice;
+          }
         );
         break;
       case "priceDesc":
         a.sort(
-          (x, y) =>
-            (y.price ?? Number.NEGATIVE_INFINITY) -
-            (x.price ?? Number.NEGATIVE_INFINITY)
+          (x, y) => {
+            const xPrice = x?.price || 0;
+            const yPrice = y?.price || 0;
+            return yPrice - xPrice;
+          }
         );
         break;
       case "areaDesc":

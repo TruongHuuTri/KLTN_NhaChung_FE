@@ -3,12 +3,13 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import Pagination from "../common/Pagination";
 import { RentPostApi } from "../../types/RentPostApi";
-import { RoommatePost } from "../../services/roommatePosts";
+import { Post } from "../../types/Post";
 import EditPostModal from "./EditPostModal";
 import { addressService } from "../../services/address";
+import { getRoomById } from "../../services/rooms";
 
 // Legacy interface để tương thích với mock data
-interface Post {
+interface LegacyPost {
   id: number;
   title: string;
   category: string;
@@ -23,60 +24,63 @@ interface Post {
 }
 
 interface MyPostsContentProps {
-  posts: (Post | RentPostApi | RoommatePost)[];
+  posts: Post[];
   onEdit: (id: number) => void;
   onView: (id: number) => void;
   onDelete: (id: number) => void;
   onRefresh: () => void;
 }
 
-// Helper function để chuẩn hóa data từ API và mock
-const normalizePost = (post: Post | RentPostApi | RoommatePost): Post => {
-  if ('rentPostId' in post) {
-    // Đây là RentPostApi từ backend
-    const api = post as any;
-    const area = api.area ?? api.basicInfo?.area ?? 0;
-    const price = api.price ?? api.basicInfo?.price ?? 0;
-    const addrObj = api.address;
-    const address = addrObj
-      ? addressService.formatAddressForDisplay(addrObj)
-      : (api.city ? String(api.city) : "");
-    return {
-      id: api.rentPostId,
-      title: api.title,
-      category: api.category,
-      price,
-      area,
-      address,
-      status: (api.status as any) || "active",
-      views: 0,
-      createdAt: new Date(api.createdAt).toISOString().split('T')[0],
-      images: api.images || [],
-      postType: 'rent'
-    };
-  } else if ('currentRoom' in post) {
-    // Đây là RoommatePost từ backend
-    const roommate = post as RoommatePost;
-    const roommatePostId = (roommate as any).roommatePostId || roommate.postId;
-    const addr = roommate.currentRoom.address as any;
-    const address = typeof addr === 'string' ? addr : addressService.formatAddressForDisplay(addr);
-    return {
-      id: roommatePostId,
-      title: roommate.title,
-      category: 'roommate',
-      price: roommate.currentRoom.price,
-      area: roommate.currentRoom.area,
-      address,
-      status: "active",
-      views: 0,
-      createdAt: new Date(roommate.createdAt).toISOString().split('T')[0],
-      images: roommate.images || [],
-      postType: 'roommate'
-    };
+// Helper function để chuẩn hóa data từ API
+const normalizePost = async (post: Post): Promise<LegacyPost> => {
+  let roomData = null;
+  
+  // Fetch room data if post has roomId
+  if (post.roomId) {
+    try {
+      roomData = await getRoomById(post.roomId);
+    } catch (error) {
+      roomData = null;
+    }
   } else {
-    // Đây là mock data
-    return post as Post;
+    roomData = post.roomInfo;
   }
+  
+  // Format address
+  let address = "Địa chỉ không xác định";
+  if (roomData?.address) {
+    if (typeof roomData.address === 'string') {
+      address = roomData.address;
+    } else if (typeof roomData.address === 'object') {
+      address = addressService.formatWardCity(roomData.address);
+    }
+  }
+  
+  // Get images with fallback logic: Post images > Room images > default
+  let images = [];
+  if (post.images && post.images.length > 0) {
+    images = post.images;
+  } else if ((roomData as any)?.images && (roomData as any).images.length > 0) {
+    images = (roomData as any).images;
+  } else {
+    images = ['/home/room1.png']; // Default fallback
+  }
+
+  // Convert Post to LegacyPost format for display
+  return {
+    id: post.postId,
+    title: post.title,
+    category: post.postType === 'rent' ? 'phong-tro' : 'roommate',
+    price: (roomData as any)?.price || (roomData as any)?.basicInfo?.price || 0,
+    area: (roomData as any)?.area || (roomData as any)?.basicInfo?.area || 0,
+    address: address,
+    status: post.status === 'active' ? 'active' : 
+            post.status === 'pending' ? 'pending' : 'inactive',
+    views: 0, // API mới không có views
+    createdAt: post.createdAt.split('T')[0],
+    images: images,
+    postType: post.postType === 'rent' ? 'rent' : 'roommate'
+  };
 };
 
 export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefresh }: MyPostsContentProps) {
@@ -85,26 +89,51 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
   const [currentPage, setCurrentPage] = useState(1);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [selectedPost, setSelectedPost] = useState<any>(null);
+  const [normalizedPosts, setNormalizedPosts] = useState<LegacyPost[]>([]);
+  const [loadingPosts, setLoadingPosts] = useState(false);
   const hasRestoredRef = useRef(false);
   const itemsPerPage = 5;
 
+  // Normalize posts when posts change
+  useEffect(() => {
+    const loadNormalizedPosts = async () => {
+      if (!posts.length) {
+        setNormalizedPosts([]);
+        return;
+      }
+
+      try {
+        setLoadingPosts(true);
+        const normalizedResults = await Promise.all(posts.map(normalizePost));
+        setNormalizedPosts(normalizedResults);
+      } catch (error) {
+        console.error('Error normalizing posts:', error);
+        setNormalizedPosts([]);
+      } finally {
+        setLoadingPosts(false);
+      }
+    };
+
+    loadNormalizedPosts();
+  }, [posts]);
+
   const filteredPosts = useMemo(() => {
-    let normalizedPosts = posts.map(normalizePost);
+    let filtered = normalizedPosts;
     
     // Filter by post type first
     if (postTypeFilter === "rent") {
-      normalizedPosts = normalizedPosts.filter(post => post.category !== "roommate");
+      filtered = filtered.filter(post => post.postType === "rent");
     } else if (postTypeFilter === "roommate") {
-      normalizedPosts = normalizedPosts.filter(post => post.category === "roommate");
+      filtered = filtered.filter(post => post.postType === "roommate");
     }
     
     // Then filter by status
     if (activeTab === "all") {
-      return normalizedPosts;
+      return filtered;
     } else {
-      return normalizedPosts.filter(post => post.status === activeTab);
+      return filtered.filter(post => post.status === activeTab);
     }
-  }, [posts, activeTab, postTypeFilter]);
+  }, [normalizedPosts, activeTab, postTypeFilter]);
 
   const paginatedPosts = useMemo(() => {
     const startIndex = (currentPage - 1) * itemsPerPage;
@@ -115,17 +144,17 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
   const totalPages = Math.ceil(filteredPosts.length / itemsPerPage);
 
   const getTabCount = (status: string) => {
-    let normalizedPosts = posts.map(normalizePost);
+    let filtered = normalizedPosts;
     
     // Apply post type filter first
     if (postTypeFilter === "rent") {
-      normalizedPosts = normalizedPosts.filter(post => post.category !== "roommate");
+      filtered = filtered.filter(post => post.postType === "rent");
     } else if (postTypeFilter === "roommate") {
-      normalizedPosts = normalizedPosts.filter(post => post.category === "roommate");
+      filtered = filtered.filter(post => post.postType === "roommate");
     }
     
-    if (status === "all") return normalizedPosts.length;
-    return normalizedPosts.filter(post => post.status === status).length;
+    if (status === "all") return filtered.length;
+    return filtered.filter(post => post.status === status).length;
   };
 
   const tabCounts = {
@@ -370,7 +399,12 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
 
       {/* Posts List */}
       <div className="divide-y divide-gray-100">
-        {paginatedPosts.length === 0 ? (
+        {loadingPosts ? (
+          <div className="p-12 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Đang tải thông tin bài đăng...</p>
+          </div>
+        ) : paginatedPosts.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-gray-400 text-2xl">📄</span>

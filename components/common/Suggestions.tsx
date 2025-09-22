@@ -1,11 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { listRentPosts } from "../../services/rentPosts";
-import { listRoommatePosts } from "../../services/roommatePosts";
-import { rentPostToUnified, roommatePostToUnified, shuffleArray, UnifiedPost } from "../../types/MixedPosts";
-import { RentPostApi } from "../../types/RentPostApi";
-import { RoommatePost } from "../../services/roommatePosts";
+import { getPosts } from "../../services/posts";
+import { Post } from "../../types/Post";
 
 type Card = {
   id: number;
@@ -53,61 +50,44 @@ export default function Suggestions() {
       try {
         setLoading(true);
         
-        // Call both APIs simultaneously like find_share
+        // Get both types of posts using new unified API
         const [rentResponse, roommateResponse] = await Promise.allSettled([
-          listRentPosts(),
-          listRoommatePosts()
+          getPosts({ postType: 'rent', limit: 4 }),
+          getPosts({ postType: 'roommate', limit: 4 })
         ]);
 
-        const rentPosts: RentPostApi[] = [];
-        const roommatePosts: RoommatePost[] = [];
+        const allPosts: Post[] = [];
 
-        // Process rent posts response
+        // Process rent posts
         if (rentResponse.status === 'fulfilled') {
-          const rentData = rentResponse.value;
-          const rentRaw = Array.isArray((rentData as any)?.data)
-            ? (rentData as any).data
-            : Array.isArray(rentData)
-            ? (rentData as any)
-            : [];
-          rentPosts.push(...rentRaw);
+          allPosts.push(...rentResponse.value.posts);
         }
 
-        // Process roommate posts response
+        // Process roommate posts
         if (roommateResponse.status === 'fulfilled') {
-          const roommateData = roommateResponse.value;
-          const roommateRaw = Array.isArray((roommateData as any)?.data)
-            ? (roommateData as any).data
-            : Array.isArray(roommateData)
-            ? (roommateData as any)
-            : [];
-          roommatePosts.push(...roommateRaw);
+          allPosts.push(...roommateResponse.value.posts);
         }
 
-        // Convert to unified format and mix
-        const unifiedRentPosts = rentPosts.map(rentPostToUnified);
-        const unifiedRoommatePosts = roommatePosts.map(roommatePostToUnified);
-        
-        // Combine and shuffle like find_share
-        const allPosts = [...unifiedRentPosts, ...unifiedRoommatePosts];
-        const shuffledPosts = shuffleArray(allPosts);
-
-        // Transform to Card format for display (limit to 8 posts)
-        const transformedCards = shuffledPosts.slice(0, 8).map((post: UnifiedPost) => {
+        // Convert to Card format
+        const transformedCards = allPosts.slice(0, 8).map((post: Post) => {
           const formatPrice = (price: number) => {
             return new Intl.NumberFormat('vi-VN').format(price / 1000000) + ' triệu / tháng';
           };
           
           return {
-            id: post.id,
+            id: post.postId,
             title: post.title,
-            price: formatPrice(post.price),
-            specs: post.category === 'phong-tro' 
-              ? `${post.area}m²` 
-              : `${post.area}m² • ${post.bedrooms || '01'} PN • ${post.bathrooms || '01'} WC`,
-            area: post.location,
+            price: post.roomInfo?.basicInfo?.price ? 
+              formatPrice(post.roomInfo.basicInfo.price) : 
+              'Liên hệ',
+            specs: post.postType === 'rent' ? 
+              `${post.roomInfo?.basicInfo?.area || 0}m²` : 
+              `${post.roomInfo?.basicInfo?.area || 0}m² • ${post.roomInfo?.basicInfo?.bedrooms || 1} PN • ${post.roomInfo?.basicInfo?.bathrooms || 1} WC`,
+            area: post.roomInfo?.address ? 
+              `${post.roomInfo.address.ward}, ${post.roomInfo.address.city}` : 
+              'N/A',
             img: post.images?.[0] || "/home/room1.png",
-            postType: post.type
+            postType: (post.postType === 'rent' ? 'rent' : 'roommate') as 'rent' | 'roommate'
           };
         });
         

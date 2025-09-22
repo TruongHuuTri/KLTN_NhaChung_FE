@@ -1,27 +1,40 @@
 "use client";
 import { useState, useEffect } from "react";
-import { RentPostApi } from "../../types/RentPostApi";
-import { RoommatePost } from "../../services/roommatePosts";
+import { Post } from "../../types/Post";
+import { getRoomById } from "../../services/rooms";
 import { useFavorites } from "../../contexts/FavoritesContext";
 
 interface PropertyInfoProps {
-  postData: RentPostApi | RoommatePost | null;
+  postData: Post | null;
   postType: 'rent' | 'roommate';
 }
 
 export default function PropertyInfo({ postData, postType }: PropertyInfoProps) {
   const [currentImage, setCurrentImage] = useState(0);
+  const [roomData, setRoomData] = useState<any>(null);
   const { isFavorited, toggleFavorite } = useFavorites();
   
-  // Extract images từ postData
-  const images = postData?.images && postData.images.length > 0 
-    ? postData.images 
-    : ["/home/room1.png"]; // fallback
+  // Fetch room data when postData changes
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      if (postData?.roomId) {
+        try {
+          const room = await getRoomById(postData.roomId);
+          setRoomData(room);
+        } catch (error) {
+          console.warn('Failed to fetch room data:', error);
+        }
+      }
+    };
+    
+    fetchRoomData();
+  }, [postData]);
+  
+  // Extract images từ roomData (preferred) or postData
+  const images = (roomData?.images?.length > 0 ? roomData.images : ((postData?.images?.length ?? 0) > 0 ? postData?.images : ["/home/room1.png"]));
 
   // Get post ID và check favorite status
-  const postId = postType === 'rent' 
-    ? (postData as RentPostApi)?.rentPostId 
-    : (postData as any)?.roommatePostId || (postData as any)?.postId;
+  const postId = postData?.postId;
   
   
   const isFav = postId ? isFavorited(postType, postId) : false;
@@ -101,7 +114,7 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
 
         {/* Thumbnails (scroll ngang) */}
         <div className="flex gap-3 overflow-x-auto pb-1">
-          {images.map((image, index) => (
+          {images.map((image: string, index: number) => (
             <button
               key={index}
               onClick={() => handleThumbnailClick(index)}
@@ -125,7 +138,10 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
             {postData?.title || 'Chưa có tiêu đề'}
           </h1>
           <p className="text-gray-600 mb-2">
-            Loại hình: {postType === 'roommate' ? 'Phòng trọ ở ghép' : 'Phòng trọ cho thuê'}
+            Loại hình: {roomData?.category === 'chung-cu' ? 'Chung cư cho thuê' : 
+                       roomData?.category === 'nha-nguyen-can' ? 'Nhà nguyên căn cho thuê' :
+                       roomData?.category === 'phong-tro' ? 'Phòng trọ cho thuê' :
+                       postType === 'roommate' ? 'Phòng trọ ở ghép' : 'Phòng trọ cho thuê'}
           </p>
         </div>
         
@@ -153,18 +169,14 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           <div className="text-2xl font-bold text-red-600">
-            {postType === 'rent' && postData && 'basicInfo' in postData 
-              ? `${(postData.basicInfo.price / 1000000).toFixed(1)} triệu / tháng`
-              : postType === 'roommate' && postData && 'currentRoom' in postData
-              ? `${((postData as any).currentRoom.price / 1000000).toFixed(1)} triệu / tháng`
+            {roomData?.price 
+              ? `${(roomData.price / 1000000).toFixed(1)} triệu / tháng`
               : 'Chưa có thông tin giá'
             }
           </div>
           <div className="text-lg text-gray-600">
-            {postType === 'rent' && postData && 'basicInfo' in postData 
-              ? `${postData.basicInfo.area} m²`
-              : postType === 'roommate' && postData && 'currentRoom' in postData
-              ? `${(postData as any).currentRoom.area} m²`
+            {roomData?.area 
+              ? `${roomData.area} m²`
               : 'Chưa có thông tin diện tích'
             }
           </div>
@@ -177,12 +189,8 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
           </svg>
           <span>
-            {postType === 'rent' && postData && 'address' in postData 
-              ? `${postData.address.specificAddress || ''} ${postData.address.street}, ${postData.address.ward}, ${postData.address.city}`.trim()
-              : postType === 'roommate' && postData && 'currentRoom' in postData
-              ? typeof (postData as any).currentRoom.address === 'string' 
-                ? (postData as any).currentRoom.address
-                : `${(postData as any).currentRoom.address.specificAddress ? (postData as any).currentRoom.address.specificAddress + ', ' : ''}${(postData as any).currentRoom.address.street}, ${(postData as any).currentRoom.address.ward}, ${(postData as any).currentRoom.address.city}`.replace(/^,\s*/, '')
+            {roomData?.address 
+              ? `${roomData.address.specificAddress || ''} ${roomData.address.street}, ${roomData.address.ward}, ${roomData.address.city}`.trim()
               : 'Chưa có thông tin địa chỉ'
             }
           </span>

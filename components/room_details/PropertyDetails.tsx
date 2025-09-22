@@ -1,14 +1,34 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { formatNumberVN, formatPriceWithSuffix } from "../../utils/format";
 import { AgeUtils } from "@/utils/ageUtils";
+import { Post } from "../../types/Post";
+import { getRoomById } from "../../services/rooms";
 
 interface PropertyDetailsProps {
-  postData: any;
+  postData: Post | null;
   postType: 'rent' | 'roommate';
 }
 
 export default function PropertyDetails({ postData, postType }: PropertyDetailsProps) {
+  const [roomData, setRoomData] = useState<any>(null);
+  
+  // Fetch room data when postData changes
+  useEffect(() => {
+    const fetchRoomData = async () => {
+      if (postData?.roomId) {
+        try {
+          const room = await getRoomById(postData.roomId);
+          setRoomData(room);
+        } catch (error) {
+          console.warn('Failed to fetch room data:', error);
+        }
+      }
+    };
+    
+    fetchRoomData();
+  }, [postData]);
   const Row = ({ label, value }: { label: string; value?: string | number | null }) => (
     <div className="flex justify-between">
       <span className="text-gray-600">{label}</span>
@@ -141,37 +161,28 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
     return map[t] || t;
   };
 
-  const rentCategory: string | undefined = postType === 'rent' ? postData?.category : undefined;
+  const rentCategory: string | undefined = postType === 'rent' ? roomData?.category : undefined;
   // Helper function to get address string
   const getAddressString = () => {
-    if (postType === 'rent' && postData?.address) {
-      const addr = postData.address;
+    if (roomData?.address) {
+      const addr = roomData.address;
       return `${addr.specificAddress || ''} ${addr.street}, ${addr.ward}, ${addr.city}`.trim();
-    } else if (postType === 'roommate' && postData?.currentRoom?.address) {
-      const addr = postData.currentRoom.address;
-      return typeof addr === 'string' 
-        ? addr 
-        : `${addr.specificAddress ? addr.specificAddress + ', ' : ''}${addr.street}, ${addr.ward}, ${addr.city}`.replace(/^,\s*/, '');
     }
     return 'Chưa có thông tin địa chỉ';
   };
 
   // Helper function to get price
   const getPriceString = () => {
-    if (postType === 'rent' && postData?.basicInfo?.price) {
-      return `${(postData.basicInfo.price / 1000000).toFixed(1)} triệu / tháng`;
-    } else if (postType === 'roommate' && postData?.currentRoom?.price) {
-      return `${(postData.currentRoom.price / 1000000).toFixed(1)} triệu / tháng`;
+    if (roomData?.price) {
+      return `${(roomData.price / 1000000).toFixed(1)} triệu / tháng`;
     }
     return 'Chưa có thông tin giá';
   };
 
   // Helper function to get area
   const getAreaString = () => {
-    if (postType === 'rent' && postData?.basicInfo?.area) {
-      return `${postData.basicInfo.area} m²`;
-    } else if (postType === 'roommate' && postData?.currentRoom?.area) {
-      return `${postData.currentRoom.area} m²`;
+    if (roomData?.area) {
+      return `${roomData.area} m²`;
     }
     return 'Chưa có thông tin diện tích';
   };
@@ -193,8 +204,8 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
           <div className="flex justify-between">
             <span className="text-gray-600">Đặt cọc:</span>
             <span className="text-gray-900">
-              {postType === 'rent' && typeof postData?.basicInfo?.deposit === 'number' 
-                ? formatPriceWithSuffix(postData.basicInfo.deposit, '', 'auto')
+              {roomData?.deposit 
+                ? formatPriceWithSuffix(roomData.deposit, '', 'auto')
                 : 'Chưa có thông tin'}
             </span>
           </div>
@@ -202,6 +213,168 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
             <span className="text-gray-600">Diện tích:</span>
             <span className="text-gray-900">{getAreaString()}</span>
           </div>
+
+          {/* Fields specific to chung cu */}
+          {roomData?.category === 'chung-cu' && roomData?.chungCuInfo && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tên toà/Chung cư:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.buildingName || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Block/Tower:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.blockOrTower || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tầng:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.floorNumber ? String(roomData.chungCuInfo.floorNumber) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Mã căn:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.unitCode || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Loại hình:</span>
+                <span className="text-gray-900">{translatePropertyType(roomData.chungCuInfo.propertyType) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phòng ngủ:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.bedrooms ? String(roomData.chungCuInfo.bedrooms) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phòng tắm:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.bathrooms ? String(roomData.chungCuInfo.bathrooms) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Hướng nhà:</span>
+                <span className="text-gray-900">{translateDirection(roomData.chungCuInfo.direction) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tình trạng pháp lý:</span>
+                <span className="text-gray-900">{roomData.chungCuInfo.legalStatus || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nội thất:</span>
+                <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người tối đa:</span>
+                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Có thể ở ghép:</span>
+                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người hiện tại:</span>
+                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Chỗ trống còn lại:</span>
+                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
+              </div>
+            </>
+          )}
+
+          {/* Fields specific to nha nguyen can */}
+          {roomData?.category === 'nha-nguyen-can' && roomData?.nhaNguyenCanInfo && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Loại hình:</span>
+                <span className="text-gray-900">{translatePropertyType(roomData.nhaNguyenCanInfo.propertyType) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số tầng:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.totalFloors ? String(roomData.nhaNguyenCanInfo.totalFloors) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">DT đất:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.landArea ? `${roomData.nhaNguyenCanInfo.landArea} m²` : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">DT sử dụng:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.usableArea ? `${roomData.nhaNguyenCanInfo.usableArea} m²` : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Kích thước:</span>
+                <span className="text-gray-900">
+                  {roomData.nhaNguyenCanInfo.width && roomData.nhaNguyenCanInfo.length 
+                    ? `${roomData.nhaNguyenCanInfo.width} x ${roomData.nhaNguyenCanInfo.length} m`
+                    : 'Chưa có thông tin'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phòng ngủ:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.bedrooms ? String(roomData.nhaNguyenCanInfo.bedrooms) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phòng tắm:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.bathrooms ? String(roomData.nhaNguyenCanInfo.bathrooms) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Hướng nhà:</span>
+                <span className="text-gray-900">{translateDirection(roomData.nhaNguyenCanInfo.direction) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tình trạng pháp lý:</span>
+                <span className="text-gray-900">{roomData.nhaNguyenCanInfo.legalStatus || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Tiện ích:</span>
+                <span className="text-gray-900">
+                  {roomData.nhaNguyenCanInfo.features && roomData.nhaNguyenCanInfo.features.length > 0 
+                    ? roomData.nhaNguyenCanInfo.features.join(', ')
+                    : 'Chưa có thông tin'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nội thất:</span>
+                <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người tối đa:</span>
+                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Có thể ở ghép:</span>
+                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người hiện tại:</span>
+                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Chỗ trống còn lại:</span>
+                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
+              </div>
+            </>
+          )}
+
+          {/* Fields specific to phong tro */}
+          {roomData?.category === 'phong-tro' && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Nội thất:</span>
+                <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người tối đa:</span>
+                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Có thể ở ghép:</span>
+                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Số người hiện tại:</span>
+                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Chỗ trống còn lại:</span>
+                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -209,152 +382,97 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
       <div className="mb-6">
         <h4 className="text-base font-semibold text-gray-800 mb-3">Tình Trạng Chi Tiết</h4>
         <div className="border-t border-gray-200 pt-3 space-y-2">
-          {postType === 'rent' && (
+          {/* Utilities information */}
+          {roomData?.utilities && (
             <>
-              {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && typeof postData?.basicInfo?.bedrooms === 'number' && postData.basicInfo.bedrooms > 0 && (
-                <Row label="Số Phòng Ngủ:" value={`${postData.basicInfo.bedrooms} phòng`} />
-              )}
-              {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && typeof postData?.basicInfo?.bathrooms === 'number' && postData.basicInfo.bathrooms > 0 && (
-                <Row label="Nhà Vệ Sinh:" value={`${postData.basicInfo.bathrooms} WC`} />
-              )}
-              {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && postData?.basicInfo?.direction && (
-                <Row label="Hướng:" value={translateDirection(postData.basicInfo.direction)} />
-              )}
-              {postData?.basicInfo?.furniture && (
-                <Row label="Nội thất:" value={translateFurniture(postData.basicInfo.furniture)} />
-              )}
-              {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && postData?.basicInfo?.legalStatus && (
-                <Row label="Tình trạng pháp lý:" value={translateLegalStatus(postData.basicInfo.legalStatus)} />
-              )}
+              <div className="flex justify-between">
+                <span className="text-gray-600">Giá điện:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.electricityPricePerKwh 
+                    ? `${formatPriceWithSuffix(roomData.utilities.electricityPricePerKwh, '', 'auto')}/kWh`
+                    : 'Chưa có thông tin'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Giá nước:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.waterPrice 
+                    ? `${formatPriceWithSuffix(roomData.utilities.waterPrice, '', 'auto')}/${translateWaterBillingType(roomData.utilities.waterBillingType)}`
+                    : 'Chưa có thông tin'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí Internet:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.internetFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.internetFee, '', 'auto')}/tháng`
+                    : 'Miễn phí'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí rác:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.garbageFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.garbageFee, '', 'auto')}/tháng`
+                    : 'Miễn phí'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí vệ sinh:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.cleaningFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.cleaningFee, '', 'auto')}/tháng`
+                    : 'Miễn phí'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí gửi xe máy:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.parkingMotorbikeFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.parkingMotorbikeFee, '', 'auto')}/tháng`
+                    : 'Miễn phí'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí gửi xe ô tô:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.parkingCarFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.parkingCarFee, '', 'auto')}/tháng`
+                    : 'Miễn phí'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Phí quản lý:</span>
+                <span className="text-gray-900">
+                  {roomData.utilities.managementFee 
+                    ? `${formatPriceWithSuffix(roomData.utilities.managementFee, '', 'auto')}/${roomData.utilities.managementFeeUnit === 'per_month' ? 'tháng' : 'm²'}`
+                    : 'Miễn phí'}
+                </span>
+              </div>
             </>
           )}
           {postType === 'roommate' && (
             <>
-              <Row label="Loại phòng:" value={translateRoomType(postData?.currentRoom?.roomType)} />
-              {typeof postData?.currentRoom?.currentOccupants === 'number' && (
-                <Row label="Số người hiện tại:" value={String(postData.currentRoom.currentOccupants)} />
+              <Row label="Loại phòng:" value={translateRoomType(roomData?.category)} />
+              {typeof roomData?.currentOccupants === 'number' && (
+                <Row label="Số người hiện tại:" value={String(roomData.currentOccupants)} />
               )}
-              <Row label="Thời hạn còn lại:" value={translateRemainingDuration(postData?.currentRoom?.remainingDuration)} />
-              {typeof postData?.currentRoom?.estimatedMonthlyUtilities === 'number' && (
-                <Row label="Ước tính chi phí/tháng:" value={`${formatNumberVN(postData.currentRoom.estimatedMonthlyUtilities)} đ/tháng`} />
+              {typeof roomData?.estimatedMonthlyUtilities === 'number' && (
+                <Row label="Ước tính chi phí/tháng:" value={`${formatNumberVN(roomData.estimatedMonthlyUtilities)} đ/tháng`} />
               )}
-              {typeof postData?.currentRoom?.capIncludedAmount === 'number' && (
-                <Row label="Mức bao gồm tối đa:" value={`${formatNumberVN(postData.currentRoom.capIncludedAmount)} đ`} />
+              {typeof roomData?.capIncludedAmount === 'number' && (
+                <Row label="Mức bao gồm tối đa:" value={`${formatNumberVN(roomData.capIncludedAmount)} đ`} />
               )}
-              <Row label="Cách chia tiền điện nước:" value={translateShareMethod(postData?.currentRoom?.shareMethod)} />
+              <Row label="Cách chia tiền điện nước:" value={translateShareMethod(roomData?.shareMethod)} />
+              <Row label="Số người tối đa:" value={String(roomData?.maxOccupancy || 0)} />
+              <Row label="Chỗ trống còn lại:" value={String(roomData?.availableSpots || 0)} />
+              <Row label="Giá ở ghép:" value={roomData?.sharePrice ? `${formatNumberVN(roomData.sharePrice)} đ/tháng` : 'Chưa có thông tin'} />
             </>
           )}
         </div>
       </div>
 
-      {/* Thông Tin Bất Động Sản */}
-      {postType === 'rent' && (postData?.category === 'chung-cu' || postData?.category === 'nha-nguyen-can') && (
-        <div className="mb-6">
-          <h4 className="text-base font-semibold text-gray-800 mb-3">Thông Tin Bất Động Sản</h4>
-          <div className="border-t border-gray-200 pt-3 space-y-2">
-            {postData?.category === 'chung-cu' && postData?.chungCuInfo && (
-              <>
-                <Row label="Tên toà/Chung cư:" value={postData.chungCuInfo.buildingName} />
-                <Row label="Block/Tower:" value={postData.chungCuInfo.blockOrTower} />
-                <Row
-                  label="Tầng:"
-                  value={typeof postData.chungCuInfo.floorNumber === 'number' ? String(postData.chungCuInfo.floorNumber) : undefined}
-                />
-                <Row label="Mã căn:" value={postData.chungCuInfo.unitCode} />
-                <Row label="Loại hình:" value={translatePropertyType(postData.chungCuInfo.propertyType)} />
-              </>
-            )}
 
-            {postData?.category === 'nha-nguyen-can' && postData?.nhaNguyenCanInfo && (
-              <>
-                <Row label="Khu/Lô:" value={postData.nhaNguyenCanInfo.khuLo} />
-                <Row label="Mã căn:" value={postData.nhaNguyenCanInfo.unitCode} />
-                <Row label="Loại hình:" value={translatePropertyType(postData.nhaNguyenCanInfo.propertyType)} />
-                <Row
-                  label="Số tầng:"
-                  value={typeof postData.nhaNguyenCanInfo.totalFloors === 'number' ? String(postData.nhaNguyenCanInfo.totalFloors) : undefined}
-                />
-                <Row
-                  label="DT đất:"
-                  value={typeof postData.nhaNguyenCanInfo.landArea === 'number' ? `${postData.nhaNguyenCanInfo.landArea} m²` : undefined}
-                />
-                <Row
-                  label="DT sử dụng:"
-                  value={typeof postData.nhaNguyenCanInfo.usableArea === 'number' ? `${postData.nhaNguyenCanInfo.usableArea} m²` : undefined}
-                />
-                <Row
-                  label="Kích thước:"
-                  value={
-                    typeof postData.nhaNguyenCanInfo.width === 'number' && typeof postData.nhaNguyenCanInfo.length === 'number'
-                      ? `${postData.nhaNguyenCanInfo.width} x ${postData.nhaNguyenCanInfo.length} m`
-                      : undefined
-                  }
-                />
-              </>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Chi Phí */}
-      {(postData?.utilities || (postType === 'roommate' && postData?.currentRoom)) && (
-        <div className="mb-6">
-          <h4 className="text-base font-semibold text-gray-800 mb-3">Chi Phí</h4>
-          <div className="border-t border-gray-200 pt-3 space-y-2">
-            {postType === 'rent' && postData?.utilities && (
-              <>
-                {typeof postData.utilities.electricityPricePerKwh === 'number' && (
-                  <Row label="Giá điện:" value={`${formatNumberVN(postData.utilities.electricityPricePerKwh)} đ/kWh`} />
-                )}
-                {typeof postData.utilities.waterPrice === 'number' && (
-                  <Row label="Giá nước:" value={`${formatNumberVN(postData.utilities.waterPrice)} đ/${postData.utilities.waterBillingType === 'per_person' ? 'người' : 'm³'}`} />
-                )}
-                {postData.utilities.waterBillingType && (
-                  <Row label="Cách tính nước:" value={translateWaterBillingType(postData.utilities.waterBillingType)} />
-                )}
-                {typeof postData.utilities.internetFee === 'number' && (
-                  <Row label="Internet:" value={`${formatNumberVN(postData.utilities.internetFee)} đ/tháng`} />
-                )}
-                {typeof postData.utilities.garbageFee === 'number' && (
-                  <Row label="Rác:" value={`${formatNumberVN(postData.utilities.garbageFee)} đ/tháng`} />
-                )}
-                {typeof postData.utilities.cleaningFee === 'number' && (
-                  <Row label="Vệ sinh:" value={`${formatNumberVN(postData.utilities.cleaningFee)} đ/tháng`} />
-                )}
-                {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && typeof postData.utilities.managementFee === 'number' && (
-                  <Row label="Phí quản lý:" value={`${formatNumberVN(postData.utilities.managementFee)} ${postData.utilities.managementFeeUnit === 'per_m2_per_month' ? 'đ/m²/tháng' : 'đ/tháng'}`} />
-                )}
-                {['chung-cu', 'nha-nguyen-can'].includes(String(rentCategory)) && typeof postData.utilities.parkingCarFee === 'number' && (
-                  <Row label="Bãi xe ô tô:" value={`${formatNumberVN(postData.utilities.parkingCarFee)} đ/tháng`} />
-                )}
-                {rentCategory === 'nha-nguyen-can' && typeof postData.utilities.gardeningFee === 'number' && (
-                  <Row label="Chăm sóc vườn:" value={`${formatNumberVN(postData.utilities.gardeningFee)} đ/tháng`} />
-                )}
-              </>
-            )}
-            {postType === 'roommate' && postData?.currentRoom && (
-              <>
-                {typeof postData.currentRoom.electricityPricePerKwh === 'number' && (
-                  <Row label="Giá điện:" value={`${formatNumberVN(postData.currentRoom.electricityPricePerKwh)} đ/kWh`} />
-                )}
-                {typeof postData.currentRoom.waterPrice === 'number' && (
-                  <Row label="Giá nước:" value={`${formatNumberVN(postData.currentRoom.waterPrice)} đ/${postData.currentRoom.waterBillingType === 'per_person' ? 'người' : 'm³'}`} />
-                )}
-                <Row label="Cách tính nước:" value={translateWaterBillingType(postData?.currentRoom?.waterBillingType)} />
-                {typeof postData.currentRoom.internetFee === 'number' && (
-                  <Row label="Internet:" value={`${formatNumberVN(postData.currentRoom.internetFee)} đ/tháng`} />
-                )}
-                {typeof postData.currentRoom.garbageFee === 'number' && (
-                  <Row label="Rác:" value={`${formatNumberVN(postData.currentRoom.garbageFee)} đ/tháng`} />
-                )}
-                {typeof postData.currentRoom.cleaningFee === 'number' && (
-                  <Row label="Vệ sinh:" value={`${formatNumberVN(postData.currentRoom.cleaningFee)} đ/tháng`} />
-                )}
-              </>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Thông Tin Cá Nhân (chỉ cho roommate) */}
       {postType === 'roommate' && postData?.personalInfo && (
@@ -362,8 +480,8 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
           <h4 className="text-base font-semibold text-gray-800 mb-3">Thông Tin Cá Nhân</h4>
           <div className="border-t border-gray-200 pt-3 space-y-2">
             <Row label="Họ và tên:" value={postData.personalInfo.fullName} />
-            {postData.personalInfo.dateOfBirth && (
-              <Row label="Tuổi:" value={AgeUtils.getAgeInfo(postData.personalInfo.dateOfBirth).ageText} />
+            {postData.personalInfo.age && (
+              <Row label="Tuổi:" value={`${postData.personalInfo.age} tuổi`} />
             )}
             <Row label="Giới tính:" value={translateGender(postData.personalInfo.gender)} />
             <Row label="Nghề nghiệp:" value={postData.personalInfo.occupation} />
@@ -403,13 +521,6 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
       <div className="mb-6">
         <h3 className="text-lg font-bold text-gray-900 mb-3">Thông Tin Thêm</h3>
         <div className="border-t border-gray-200 pt-3 space-y-4">
-          {postType === 'roommate' && postData?.currentRoom?.description && (
-            <div className="text-gray-700 leading-relaxed">
-              {String(postData.currentRoom.description).split('\n').map((line: string, idx: number) => (
-                <p key={idx} className="mb-2">{line}</p>
-              ))}
-            </div>
-          )}
           {postData?.description ? (
             <div className="text-gray-700 leading-relaxed">
               {postData.description.split('\n').map((line: string, index: number) => (

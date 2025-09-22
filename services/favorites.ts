@@ -19,7 +19,8 @@ export interface AddFavoriteRequest {
  * Get all favorites for a user
  */
 export async function getUserFavorites(userId: number): Promise<Favorite[]> {
-  return apiGet(`favourites?userId=${userId}`);
+  const allFavorites = await apiGet('favourites');
+  return allFavorites.filter((fav: Favorite) => fav.userId === userId);
 }
 
 /**

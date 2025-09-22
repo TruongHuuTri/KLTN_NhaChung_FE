@@ -14,18 +14,6 @@ export default function RoomCardVertical({
   onDelete: (id: number) => void;
 }) {
   const cover = room.images?.[0] || "/home/room1.png";
-  
-  // Debug: log room data để kiểm tra bedrooms/bathrooms
-  console.log('Room data:', {
-    id: room.id,
-    roomId: (room as any).roomId,
-    roomNumber: room.roomNumber,
-    bedrooms: room.bedrooms,
-    bathrooms: room.bathrooms,
-    area: room.area
-  });
-  
-  // Sử dụng roomId từ backend thay vì id
   const roomId = (room as any).roomId || room.id;
   
   return (

@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getUserById } from "../../services/user";
-import { getUserRentPosts } from "../../services/rentPosts";
-import { listRoommatePosts } from "../../services/roommatePosts";
+import { getUserPosts } from "../../services/posts";
 import { User } from "../../types/User";
 
 interface ContactCardProps {
@@ -24,10 +23,9 @@ export default function ContactCard({ postData, postType }: ContactCardProps) {
       
       try {
         // Fetch user info and user statistics in parallel
-        const [user, rentPosts, roommatePosts] = await Promise.allSettled([
+        const [user, userPosts] = await Promise.allSettled([
           getUserById(postData.userId),
-          getUserRentPosts(postData.userId),
-          listRoommatePosts({ userId: postData.userId })
+          getUserPosts(postData.userId)
         ]);
 
         // Set user info
@@ -39,17 +37,15 @@ export default function ContactCard({ postData, postType }: ContactCardProps) {
 
         // Calculate total posts count
         let totalPosts = 0;
-        if (rentPosts.status === 'fulfilled') {
-          const rentData = rentPosts.value;
-          const rentCount = Array.isArray((rentData as any)?.data) ? (rentData as any).data.length : 
-                           Array.isArray(rentData) ? rentData.length : 0;
-          totalPosts += rentCount;
-        }
-        if (roommatePosts.status === 'fulfilled') {
-          const roommateData = roommatePosts.value;
-          const roommateCount = Array.isArray((roommateData as any)?.data) ? (roommateData as any).data.length : 
-                               Array.isArray(roommateData) ? roommateData.length : 0;
-          totalPosts += roommateCount;
+        if (userPosts.status === 'fulfilled') {
+          const postsData = userPosts.value;
+          // Check if it's the new unified API response format
+          if (postsData && typeof postsData === 'object' && 'posts' in postsData) {
+            totalPosts = Array.isArray(postsData.posts) ? postsData.posts.length : 0;
+          } else if (Array.isArray(postsData)) {
+            // Fallback for direct array response
+            totalPosts = postsData.length;
+          }
         }
 
         setUserStats({

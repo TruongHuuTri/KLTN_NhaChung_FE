@@ -1,0 +1,223 @@
+"use client";
+
+import { useState } from "react";
+import { PostType } from "@/types/Post";
+import { RoomForPost } from "@/types/Post";
+import PostTypeSelector from "./PostTypeSelector";
+import RoomSelector from "./RoomSelector";
+import PostFormUnified from "./PostFormUnified";
+
+// Sử dụng RoomForPost type từ types/Post.ts
+
+type FlowStep = 'select-type' | 'select-room' | 'fill-form' | 'success';
+
+interface NewPostFlowProps {
+  onClose: () => void;
+  onSuccess?: () => void;
+}
+
+export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
+  const [currentStep, setCurrentStep] = useState<FlowStep>('select-type');
+  const [selectedType, setSelectedType] = useState<PostType | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<RoomForPost | null>(null);
+
+  const handleSelectType = (type: PostType) => {
+    setSelectedType(type);
+    setSelectedRoom(null); // Reset selectedRoom khi chọn type mới
+    setCurrentStep('select-room');
+  };
+
+  const handleSelectRoom = (room: RoomForPost | null) => {
+    setSelectedRoom(room);
+  };
+
+  const handleNextFromRoom = () => {
+    if (selectedRoom) {
+      setCurrentStep('fill-form');
+    }
+  };
+
+  const handleBack = () => {
+    switch (currentStep) {
+      case 'select-room':
+        setCurrentStep('select-type');
+        setSelectedType(null);
+        break;
+      case 'fill-form':
+        setCurrentStep('select-room');
+        setSelectedRoom(null);
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleSuccess = () => {
+    setCurrentStep('success');
+    if (onSuccess) {
+      onSuccess();
+    }
+  };
+
+  const handleClose = () => {
+    // Reset state
+    setCurrentStep('select-type');
+    setSelectedType(null);
+    setSelectedRoom(null);
+    onClose();
+  };
+
+  const getStepTitle = () => {
+    switch (currentStep) {
+      case 'select-type':
+        return 'Tạo bài đăng mới';
+      case 'select-room':
+        return 'Chọn phòng';
+      case 'fill-form':
+        return 'Thông tin bài đăng';
+      case 'success':
+        return 'Tạo bài đăng thành công';
+      default:
+        return 'Tạo bài đăng mới';
+    }
+  };
+
+  const getStepNumber = () => {
+    switch (currentStep) {
+      case 'select-type':
+        return 1;
+      case 'select-room':
+        return 2;
+      case 'fill-form':
+        return 3;
+      case 'success':
+        return 4;
+      default:
+        return 1;
+    }
+  };
+
+  const renderStepContent = () => {
+    switch (currentStep) {
+      case 'select-type':
+        return (
+          <PostTypeSelector
+            selectedType={selectedType}
+            onSelectType={handleSelectType}
+          />
+        );
+
+      case 'select-room':
+        return (
+          <RoomSelector
+            postType={selectedType!}
+            selectedRoom={selectedRoom}
+            onSelectRoom={handleSelectRoom}
+            onBack={handleBack}
+            onNext={handleNextFromRoom}
+          />
+        );
+
+      case 'fill-form':
+        return (
+          <PostFormUnified
+            postType={selectedType!}
+            selectedRoom={selectedRoom!}
+            onBack={handleBack}
+            onSuccess={handleSuccess}
+          />
+        );
+
+      case 'success':
+        return (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Tạo bài đăng thành công!
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Bài đăng của bạn đã được tạo và sẽ hiển thị ngay lập tức.
+            </p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={handleClose}
+                className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={() => {
+                  setCurrentStep('select-type');
+                  setSelectedType(null);
+                  setSelectedRoom(null);
+                }}
+                className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Tạo bài đăng khác
+              </button>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                <span className="text-teal-600 font-semibold text-sm">
+                  {getStepNumber()}
+                </span>
+              </div>
+              <h2 className="text-xl font-bold text-gray-900">{getStepTitle()}</h2>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Progress Bar */}
+        {currentStep !== 'success' && (
+          <div className="px-6 py-4 border-b border-gray-100">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Bước {getStepNumber()} / 3
+              </span>
+              <span className="text-sm text-gray-500">
+                {Math.round((getStepNumber() / 3) * 100)}%
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div
+                className="bg-teal-600 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${(getStepNumber() / 3) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Content */}
+        <div className="p-6">
+          {renderStepContent()}
+        </div>
+      </div>
+    </div>
+  );
+}

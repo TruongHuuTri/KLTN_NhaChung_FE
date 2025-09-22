@@ -45,29 +45,12 @@ export async function api<T = any>(
   };
 
   const fullUrl = join(API_BASE, path);
-  console.log("🌐 API call:", { 
-    method: init.method, 
-    url: fullUrl, 
-    headers, 
-    hasToken: !!token,
-    skipAuth: init.skipAuth 
-  });
-
   const res = await fetch(fullUrl, { ...init, headers });
-
-  console.log("📡 API response:", { 
-    status: res.status, 
-    statusText: res.statusText, 
-    ok: res.ok,
-    url: res.url 
-  });
 
   if (res.status === 204) return undefined as T;
 
   const raw = await res.text();
   const data = safeParse(raw);
-  
-  console.log("📄 API response data:", { raw, parsed: data });
 
   if (res.status === 401) {
     // Token hết hạn hoặc không hợp lệ - tự động logout

@@ -6,156 +6,12 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import Footer from "../../components/common/Footer";
 import FavoritesContent from "../../components/favorites/FavoritesContent";
-import { listRentPosts } from "../../services/rentPosts";
-import { listRoommatePosts } from "../../services/roommatePosts";
-import { RentPostApi } from "../../types/RentPostApi";
-import { RoommatePost } from "../../services/roommatePosts";
+import { getPosts } from "../../services/posts";
+import { Post } from "../../types/Post";
 import { addressService } from "../../services/address";
 import { AgeUtils } from "../../utils/ageUtils";
+import { getRoomById } from "../../services/rooms";
 
-// Mock data cho danh sách yêu thích
-const mockFavorites = [
-  {
-    id: 1,
-    title: "Phòng trọ đẹp gần trường ĐH Bách Khoa",
-    category: "phong-tro",
-    price: 2500000,
-    area: 25,
-    address: "Quận 10, TP.HCM",
-    owner: "Nguyễn Văn A",
-    phone: "0123456789",
-    addedAt: "2024-01-15",
-    images: ["/home/room1.png", "/home/room2.png"],
-    description: "Phòng trọ đẹp, thoáng mát, gần trường ĐH Bách Khoa. Có đầy đủ tiện nghi cơ bản.",
-    postType: "rent",
-  },
-  {
-    id: 2,
-    title: "Căn hộ chung cư 2PN 2WC tại Quận 7",
-    category: "chung-cu",
-    price: 8000000,
-    area: 65,
-    address: "Quận 7, TP.HCM",
-    owner: "Trần Thị B",
-    phone: "0987654321",
-    addedAt: "2024-01-12",
-    images: ["/home/room3.png"],
-    description: "Căn hộ chung cư cao cấp, view đẹp, gần trung tâm thương mại.",
-    postType: "rent",
-  },
-  {
-    id: 3,
-    title: "Nhà nguyên căn 3 tầng tại Quận 2",
-    category: "nha-nguyen-can",
-    price: 15000000,
-    area: 120,
-    address: "Quận 2, TP.HCM",
-    owner: "Lê Văn C",
-    phone: "0369852147",
-    addedAt: "2024-01-10",
-    images: ["/home/room4.png"],
-    description: "Nhà nguyên căn 3 tầng, có sân vườn, gần sông, không khí trong lành.",
-    postType: "rent",
-  },
-  {
-    id: 4,
-    title: "Phòng trọ giá rẻ gần chợ Bến Thành",
-    category: "phong-tro",
-    price: 1800000,
-    area: 20,
-    address: "Quận 1, TP.HCM",
-    owner: "Phạm Thị D",
-    phone: "0741852963",
-    addedAt: "2024-01-08",
-    images: ["/home/room1.png"],
-    description: "Phòng trọ giá rẻ, gần chợ Bến Thành, thuận tiện đi lại.",
-    postType: "rent",
-  },
-  {
-    id: 5,
-    title: "Căn hộ cao cấp view sông tại Quận 4",
-    category: "chung-cu",
-    price: 12000000,
-    area: 85,
-    address: "Quận 4, TP.HCM",
-    owner: "Hoàng Văn E",
-    phone: "0521478963",
-    addedAt: "2024-01-20",
-    images: ["/home/room2.png"],
-    description: "Căn hộ cao cấp với view sông tuyệt đẹp, nội thất sang trọng.",
-    postType: "rent",
-  },
-  {
-    id: 6,
-    title: "Nhà phố 2 tầng tại Quận 3",
-    category: "nha-nguyen-can",
-    price: 20000000,
-    area: 150,
-    address: "Quận 3, TP.HCM",
-    owner: "Vũ Thị F",
-    phone: "0963258741",
-    addedAt: "2024-01-18",
-    images: ["/home/room3.png"],
-    description: "Nhà phố 2 tầng, vị trí trung tâm, gần các trường học và bệnh viện.",
-    postType: "rent",
-  },
-  {
-    id: 7,
-    title: "Phòng trọ sinh viên gần ĐH Kinh tế",
-    category: "phong-tro",
-    price: 2200000,
-    area: 22,
-    address: "Quận 10, TP.HCM",
-    owner: "Đặng Văn G",
-    phone: "0147852963",
-    addedAt: "2024-01-25",
-    images: ["/home/room4.png"],
-    description: "Phòng trọ dành cho sinh viên, gần ĐH Kinh tế, có wifi miễn phí.",
-    postType: "rent",
-  },
-  {
-    id: 8,
-    title: "Căn hộ studio hiện đại tại Quận 5",
-    category: "chung-cu",
-    price: 6500000,
-    area: 45,
-    address: "Quận 5, TP.HCM",
-    owner: "Bùi Thị H",
-    phone: "0789632145",
-    addedAt: "2024-01-22",
-    images: ["/home/room1.png"],
-    description: "Căn hộ studio hiện đại, thiết kế tối ưu không gian, phù hợp cho người độc thân.",
-    postType: "rent",
-  },
-  {
-    id: 9,
-    title: "Phòng trọ có ban công tại Quận 6",
-    category: "phong-tro",
-    price: 2800000,
-    area: 28,
-    address: "Quận 6, TP.HCM",
-    owner: "Lý Văn I",
-    phone: "0321654987",
-    addedAt: "2024-01-28",
-    images: ["/home/room2.png"],
-    description: "Phòng trọ có ban công rộng, thoáng mát, gần chợ và siêu thị.",
-    postType: "rent",
-  },
-  {
-    id: 10,
-    title: "Nhà vườn 1 tầng tại Quận 9",
-    category: "nha-nguyen-can",
-    price: 18000000,
-    area: 200,
-    address: "Quận 9, TP.HCM",
-    owner: "Trịnh Văn K",
-    phone: "0958741236",
-    addedAt: "2024-01-30",
-    images: ["/home/room3.png"],
-    description: "Nhà vườn 1 tầng, có sân vườn rộng, không khí trong lành, yên tĩnh.",
-    postType: "rent",
-  },
-];
 
 export default function FavoritesPage() {
   const { user } = useAuth();
@@ -175,85 +31,106 @@ export default function FavoritesPage() {
       try {
         setLoadingPosts(true);
         
-        // Get all posts (both rent and roommate)
-        const [allRentPosts, allRoommatePosts] = await Promise.allSettled([
-          listRentPosts(), // Lấy tất cả rent posts
-          listRoommatePosts()
-        ]);
-
-        const rentFavorites = userFavorites.filter(fav => fav.postType === 'rent');
-        const roommateFavorites = userFavorites.filter(fav => fav.postType === 'roommate');
+        // Get all posts using unified API
+        const allPostsResponse = await getPosts({});
+        
+        // Handle both array and object response formats
+        let allPosts: Post[] = [];
+        if (Array.isArray(allPostsResponse)) {
+          // Direct array response
+          allPosts = allPostsResponse;
+        } else if (allPostsResponse && typeof allPostsResponse === 'object' && 'posts' in allPostsResponse) {
+          // Object with posts field
+          allPosts = allPostsResponse.posts || [];
+        }
         
         const favoritedPostsData: any[] = [];
 
-        // Process rent favorites
-        if (allRentPosts.status === 'fulfilled') {
-          const rentData = allRentPosts.value;
-          const rentPosts = Array.isArray((rentData as any)?.data) 
-            ? (rentData as any).data 
-            : Array.isArray(rentData) 
-            ? rentData 
-            : [];
+        // Process each favorite and fetch room data
+        const favoritePromises = userFavorites.map(async (fav) => {
+          const post = allPosts.find((p: Post) => p.postId === fav.postId);
           
-          rentFavorites.forEach(fav => {
-            const post = rentPosts.find((p: RentPostApi) => p.rentPostId === fav.postId);
-            if (post) {
-              favoritedPostsData.push({
-                id: post.rentPostId,
-                title: post.title,
-                category: post.category,
-                price: post.basicInfo.price,
-                area: post.basicInfo.area,
-                // Truyền object address trực tiếp (đã có ward/city) hoặc fallback format chuỗi an toàn
-                address: post.address || addressService.formatAddressForDisplay(post.address as any),
-                owner: "Chủ trọ",
-                phone: "0123456789",
-                addedAt: fav.createdAt.split('T')[0],
-                images: post.images || ["/home/room1.png"],
-                description: post.description || "",
-                postType: 'rent'
-              });
-            }
-          });
-        }
+          if (!post) {
+            return null;
+          }
 
-        // Process roommate favorites
-        if (allRoommatePosts.status === 'fulfilled') {
-          const roommateData = allRoommatePosts.value;
-          const roommatePosts = Array.isArray((roommateData as any)?.data) 
-            ? (roommateData as any).data 
-            : Array.isArray(roommateData) 
-            ? roommateData 
-            : [];
-          roommateFavorites.forEach(fav => {
-            const post = roommatePosts.find((p: RoommatePost) => {
-              const roommatePostId = (p as any).roommatePostId || p.postId;
-              return roommatePostId === fav.postId;
-            });
-            if (post) {
-              const roommatePostId = (post as any).roommatePostId || post.postId;
-              favoritedPostsData.push({
-                id: roommatePostId,
-                title: post.title,
-                category: 'roommate',
-                price: post.currentRoom.price,
-                area: post.currentRoom.area,
-                address: post.currentRoom.address,
-                owner: `${post.personalInfo.occupation}, ${post.personalInfo.dateOfBirth ? AgeUtils.getAgeInfo(post.personalInfo.dateOfBirth).ageText : 'N/A'}`,
-                phone: "0123456789", // Backend chưa có
-                addedAt: fav.createdAt.split('T')[0],
-                images: post.images || ["/home/room1.png"],
-                description: post.description || "",
-                postType: 'roommate'
-              });
+          let roomData = null;
+          
+          // Fetch room data if post has roomId
+          if (post.roomId) {
+            try {
+              roomData = await getRoomById(post.roomId);
+            } catch (error) {
+              roomData = null;
             }
-          });
-        }
+          } else {
+            roomData = post.roomInfo;
+          }
+          
+          // Determine category from post data
+          let category = 'phong-tro'; // default
+          if (post.postType === 'roommate') {
+            category = 'roommate';
+          } else if (roomData?.chungCuInfo) {
+            category = 'chung-cu';
+          } else if (roomData?.nhaNguyenCanInfo) {
+            category = 'nha-nguyen-can';
+          } else {
+            category = 'phong-tro';
+          }
+          
+          // Format address
+          let address = "Chưa có địa chỉ";
+          if (roomData?.address) {
+            if (typeof roomData.address === 'string') {
+              address = roomData.address;
+            } else if (typeof roomData.address === 'object') {
+              address = addressService.formatWardCity(roomData.address);
+            }
+          }
+          
+          // Get images with fallback logic: Post images > Room images > default
+          let images = [];
+          if (post.images && post.images.length > 0) {
+            images = post.images;
+          } else if ((roomData as any)?.images && (roomData as any).images.length > 0) {
+            images = (roomData as any).images;
+          } else {
+            images = ['/home/room1.png']; // Default fallback
+          }
+
+          return {
+            id: post.postId,
+            title: post.title,
+            category: category,
+            price: (roomData as any)?.price || (roomData as any)?.basicInfo?.price || 0,
+            area: (roomData as any)?.area || (roomData as any)?.basicInfo?.area || 0,
+            address: address,
+            owner: post.postType === 'roommate' && post.personalInfo 
+              ? `${post.personalInfo.occupation}, ${post.personalInfo.age} tuổi`
+              : "Chủ trọ",
+            phone: post.phone || "0123456789",
+            addedAt: fav.createdAt.split('T')[0],
+            images: images,
+            description: post.description || "",
+            postType: fav.postType
+          };
+        });
+
+        // Wait for all promises to resolve
+        const favoriteResults = await Promise.all(favoritePromises);
+        
+        // Filter out null results
+        favoriteResults.forEach(result => {
+          if (result) {
+            favoritedPostsData.push(result);
+          }
+        });
 
         setFavoritedPosts(favoritedPostsData);
       } catch (error) {
-        // Fallback to mock data
-        setFavoritedPosts(mockFavorites);
+        console.error('Error loading favorited posts:', error);
+        setFavoritedPosts([]);
       } finally {
         setLoadingPosts(false);
       }
@@ -276,10 +153,7 @@ export default function FavoritesPage() {
 
   const handleRemove = async (id: number) => {
     // Find the post type from favorites
-    const favorite = userFavorites.find(fav => 
-      (fav.postType === 'rent' && fav.postId === id) || 
-      (fav.postType === 'roommate' && fav.postId === id)
-    );
+    const favorite = userFavorites.find(fav => fav.postId === id);
     
     if (favorite) {
       await toggleFavorite(favorite.postType, id);

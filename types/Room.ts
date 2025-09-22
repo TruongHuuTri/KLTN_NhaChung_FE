@@ -74,6 +74,9 @@ export type Room = {
   maxOccupancy: number;
   canShare: boolean;
   sharePrice?: number;
+  currentOccupants: number;
+  availableSpots: number;
+  status: 'available' | 'occupied' | 'maintenance';
   chungCuInfo?: ChungCuInfo;
   nhaNguyenCanInfo?: NhaNguyenCanInfo;
   utilities?: Utilities;

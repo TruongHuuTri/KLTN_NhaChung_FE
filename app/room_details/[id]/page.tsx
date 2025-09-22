@@ -9,14 +9,12 @@ import ContactCard from "../../../components/room_details/ContactCard";
 import MapSection from "../../../components/room_details/MapSection";
 import Suggestions from "../../../components/common/Suggestions";
 import Footer from "../../../components/common/Footer";
-import { getRentPostById } from "../../../services/rentPosts";
-import { getRoommatePostById } from "../../../services/roommatePosts";
-import { RentPostApi } from "../../../types/RentPostApi";
-import { RoommatePost } from "../../../services/roommatePosts";
+import { getPostById } from "../../../services/posts";
+import { Post } from "../../../types/Post";
 
 
 type PostType = 'rent' | 'roommate';
-type PostData = RentPostApi | RoommatePost;
+type PostData = Post;
 
 interface RoomDetailsPageProps {
   params: { id: string };
@@ -59,15 +57,24 @@ export default function RoomDetailsPage() {
 
         let data: PostData;
         
+        // Extract postId from URL parameter
+        let postId: number;
         if (idParam.startsWith('rent-')) {
-          const postId = idParam.replace('rent-', '');
-          data = await getRentPostById(postId);
+          postId = parseInt(idParam.replace('rent-', ''));
         } else if (idParam.startsWith('roommate-')) {
-          const postId = idParam.replace('roommate-', '');
-          data = await getRoommatePostById(parseInt(postId));
+          postId = parseInt(idParam.replace('roommate-', ''));
         } else {
-          throw new Error('Invalid post type');
+          // Try to parse as direct postId
+          postId = parseInt(idParam);
         }
+        
+        // Use unified API to get post data
+        data = await getPostById(postId);
+        
+        // Set postType based on actual data
+        const actualPostType = data.postType === 'cho-thue' ? 'rent' : 
+                               data.postType === 'tim-o-ghep' ? 'roommate' : 'rent';
+        setPostType(actualPostType);
         
         setPostData(data);
         // Scroll to top after data loads successfully
