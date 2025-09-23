@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import RoomCard from "@/components/common/RoomCard";
+import PostCard from "@/components/common/PostCard";
 import { searchPosts } from "@/services/posts";
 import { getRoomById } from "@/services/rooms";
 import { rentPostToUnified, roommatePostToUnified, shuffleArray, UnifiedPost } from "@/types/MixedPosts";
+import { getMyProfile, UserProfile } from "@/services/userProfiles";
+import { rankPosts, PostRankingOptions } from "@/services/postRanking";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortKey = "random" | "newest" | "priceAsc" | "priceDesc" | "areaDesc";
 
@@ -13,6 +16,8 @@ export default function RoomList() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("random");
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { user } = useAuth();
 
   // pagination 3x3
   const [currentPage, setCurrentPage] = useState(1);
@@ -24,6 +29,12 @@ export default function RoomList() {
       try {
         setLoading(true);
         setErr("");
+
+        // Load profile nếu có
+        try {
+          const pf = await getMyProfile();
+          setProfile(pf as any);
+        } catch {}
 
         // Gọi unified search API để lấy tất cả posts
         const searchResponse = await searchPosts();
@@ -91,7 +102,19 @@ export default function RoomList() {
           })
         );
         
-        const shuffledPosts = shuffleArray(unifiedPosts);
+        // Sử dụng service ranking với priority city filter
+        // Fallback về selectedCity nếu profile không có preferredCity
+        const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
+        const userCity = (user as any)?.address?.city || (user as any)?.city || '';
+        const cityToFilter = profile?.preferredCity || selectedCityLS || userCity;
+        
+        const rankingOptions: PostRankingOptions = {
+          profileCity: cityToFilter,
+          strictCityFilter: false // PropertyList: ưu tiên thành phố nhưng không loại bỏ
+        };
+        
+        const { ranked } = rankPosts(unifiedPosts, profile, rankingOptions);
+        const shuffledPosts = ranked.map(({ _score, _price, _cityMatch, _cityScore, ...rest }) => rest as UnifiedPost);
 
         if (!cancelled) {
           setItems(shuffledPosts);
@@ -198,7 +221,7 @@ export default function RoomList() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {current.map((it) => (
-              <RoomCard 
+              <PostCard 
                 key={`${it.type}-${it.id}`} 
                 rentPostId={it.id}
                 category={it.category as any || it.type as any}

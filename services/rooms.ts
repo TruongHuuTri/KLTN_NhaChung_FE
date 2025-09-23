@@ -25,7 +25,8 @@ export async function getRooms(params: RoomListParams = {}): Promise<RoomListRes
 
 // Lấy chi tiết phòng
 export async function getRoomById(id: number): Promise<Room> {
-  return apiGet(`landlord/rooms/${id}?include=building`);
+  // Public endpoint để mọi user (kể cả role 'user') có thể xem chi tiết phòng
+  return apiGet(`rooms/${id}?include=building`);
 }
 
 // Tạo phòng mới

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { formatNumberVN, formatPriceWithSuffix } from "../../utils/format";
 import { AgeUtils } from "@/utils/ageUtils";
 import { Post } from "../../types/Post";
@@ -13,6 +14,7 @@ interface PropertyDetailsProps {
 
 export default function PropertyDetails({ postData, postType }: PropertyDetailsProps) {
   const [roomData, setRoomData] = useState<any>(null);
+  const { user } = useAuth();
   
   // Fetch room data when postData changes
   useEffect(() => {
@@ -162,11 +164,17 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
   };
 
   const rentCategory: string | undefined = postType === 'rent' ? roomData?.category : undefined;
-  // Helper function to get address string
+  // Helper build full address string from room address
   const getAddressString = () => {
     if (roomData?.address) {
-      const addr = roomData.address;
-      return `${addr.specificAddress || ''} ${addr.street}, ${addr.ward}, ${addr.city}`.trim();
+      const a = roomData.address as any;
+      const parts = [
+        a.specificAddress,
+        a.street,
+        a.wardName || a.ward,
+        a.city || a.provinceName,
+      ].filter((v: string | undefined) => !!v && String(v).trim().length > 0);
+      return parts.join(', ');
     }
     return 'Chưa có thông tin địa chỉ';
   };
@@ -521,9 +529,9 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
       <div className="mb-6">
         <h3 className="text-lg font-bold text-gray-900 mb-3">Thông Tin Thêm</h3>
         <div className="border-t border-gray-200 pt-3 space-y-4">
-          {postData?.description ? (
+          {roomData?.description ? (
             <div className="text-gray-700 leading-relaxed">
-              {postData.description.split('\n').map((line: string, index: number) => (
+              {roomData.description.split('\n').map((line: string, index: number) => (
                 <p key={index} className="mb-2">{line}</p>
               ))}
             </div>
@@ -533,21 +541,23 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
         </div>
       </div>
 
-      {/* Action Buttons */}
-      <div className="flex gap-3 pt-4 border-t border-gray-200">
-        <button className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
-          </svg>
-          Liên hệ: 0782926 ***
-        </button>
-        <button className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-          </svg>
-          Đăng ký thuê ngay
-        </button>
-      </div>
+      {/* Action Buttons - chỉ hiển thị cho user không phải chủ nhà */}
+      {user?.role !== 'landlord' && (
+        <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <button className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+            </svg>
+            Liên hệ: 0782926 ***
+          </button>
+          <button className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+            </svg>
+            Đăng ký thuê ngay
+          </button>
+        </div>
+      )}
     </div>
   );
 }

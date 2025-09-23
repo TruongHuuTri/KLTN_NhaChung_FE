@@ -54,15 +54,49 @@ export function roommatePostToUnified(post: RoommatePost): UnifiedPost {
     title: post.title,
     description: post.description,
     images: post.images || ["/home/room1.png"],
-    price: post.currentRoom.price,
-    area: post.currentRoom.area,
-    location: addressService.formatWardCity(post.currentRoom.address),
-    address: post.currentRoom.address,
+    price: (post as any).currentRoom?.price,
+    area: (post as any).currentRoom?.area,
+    location: addressService.formatWardCity((post as any).currentRoom?.address),
+    address: (post as any).currentRoom?.address,
     category: 'roommate',
     photoCount: post.images?.length || 0,
     isVerified: false, // Roommate posts không có verification
     createdAt: post.createdAt,
     originalData: post
+  };
+}
+
+// Convert từ Post (API mới: services/posts.searchPosts hoặc getPosts) sang UnifiedPost
+// Hỗ trợ trường hợp post liên kết roomId và cần roomData để lấy area/price/address/images
+export function searchPostToUnified(post: any, roomData?: any): UnifiedPost {
+  const mappedPostType = post.postType === 'cho-thue' ? 'rent' : 
+                         post.postType === 'tim-o-ghep' ? 'roommate' : post.postType;
+
+  const images = roomData?.images?.length > 0 ? roomData.images : (post.images || ["/home/room1.png"]);
+  const price = roomData?.price ?? post.roomInfo?.basicInfo?.price ?? 0;
+  const area = roomData?.area ?? post.roomInfo?.basicInfo?.area ?? 0;
+  const address = roomData?.address ?? post.roomInfo?.address;
+  const location = address ? addressService.formatWardCity(address) : 'Chưa xác định';
+  const bedrooms = roomData?.chungCuInfo?.bedrooms || roomData?.nhaNguyenCanInfo?.bedrooms || post.roomInfo?.basicInfo?.bedrooms;
+  const bathrooms = roomData?.chungCuInfo?.bathrooms || roomData?.nhaNguyenCanInfo?.bathrooms || post.roomInfo?.basicInfo?.bathrooms;
+
+  return {
+    id: post.postId,
+    type: mappedPostType,
+    title: post.title || 'Không có tiêu đề',
+    description: post.description || '',
+    images,
+    price,
+    area,
+    location,
+    address,
+    category: mappedPostType,
+    photoCount: images.length + (post.videos?.length || 0),
+    bedrooms,
+    bathrooms,
+    isVerified: false,
+    createdAt: post.createdAt,
+    originalData: post,
   };
 }
 

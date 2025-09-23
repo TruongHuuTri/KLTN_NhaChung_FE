@@ -1,97 +1,67 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
-import { getPosts } from "../../services/posts";
-import { Post } from "../../types/Post";
-
-type Card = {
-  id: number;
-  title: string;
-  price: string;
-  specs: string;
-  area: string;
-  img: string;
-  postType: 'rent' | 'roommate';
-};
-
-
-function CardItem({ c }: { c: Card }) {
-  const router = useRouter();
-
-  const handleCardClick = () => {
-    router.push(`/room_details/${c.postType}-${c.id}`);
-  };
-
-  return (
-    <div
-      className="rounded-2xl overflow-hidden shadow border border-slate-100 bg-white hover:shadow-lg transition-shadow cursor-pointer hover:scale-105 transition-transform duration-300 h-full flex flex-col"
-      onClick={handleCardClick}
-    >
-      <div className="relative">
-        <img src={c.img} alt={c.title} className="h-44 w-full object-cover" />
-      </div>
-      <div className="p-4 flex flex-col flex-1">
-        <h4 className="font-semibold text-gray-900 line-clamp-2 min-h-[2.5rem]">{c.title}</h4>
-        <p className="mt-1 text-sm text-slate-600">{c.specs}</p>
-        <p className="text-sm text-slate-600">{c.area}</p>
-        <p className="mt-2 font-bold text-teal-600 mt-auto">{c.price}</p>
-      </div>
-    </div>
-  );
-}
+import { searchPosts } from "../../services/posts";
+import { getRoomById } from "../../services/rooms";
+import { searchPostToUnified, shuffleArray } from "@/types/MixedPosts";
+import PostCard from "@/components/common/PostCard";
+import { getMyProfile, UserProfile } from "@/services/userProfiles";
+import { rankPosts, PostRankingOptions } from "../../services/postRanking";
 
 export default function Suggestions() {
-  const [items, setItems] = useState<Card[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const { user } = useAuth();
 
-  // Load both rent and roommate posts from API
+
+  // Load suggestions: gọi danh sách posts, lấy room khi cần, mix và render PostCard (giới hạn 12)
   useEffect(() => {
     const loadMixedPosts = async () => {
       try {
         setLoading(true);
+        // Load profile (nếu đã đăng nhập)
+        let pf: UserProfile | null = null;
+        try {
+          pf = (await getMyProfile()) as any;
+          setProfile(pf);
+        } catch {}
+
+        const response = await searchPosts({});
+        const allPosts = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.posts)
+          ? response.posts
+          : [];
+
+        const unified = await Promise.all(
+          shuffleArray(allPosts).slice(0, 20).map(async (post: any) => {
+            let roomData: any = null;
+            if (post.roomId) {
+              try {
+                roomData = await getRoomById(post.roomId);
+              } catch {}
+            }
+            return searchPostToUnified(post, roomData);
+          })
+        );
+
+        // Sử dụng service ranking với strict city filter
+        const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
+        const userCity = (user as any)?.address?.city || (user as any)?.city || '';
         
-        // Get both types of posts using new unified API
-        const [rentResponse, roommateResponse] = await Promise.allSettled([
-          getPosts({ postType: 'rent', limit: 4 }),
-          getPosts({ postType: 'roommate', limit: 4 })
-        ]);
-
-        const allPosts: Post[] = [];
-
-        // Process rent posts
-        if (rentResponse.status === 'fulfilled') {
-          allPosts.push(...rentResponse.value.posts);
-        }
-
-        // Process roommate posts
-        if (roommateResponse.status === 'fulfilled') {
-          allPosts.push(...roommateResponse.value.posts);
-        }
-
-        // Convert to Card format
-        const transformedCards = allPosts.slice(0, 8).map((post: Post) => {
-          const formatPrice = (price: number) => {
-            return new Intl.NumberFormat('vi-VN').format(price / 1000000) + ' triệu / tháng';
-          };
-          
-          return {
-            id: post.postId,
-            title: post.title,
-            price: post.roomInfo?.basicInfo?.price ? 
-              formatPrice(post.roomInfo.basicInfo.price) : 
-              'Liên hệ',
-            specs: post.postType === 'rent' ? 
-              `${post.roomInfo?.basicInfo?.area || 0}m²` : 
-              `${post.roomInfo?.basicInfo?.area || 0}m² • ${post.roomInfo?.basicInfo?.bedrooms || 1} PN • ${post.roomInfo?.basicInfo?.bathrooms || 1} WC`,
-            area: post.roomInfo?.address ? 
-              `${post.roomInfo.address.ward}, ${post.roomInfo.address.city}` : 
-              'N/A',
-            img: post.images?.[0] || "/home/room1.png",
-            postType: (post.postType === 'rent' ? 'rent' : 'roommate') as 'rent' | 'roommate'
-          };
-        });
+        const rankingOptions: PostRankingOptions = {
+          userCity,
+          profileCity: pf?.preferredCity,
+          selectedCity: selectedCityLS,
+          strictCityFilter: true // Suggestions: loại bỏ bài không cùng thành phố
+        };
         
-        setItems(transformedCards);
+        const { ranked } = rankPosts(unified, profile, rankingOptions);
+        const finalItems = ranked.slice(0, 12);
+
+        setItems(finalItems);
       } catch (error) {
         setItems([]);
       } finally {
@@ -148,9 +118,21 @@ export default function Suggestions() {
                 id="suggestions-scroll"
                 className="flex gap-6 overflow-x-hidden scroll-smooth pb-4 items-stretch"
               >
-                {items.map((i, index) => (
-                  <div key={`${i.id}-${i.postType}-${index}`} className="flex-shrink-0 w-80">
-                    <CardItem c={i} />
+                {items.map((u: any, index: number) => (
+                  <div key={`${u.type}-${u.id}-${index}`} className="flex-shrink-0 w-80">
+                    <PostCard
+                      rentPostId={u.id}
+                      category={u.type as any}
+                      title={u.title}
+                      cover={u.images?.[0] || "/home/room1.png"}
+                      photoCount={u.images?.length || 0}
+                      area={u.area}
+                      bedrooms={u.bedrooms}
+                      bathrooms={u.bathrooms}
+                      {...(u.address ? { address: u.address as any } : { city: u.location })}
+                      price={u.price}
+                      isVerified={u.isVerified}
+                    />
                   </div>
                 ))}
               </div>

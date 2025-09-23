@@ -23,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       const token = localStorage.getItem("token");
       const storedUser = localStorage.getItem("user");
+      const tokenIssuedAt = localStorage.getItem("token_issued_at");
       const isRegistrationFlow = localStorage.getItem("isRegistrationFlow");
       const registrationData = localStorage.getItem("registrationData");
       
@@ -32,6 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       
+      // Kiểm tra token đã quá hạn (24h) thì xoá ngay, tránh hiển thị user ảo
+      if (token && tokenIssuedAt) {
+        const issuedAtMs = Number(tokenIssuedAt);
+        const isExpired = Number.isFinite(issuedAtMs) && Date.now() - issuedAtMs > 24 * 60 * 60 * 1000;
+        if (isExpired) {
+          try {
+            localStorage.removeItem("token");
+            localStorage.removeItem("token_issued_at");
+            localStorage.removeItem("user");
+          } catch {}
+          setUser(null);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       if (token) {
         try {
           // Nếu có token, gọi API để lấy thông tin user mới nhất
@@ -40,14 +57,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Cập nhật localStorage với dữ liệu mới
           localStorage.setItem("user", JSON.stringify(userData));
         } catch (error) {
-          // Nếu API call thất bại, thử dùng dữ liệu từ localStorage
-          if (storedUser) {
-            setUser(JSON.parse(storedUser));
-          } else {
-            // Nếu không có dữ liệu nào, xóa token
+          // Nếu API call thất bại (có thể do 401/hết hạn), dọn dẹp để tránh UI sai
+          try {
             localStorage.removeItem("token");
+            localStorage.removeItem("token_issued_at");
             localStorage.removeItem("user");
-          }
+          } catch {}
+          setUser(null);
         }
       } else if (storedUser) {
         // Không có token nhưng còn dữ liệu user cũ: dọn dẹp để tránh UI hiển thị sai
@@ -65,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       try {
         localStorage.removeItem("token");
+        localStorage.removeItem("token_issued_at");
         localStorage.removeItem("user");
       } catch {}
     };
@@ -84,6 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { access_token, user } = await loginService(email, password);
       if (typeof window !== 'undefined') {
         localStorage.setItem("token", access_token);
+        localStorage.setItem("token_issued_at", String(Date.now()));
         localStorage.setItem("user", JSON.stringify(user));
       }
       setUser(user);

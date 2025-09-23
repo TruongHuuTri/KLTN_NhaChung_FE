@@ -13,6 +13,7 @@ export default function Header() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const { user, logout } = useAuth();
+  const [selectedCity, setSelectedCity] = useState<string>('TP. Hồ Chí Minh');
 
   // Auto detect current page based on pathname
   const getCurrentPage = () => {
@@ -41,6 +42,28 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Lắng nghe thay đổi city từ AreaDropdown
+  useEffect(() => {
+    const syncCity = () => {
+      if (typeof window === 'undefined') return;
+      const city = localStorage.getItem('selectedCity') || (user as any)?.address?.city || (user as any)?.city || 'TP. Hồ Chí Minh';
+      setSelectedCity(city);
+    };
+    syncCity();
+    const onCityChanged = (e: any) => {
+      const city = e?.detail?.city;
+      if (city) setSelectedCity(city);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('app:cityChanged', onCityChanged as any);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('app:cityChanged', onCityChanged as any);
+      }
+    };
+  }, [user]);
 
   const menuItems = [
     { id: "trang-chu", label: "Trang chủ", href: "/" },
@@ -74,7 +97,7 @@ export default function Header() {
               <svg className="w-4 h-4 text-teal-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
-              TP. Hồ Chí Minh
+              {selectedCity}
               <svg className={`w-4 h-4 transition-transform duration-300 ${isAreaDropdownOpen ? 'rotate-180' : ''}`} fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
               </svg>

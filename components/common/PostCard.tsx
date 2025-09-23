@@ -1,13 +1,12 @@
 "use client";
-
-import { useState } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import type { RoomCardData } from "@/types/RentPostApi";
 import { useFavorites } from "../../contexts/FavoritesContext";
 import { formatPrice } from "@/utils/format";
 import { addressService } from "../../services/address";
 
-export default function RoomCard({
+export default function PostCard({
   rentPostId,
   category,
   title,

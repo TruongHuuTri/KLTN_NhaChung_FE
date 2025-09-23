@@ -56,6 +56,7 @@ export async function api<T = any>(
     // Token hết hạn hoặc không hợp lệ - tự động logout
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
+      localStorage.removeItem("token_issued_at");
       localStorage.removeItem("user");
       // Dispatch event để AuthContext cập nhật state
       window.dispatchEvent(new CustomEvent('app:logout'));

@@ -31,6 +31,7 @@ export interface UserProfile {
   targetWardCodes?: string[];
   targetCityCode?: string;
   targetCityName?: string;
+  preferredCity?: string;
   priceRange?: BudgetRange;
   targetTenants?: string[];
   managementStyle?: string; // Raw value from FE, no enum constraint

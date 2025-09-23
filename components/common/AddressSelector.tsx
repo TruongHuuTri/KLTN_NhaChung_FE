@@ -134,24 +134,22 @@ export default function AddressSelector({ value, onChange, className = "", field
   useEffect(() => {
     let emitted: Address | null = null;
 
-    if (selectedProvince && selectedWard) {
-      const province = provinces.find(p => p.provinceCode === selectedProvince);
-      const ward = wards.find(w => w.wardCode === selectedWard);
-      
-      if (province && ward) {
-        emitted = {
-          street: street || '',
-          ward: ward.wardName,
-          city: province.provinceName,
-          specificAddress: specificAddress || undefined,
-          showSpecificAddress,
-          provinceCode: selectedProvince,
-          provinceName: province.provinceName,
-          wardCode: selectedWard,
-          wardName: ward.wardName,
-          additionalInfo: additionalInfo || undefined
-        };
-      }
+    const province = selectedProvince ? provinces.find(p => p.provinceCode === selectedProvince) : undefined;
+    const ward = selectedWard ? wards.find(w => w.wardCode === selectedWard) : undefined;
+
+    if (province && (!showWard || (showWard && ward))) {
+      emitted = {
+        street: street || '',
+        ward: ward?.wardName || '',
+        city: province.provinceName,
+        specificAddress: specificAddress || undefined,
+        showSpecificAddress,
+        provinceCode: selectedProvince,
+        provinceName: province.provinceName,
+        wardCode: ward?.wardCode || '',
+        wardName: ward?.wardName || '',
+        additionalInfo: additionalInfo || undefined
+      } as Address;
     }
 
     const serialized = emitted ? JSON.stringify(emitted) : 'null';
@@ -159,7 +157,7 @@ export default function AddressSelector({ value, onChange, className = "", field
       lastEmittedRef.current = serialized;
       onChange(emitted);
     }
-  }, [selectedProvince, selectedWard, street, specificAddress, showSpecificAddress, additionalInfo, provinces, wards]);
+  }, [selectedProvince, selectedWard, street, specificAddress, showSpecificAddress, additionalInfo, provinces, wards, showWard]);
 
   const handleProvinceSelect = (province: Province) => {
     console.log('Province selected:', province);

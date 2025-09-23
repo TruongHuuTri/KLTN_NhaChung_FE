@@ -28,6 +28,7 @@ export async function registerService(payload: RegisterPayload): Promise<{ messa
 export async function logoutService() {
   if (typeof window !== 'undefined') {
     localStorage.removeItem("token");
+    localStorage.removeItem("token_issued_at");
     localStorage.removeItem("user");
   }
 }

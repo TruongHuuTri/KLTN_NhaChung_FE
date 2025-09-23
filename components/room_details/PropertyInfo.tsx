@@ -189,10 +189,16 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
             <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
           </svg>
           <span>
-            {roomData?.address 
-              ? `${roomData.address.specificAddress || ''} ${roomData.address.street}, ${roomData.address.ward}, ${roomData.address.city}`.trim()
-              : 'Chưa có thông tin địa chỉ'
-            }
+            {roomData?.address
+              ? [
+                  roomData.address.specificAddress,
+                  roomData.address.street,
+                  (roomData.address as any).wardName || roomData.address.ward,
+                  roomData.address.city || (roomData.address as any).provinceName,
+                ]
+                  .filter((v) => !!v && String(v).trim().length > 0)
+                  .join(', ')
+              : 'Chưa có thông tin địa chỉ'}
           </span>
         </div>
         
