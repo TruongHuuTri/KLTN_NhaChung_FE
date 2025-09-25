@@ -64,11 +64,24 @@ export default function BuildingsContent({
   // Load rooms khi component mount
   React.useEffect(() => {
     loadAllRooms();
-  }, []);
+  }, [buildings]);
 
   // Tính số phòng thực tế cho mỗi dãy
   const getActualRoomCount = (buildingId: number) => {
     return allRooms.filter(room => room.buildingId === buildingId).length;
+  };
+
+  // Tìm thời điểm cập nhật gần nhất dựa vào rooms của dãy (created/updated)
+  const getLatestActivityAt = (buildingId: number) => {
+    const related = allRooms.filter(r => r.buildingId === buildingId);
+    if (related.length === 0) return undefined;
+    const latest = related.reduce<string | undefined>((acc, r) => {
+      const times = [r.updatedAt, r.createdAt].filter(Boolean) as string[];
+      const maxOfRoom = times.sort().slice(-1)[0];
+      if (!acc) return maxOfRoom;
+      return acc > maxOfRoom ? acc : maxOfRoom;
+    }, undefined);
+    return latest;
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -175,6 +188,13 @@ export default function BuildingsContent({
             >
               Tìm kiếm
             </button>
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Làm mới
+            </button>
             {searchQuery && (
               <button
                 type="button"
@@ -218,6 +238,7 @@ export default function BuildingsContent({
                 key={building.buildingId}
                 building={building}
                 actualRoomCount={getActualRoomCount(building.buildingId)}
+                overrideUpdatedAt={getLatestActivityAt(building.buildingId) || undefined}
                 onClick={onView}
                 onEdit={onEdit}
                 onDelete={onDelete}

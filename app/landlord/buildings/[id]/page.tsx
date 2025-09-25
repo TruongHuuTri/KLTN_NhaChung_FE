@@ -12,6 +12,7 @@ import NotificationModal from "@/components/common/NotificationModal";
 import ConfirmModal from "@/components/common/ConfirmModal";
 import { getBuildingById } from "@/services/buildings";
 import { getRooms, createRoom, deleteRoom, softDeleteRoom } from "@/services/rooms";
+import { getPostsByRoom, deletePost } from "@/services/posts";
 import { Building } from "@/types/Building";
 import { Room, CreateRoomPayload, RoomListParams } from "@/types/Room";
 import { extractApiErrorMessage } from "@/utils/api";
@@ -79,8 +80,19 @@ export default function BuildingDetailsPage() {
     try {
       setLoading(true);
       await createRoom(payload);
+      // Optimistic update: cập nhật updatedAt và số phòng
+      setBuilding((prev) => prev ? { 
+        ...prev, 
+        updatedAt: new Date().toISOString(),
+        totalRooms: (prev.totalRooms ?? 0) + 1
+      } : prev);
       setShowCreate(false);
-      const list = await getRooms({ buildingId: id } as RoomListParams);
+      // Refresh rooms và building
+      const [freshBuilding, list] = await Promise.all([
+        getBuildingById(id),
+        getRooms({ buildingId: id } as RoomListParams),
+      ]);
+      setBuilding(freshBuilding);
       setRooms(list.rooms ?? list);
     } catch (e: any) {
       alert(e?.message || "Không thể tạo phòng");
@@ -145,6 +157,18 @@ export default function BuildingDetailsPage() {
       
       // Sử dụng deleteRoom service function (theo integration guide)
       const result = await deleteRoom(validRoomId);
+      
+      // Xóa tất cả bài post liên quan đến phòng
+      try {
+        const relatedPosts = await getPostsByRoom(validRoomId);
+        if (Array.isArray(relatedPosts) && relatedPosts.length > 0) {
+          await Promise.all(
+            relatedPosts.map((p: any) => deletePost((p as any).id || (p as any).postId))
+          );
+        }
+      } catch (postErr) {
+        console.warn("Không thể xóa một số bài đăng liên quan tới phòng", postErr);
+      }
       console.log("✅ Delete successful:", result);
       
       // Cập nhật state ngay lập tức (theo integration guide)
@@ -152,6 +176,17 @@ export default function BuildingDetailsPage() {
         const id = (room as any).roomId || room.id;
         return id !== validRoomId;
       }));
+      // Optimistic: cập nhật updatedAt và giảm số phòng
+      setBuilding(prev => prev ? {
+        ...prev,
+        updatedAt: new Date().toISOString(),
+        totalRooms: Math.max(0, (prev.totalRooms ?? 0) - 1)
+      } : prev);
+      // Refresh building từ BE
+      try {
+        const fresh = await getBuildingById(id);
+        setBuilding(fresh);
+      } catch (_) {}
       
       // Đóng confirm modal
       hideConfirm();

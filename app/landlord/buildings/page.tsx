@@ -60,6 +60,22 @@ export default function BuildingsPage() {
     }
   }, [user?.userId, user?.role, searchQuery]);
 
+  // Lắng nghe rooms:changed để refresh danh sách và phản ánh updatedAt ngay
+  useEffect(() => {
+    const onRoomsChanged = (e: any) => {
+      // Refresh danh sách dãy nền để cập nhật chính xác từ BE
+      loadBuildings(currentPage, searchQuery);
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('rooms:changed' as any, onRoomsChanged as any);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('rooms:changed' as any, onRoomsChanged as any);
+      }
+    };
+  }, [currentPage, searchQuery]);
+
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     loadBuildings(1, query);

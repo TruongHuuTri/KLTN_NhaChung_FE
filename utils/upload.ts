@@ -16,13 +16,21 @@ export async function uploadFiles(
     const token = localStorage.getItem("token");
     // Lấy userId hiệu lực: ưu tiên tham số, fallback từ localStorage.user
     let effectiveUserId: number | undefined = userId;
+    // Chuẩn hoá: nếu userId là string số => ép về number
+    if (typeof effectiveUserId === "string" as any) {
+      const coerced = Number(effectiveUserId as unknown as string);
+      effectiveUserId = Number.isFinite(coerced) ? coerced : undefined;
+    }
     if ((!effectiveUserId || effectiveUserId <= 0) && typeof window !== 'undefined') {
       try {
         const u = localStorage.getItem('user');
         if (u) {
           const parsed = JSON.parse(u);
-          if (parsed && typeof parsed.userId === 'number' && parsed.userId > 0) {
-            effectiveUserId = parsed.userId;
+          // Hỗ trợ cả string hoặc number từ localStorage
+          const maybeId = parsed?.userId;
+          const normalizedId = typeof maybeId === 'string' ? Number(maybeId) : maybeId;
+          if (typeof normalizedId === 'number' && Number.isFinite(normalizedId) && normalizedId > 0) {
+            effectiveUserId = normalizedId;
           }
         }
       } catch {}
@@ -39,7 +47,9 @@ export async function uploadFiles(
           contentType: file.type,
           folder,
         };
-        if (typeof effectiveUserId === "number" && effectiveUserId > 0) payload.userId = effectiveUserId;
+        if (typeof effectiveUserId === "number" && Number.isFinite(effectiveUserId) && effectiveUserId > 0) {
+          payload.userId = effectiveUserId;
+        }
         return payload;
       })()),
     }).then(async (r) => {

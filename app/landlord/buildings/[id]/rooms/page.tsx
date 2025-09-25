@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import { getRooms, createRoom, deleteRoom, softDeleteRoom } from "@/services/rooms";
 import { getBuildingById } from "@/services/buildings";
+import { getPostsByRoom, deletePost } from "@/services/posts";
 import { Room, RoomListParams, CreateRoomPayload } from "@/types/Room";
 import { Building } from "@/types/Building";
 import { extractApiErrorMessage } from "@/utils/api";
@@ -69,7 +70,22 @@ export default function BuildingRoomsPage() {
     try {
       setLoading(true);
       await createRoom(payload);
+      // Optimistic update: cập nhật updatedAt và tăng tổng phòng nếu có
+      setBuilding((prev) => prev ? { 
+        ...prev, 
+        updatedAt: new Date().toISOString(),
+        totalRooms: (prev.totalRooms ?? 0) + 1
+      } : prev);
+      // Thông báo danh sách dãy để cập nhật ngay
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('rooms:changed', { detail: { buildingId, at: new Date().toISOString(), type: 'create' } }));
+      }
       setShowCreate(false);
+      // Fetch lại từ BE để đồng bộ dữ liệu
+      try {
+        const fresh = await getBuildingById(buildingId);
+        setBuilding(fresh);
+      } catch (_) {}
       await loadData();
     } catch (e: any) {
       alert(e?.message || "Không thể tạo phòng");
@@ -132,12 +148,36 @@ export default function BuildingRoomsPage() {
     try {
       setConfirmLoading(true);
       await deleteRoom(validRoomId);
+
+      // Xóa tất cả bài post liên quan đến phòng
+      try {
+        const relatedPosts = await getPostsByRoom(validRoomId);
+        if (Array.isArray(relatedPosts) && relatedPosts.length > 0) {
+          await Promise.all(
+            relatedPosts.map((p: any) => deletePost((p as any).id || (p as any).postId))
+          );
+        }
+      } catch (postErr) {
+        console.warn("Không thể xóa một số bài đăng liên quan tới phòng", postErr);
+      }
       
       // Cập nhật state ngay lập tức (theo integration guide)
       setRooms(prev => prev.filter(room => {
         const roomId = (room as any).roomId || room.id;
         return roomId !== validRoomId;
       }));
+      // Tải lại thông tin dãy để cập nhật updatedAt hoặc cập nhật tức thời
+      try {
+        const fresh = await getBuildingById(buildingId);
+        setBuilding(fresh);
+      } catch (_) {
+        // Fallback: nếu không fetch được, cập nhật updatedAt tạm thời để UI phản ánh thay đổi
+        setBuilding(prev => prev ? { ...prev, updatedAt: new Date().toISOString() } : prev);
+      }
+      // Phát sự kiện để trang danh sách dãy cập nhật ngay
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('rooms:changed', { detail: { buildingId, at: new Date().toISOString(), type: 'delete' } }));
+      }
       
       // Đóng confirm modal
       hideConfirm();

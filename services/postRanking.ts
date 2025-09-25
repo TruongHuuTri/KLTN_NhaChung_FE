@@ -25,8 +25,8 @@ export function filterPostsByCity(
 ): { filtered: any[]; cityInfo: { hardCity: string; strategy: string } } {
   const { userCity, profileCity, selectedCity, strictCityFilter = false } = options;
   
-  // Determine the city to filter by (priority: profile > selected > user)
-  const hardCity = ((profileCity || selectedCity || userCity || '') as string).trim();
+  // Determine the city to filter by (priority: selected > profile > user)
+  const hardCity = ((selectedCity || profileCity || userCity || '') as string).trim();
   
   if (!hardCity) {
     return { filtered: posts, cityInfo: { hardCity: '', strategy: 'no-filter' } };

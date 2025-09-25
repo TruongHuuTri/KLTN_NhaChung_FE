@@ -14,6 +14,9 @@ export default function Suggestions() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const { user } = useAuth();
+  const [selectedCity, setSelectedCity] = useState<string>(
+    typeof window !== 'undefined' ? (localStorage.getItem('selectedCity') || '') : ''
+  );
 
 
   // Load suggestions: gọi danh sách posts, lấy room khi cần, mix và render PostCard (giới hạn 12)
@@ -48,7 +51,7 @@ export default function Suggestions() {
         );
 
         // Sử dụng service ranking với strict city filter
-        const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
+        const selectedCityLS = selectedCity || ((typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '');
         const userCity = (user as any)?.address?.city || (user as any)?.city || '';
         
         const rankingOptions: PostRankingOptions = {
@@ -70,6 +73,40 @@ export default function Suggestions() {
     };
 
     loadMixedPosts();
+  }, [selectedCity, user?.userId]);
+
+  // Lắng nghe thay đổi selectedCity từ nơi khác trong app (dropdown)
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === 'selectedCity') setSelectedCity(e.newValue || '');
+    };
+    const onCityChanged = (e: any) => {
+      const val = e?.detail?.selectedCity;
+      if (typeof val === 'string') setSelectedCity(val);
+      else if (typeof window !== 'undefined') setSelectedCity(localStorage.getItem('selectedCity') || '');
+    };
+    let handleAppCityChanged: any;
+    if (typeof window !== 'undefined') {
+      window.addEventListener('storage', onStorage);
+      window.addEventListener('city:changed', onCityChanged as any);
+      // Backward-compat: header/AreaDropdown currently dispatch 'app:cityChanged' with { city }
+      handleAppCityChanged = (ev: any) => {
+        const city = ev?.detail?.city;
+        if (typeof city === 'string') {
+          setSelectedCity(city);
+        }
+      };
+      window.addEventListener('app:cityChanged', handleAppCityChanged);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('storage', onStorage);
+        window.removeEventListener('city:changed', onCityChanged as any);
+        if (handleAppCityChanged) {
+          window.removeEventListener('app:cityChanged', handleAppCityChanged);
+        }
+      }
+    };
   }, []);
 
   const scrollContainer = (direction: "left" | "right") => {

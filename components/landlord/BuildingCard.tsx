@@ -40,12 +40,14 @@ export default function BuildingCard({
   onClick,
   onEdit,
   onDelete,
+  overrideUpdatedAt,
 }: {
   building: Building;
   actualRoomCount?: number;
   onClick: (id: number) => void;
   onEdit: (id: number) => void;
   onDelete: (id: number) => void;
+  overrideUpdatedAt?: string;
 }) {
   return (
     <div
@@ -110,7 +112,7 @@ export default function BuildingCard({
 
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span>📅 Tạo ngày: {formatDate(building.createdAt)}</span>
-                <span>🔄 Cập nhật: {formatDate(building.updatedAt)}</span>
+                <span>🔄 Cập nhật: {formatDate(overrideUpdatedAt || building.updatedAt)}</span>
               </div>
             </div>
 

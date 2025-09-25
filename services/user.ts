@@ -71,7 +71,9 @@ export async function uploadUserAvatar(file: File): Promise<string> {
   
   try {
     // Upload theo quy trình API Guide: Presigned URL
-    const uploadedUrls = await uploadFiles([file], user.userId.toString(), "images");
+    // Đảm bảo userId là number hợp lệ khi truyền sang uploadFiles
+    const numericUserId = typeof user.userId === "string" ? Number(user.userId) : user.userId;
+    const uploadedUrls = await uploadFiles([file], numericUserId, "images");
     
     if (uploadedUrls.length === 0) {
       throw new Error("Upload avatar thất bại - không nhận được URL");
