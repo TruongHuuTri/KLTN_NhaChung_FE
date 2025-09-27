@@ -6,6 +6,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import Footer from "../../../components/common/Footer";
 import RoomsContent from "../../../components/landlord/RoomsContent";
 import { getRooms } from "../../../services/rooms";
+import { getLandlordRooms } from "../../../services/landlordRooms";
 import { getBuildings } from "../../../services/buildings";
 import { Room, RoomListParams } from "../../../types/Room";
 import { Building } from "../../../types/Building";
@@ -35,7 +36,9 @@ export default function RoomsPage() {
     if (!user?.userId) return;
     
     try {
+      console.log('Loading buildings...');
       const list = await getBuildings(); // Load tất cả dãy
+      console.log('Buildings loaded:', list);
       setBuildings(list);
     } catch (err) {
       console.error('Error loading buildings:', err);
@@ -57,13 +60,30 @@ export default function RoomsPage() {
         buildingId
       };
       
-      const response = await getRooms(params);
-      setRooms(response.rooms);
-      setTotalPages(Math.ceil(response.total / 10));
-      setCurrentPage(page);
+      console.log('Loading rooms with params:', params);
+      console.log('User:', user);
+      
+      // Thử API khác để test
+      try {
+        const response = await getRooms(params);
+        console.log('Rooms API response:', response);
+        
+        setRooms(response.rooms);
+        setTotalPages(Math.ceil(response.total / 10));
+        setCurrentPage(page);
+      } catch (err) {
+        console.log('getRooms failed, trying getLandlordRooms...');
+        const landlordRooms = await getLandlordRooms();
+        console.log('Landlord rooms response:', landlordRooms);
+        
+        // Convert format để phù hợp với component
+        setRooms(landlordRooms || []);
+        setTotalPages(1);
+        setCurrentPage(1);
+      }
     } catch (err: any) {
-      setError('Không thể tải danh sách phòng. Vui lòng thử lại.');
       console.error('Error loading rooms:', err);
+      setError('Không thể tải danh sách phòng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
     }
@@ -75,6 +95,20 @@ export default function RoomsPage() {
       loadRooms(1, searchQuery, selectedBuildingId);
     }
   }, [user?.userId, user?.role]);
+
+  // Refresh when window gains focus (e.g., returning from edit page)
+  useEffect(() => {
+    const handleFocus = () => {
+      if (user?.userId && user.role === "landlord") {
+        console.log('Window focused - refreshing data');
+        loadRooms(currentPage, searchQuery, selectedBuildingId);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [user?.userId, user?.role, currentPage, searchQuery, selectedBuildingId]);
+
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);

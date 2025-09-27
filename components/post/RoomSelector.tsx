@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { PostType } from "@/types/Post";
 import { Room } from "@/types/Room";
 import { RoomForPost } from "@/types/Post";
-import { getUserRooms } from "@/services/posts";
+import { getUserRooms, getPostsByRoom } from "@/services/posts";
 import { addressService } from "@/services/address";
 import { formatPrice } from "@/utils/format";
 import { useAuth } from "@/contexts/AuthContext";
@@ -31,12 +31,39 @@ export default function RoomSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
+  const [postedRoomIds, setPostedRoomIds] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Helper function để validate image URL
   const isValidImageUrl = (url: string): boolean => {
     if (!url || url === 'url1' || url === 'url2' || url === 'url3') return false;
     // Chấp nhận cả URL đầy đủ và relative URLs
     return url.length > 0 && !url.startsWith('url');
+  };
+
+  // Helper function để kiểm tra phòng đã được đăng bài hay chưa
+  const checkRoomPostedStatus = async (roomIds: number[]) => {
+    try {
+      const postedIds = new Set<number>();
+      
+      // Kiểm tra từng phòng xem có bài đăng active không
+      for (const roomId of roomIds) {
+        try {
+          const posts = await getPostsByRoom(roomId);
+          // Nếu có bài đăng với status 'active' thì phòng đã được đăng
+          const hasActivePost = posts.some(post => post.status === 'active');
+          if (hasActivePost) {
+            postedIds.add(roomId);
+          }
+        } catch (err) {
+          console.warn(`Không thể kiểm tra trạng thái đăng bài của phòng ${roomId}:`, err);
+        }
+      }
+      
+      setPostedRoomIds(postedIds);
+    } catch (err) {
+      console.error('Lỗi khi kiểm tra trạng thái đăng bài của phòng:', err);
+    }
   };
 
   // Tạo selectedRoomId để so sánh chính xác
@@ -90,6 +117,10 @@ export default function RoomSelector({
       
       // Set rooms to state (use unique rooms)
       setRooms(uniqueRooms);
+      
+      // Kiểm tra trạng thái đăng bài của các phòng
+      const roomIds = uniqueRooms.map(room => room.roomId);
+      await checkRoomPostedStatus(roomIds);
     } catch (err: any) {
       setError('Không thể tải danh sách phòng. Vui lòng thử lại.');
     } finally {
@@ -192,8 +223,31 @@ export default function RoomSelector({
     );
   }
 
-  // Filter rooms based on postType logic
+  // Filter rooms based on postType logic, posted status, and search query
   const validRooms = rooms.filter(room => {
+    // Ẩn phòng đã được đăng bài
+    if (postedRoomIds.has(room.roomId)) {
+      return false;
+    }
+    
+    // Filter theo search query (tìm theo tên phòng, mã phòng, địa chỉ)
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      const roomNumber = room.roomNumber.toLowerCase();
+      const buildingName = (room.buildingName || '').toLowerCase();
+      const address = room.address ? 
+        `${room.address.street} ${room.address.ward} ${room.address.city}`.toLowerCase() : '';
+      
+      // Tìm kiếm linh hoạt: tìm trong tên phòng, tòa nhà, hoặc địa chỉ
+      const matchesRoomNumber = roomNumber.includes(query);
+      const matchesBuildingName = buildingName.includes(query);
+      const matchesAddress = address.includes(query);
+      
+      if (!matchesRoomNumber && !matchesBuildingName && !matchesAddress) {
+        return false;
+      }
+    }
+    
     if (postType === 'rent') {
       // Cho thuê: Chỉ hiển thị phòng 100% trống
       return room.currentOccupants === 0 && room.status === 'available';
@@ -215,6 +269,24 @@ export default function RoomSelector({
             }
           </p>
         </div>
+
+        {/* Thanh tìm kiếm vẫn hiển thị khi có lỗi */}
+        <div className="max-w-md mx-auto">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Tìm theo mã phòng, tên tòa nhà hoặc địa chỉ..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+            />
+          </div>
+        </div>
         
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
           <div className="text-yellow-600 mb-4">
@@ -223,15 +295,17 @@ export default function RoomSelector({
             </svg>
           </div>
           <h3 className="text-lg font-medium text-yellow-800 mb-2">
-            {postType === 'rent' ? 
-              'Không có phòng trống' : 
-              'Không có phòng cho ở ghép'
+            {searchQuery.trim() ? 
+              'Không tìm thấy phòng phù hợp' : 
+              (postType === 'rent' ? 'Không có phòng trống' : 'Không có phòng cho ở ghép')
             }
           </h3>
           <p className="text-yellow-600 mb-4">
-            {postType === 'rent' ? 
-              'Hiện tại không có phòng nào 100% trống để cho thuê. Chỉ những phòng hoàn toàn trống mới có thể đăng cho thuê.' :
-              'Hiện tại không có phòng nào đang có người ở và còn chỗ trống để ở ghép. Phòng trống không thể đăng tìm ở ghép.'
+            {searchQuery.trim() ? 
+              `Không tìm thấy phòng nào phù hợp với từ khóa "${searchQuery}". Hãy thử tìm kiếm với từ khóa khác.` :
+              (postType === 'rent' ? 
+                'Hiện tại không có phòng nào 100% trống để cho thuê. Chỉ những phòng hoàn toàn trống mới có thể đăng cho thuê.' :
+                'Hiện tại không có phòng nào đang có người ở và còn chỗ trống để ở ghép. Phòng trống không thể đăng tìm ở ghép.')
             }
           </p>
           <div className="flex gap-3 justify-center">
@@ -241,12 +315,21 @@ export default function RoomSelector({
             >
               Quay lại
             </button>
-            <button
-              onClick={loadRooms}
-              className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
-            >
-              Tải lại
-            </button>
+            {searchQuery.trim() ? (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Xóa tìm kiếm
+              </button>
+            ) : (
+              <button
+                onClick={loadRooms}
+                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors"
+              >
+                Tải lại
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -263,6 +346,24 @@ export default function RoomSelector({
             'Chọn phòng đang có người ở để tìm ở ghép'
           }
         </p>
+      </div>
+
+      {/* Thanh tìm kiếm */}
+      <div className="max-w-md mx-auto">
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            type="text"
+            placeholder="Tìm theo mã phòng, tên tòa nhà hoặc địa chỉ..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-teal-500 focus:border-teal-500 sm:text-sm"
+          />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

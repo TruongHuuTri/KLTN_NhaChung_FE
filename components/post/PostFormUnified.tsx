@@ -4,12 +4,11 @@ import React, { useState, useEffect } from "react";
 import { PostType, CreatePostPayload, PersonalInfo, Requirements } from "@/types/Post";
 import { RoomForPost } from "@/types/Post";
 import { createPost } from "@/services/posts";
-import { uploadFiles } from "@/utils/upload";
-import { LocalMediaItem } from "../common/MediaPickerLocal";
-import MediaPickerLocal from "../common/MediaPickerLocal";
+// Removed unused imports for media upload
 import { extractApiErrorMessage } from "@/utils/api";
 import { useNotification } from "@/hooks/useNotification";
 import { addressService } from "@/services/address";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Sử dụng RoomForPost type từ types/Post.ts
 
@@ -22,15 +21,11 @@ interface PostFormUnifiedProps {
 
 export default function PostFormUnified({ postType, selectedRoom, onBack, onSuccess }: PostFormUnifiedProps) {
   const { showSuccess, showError } = useNotification();
+  const { user } = useAuth();
   const [formData, setFormData] = useState<Partial<CreatePostPayload>>({
     postType: postType,
     roomId: selectedRoom.roomId,
     title: "",
-    description: "",
-    images: [],
-    videos: [],
-    phone: "",
-    email: "",
     personalInfo: {
       fullName: "",
       age: 0,
@@ -50,8 +45,6 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
     },
   });
   const [loading, setLoading] = useState(false);
-  const [localImages, setLocalImages] = useState<LocalMediaItem[]>([]);
-  const [localVideos, setLocalVideos] = useState<LocalMediaItem[]>([]);
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -122,86 +115,71 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Debug: Log user info
+    console.log('User info before validation:', user);
+    
+    // Kiểm tra thông tin liên hệ
+    if (!user?.email) {
+      console.log('Missing email');
+      showError("Lỗi", "Không tìm thấy thông tin email. Vui lòng đăng nhập lại.");
+      return;
+    }
+    
+    if (!user?.phone) {
+      console.log('Missing phone');
+      showError("Lỗi", "Không tìm thấy thông tin số điện thoại. Vui lòng cập nhật thông tin cá nhân.");
+      return;
+    }
+    
+    console.log('Validation passed, proceeding to submit...');
+    
     setLoading(true);
-
+    
     try {
-      const userStr = localStorage.getItem('user');
-      const user = userStr ? JSON.parse(userStr) : null;
+      console.log('Starting submit process...');
       const userId = user?.userId;
 
       if (!userId) {
         throw new Error('Không tìm thấy thông tin người dùng');
       }
+      
+      console.log('UserId found:', userId);
 
       // Validate roomId
       if (!formData.roomId || formData.roomId <= 0) {
         throw new Error('Vui lòng chọn phòng hợp lệ');
       }
+      console.log('RoomId validated:', formData.roomId);
 
       // Validate required fields
       if (!formData.title?.trim()) {
         throw new Error('Vui lòng nhập tiêu đề bài đăng');
       }
-      if (!formData.description?.trim()) {
-        throw new Error('Vui lòng nhập mô tả bài đăng');
-      }
-      if (!formData.phone?.trim()) {
-        throw new Error('Vui lòng nhập số điện thoại');
-      }
-      if (!formData.email?.trim()) {
-        throw new Error('Vui lòng nhập email');
-      }
+      console.log('Title validated:', formData.title);
 
-      // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email.trim())) {
-        throw new Error('Email không đúng định dạng');
-      }
+      // Skip roommate validation since we only use rent posts
 
-      // Validate roommate-specific required fields
-      if (postType === "roommate") {
-        if (!formData.personalInfo?.fullName?.trim()) {
-          throw new Error('Vui lòng nhập họ và tên');
-        }
-        if (!formData.personalInfo?.age || formData.personalInfo.age <= 0) {
-          throw new Error('Vui lòng nhập tuổi hợp lệ');
-        }
-        if (!formData.personalInfo?.gender) {
-          throw new Error('Vui lòng chọn giới tính');
-        }
-        // Ensure dateOfBirth is calculated
-        if (!formData.personalInfo?.dateOfBirth && formData.personalInfo?.age > 0) {
-          const currentYear = new Date().getFullYear();
-          const birthYear = currentYear - formData.personalInfo.age;
-          formData.personalInfo.dateOfBirth = `${birthYear}-01-01T00:00:00.000Z`;
-        }
-      }
-
-      let imageUrls: string[] = [];
-      if (localImages.length > 0) {
-        const imageFiles = localImages.map((item) => item.file);
-        imageUrls = await uploadFiles(imageFiles, userId, 'images');
-      }
-
-      let videoUrls: string[] = [];
-      if (localVideos.length > 0) {
-        const videoFiles = localVideos.map((item) => item.file);
-        videoUrls = await uploadFiles(videoFiles, userId, 'videos');
-      }
+      // Không cần upload media vì sử dụng từ room
 
       // Map postType to backend format
       const backendPostType = formData.postType === 'rent' ? 'cho-thue' : 'tim-o-ghep';
       
+      // Sử dụng thông tin từ room và user thay vì form
       const payload: CreatePostPayload = {
         postType: backendPostType as any, // Cast to satisfy TypeScript
         roomId: formData.roomId!,
         title: formData.title!.trim(),
-        description: formData.description!.trim(),
-        images: imageUrls,
-        videos: videoUrls,
-        phone: formData.phone!.trim(),
-        email: formData.email!.trim(),
+        description: selectedRoom.description || '', // Lấy mô tả từ room
+        images: selectedRoom.images || [], // Lấy hình ảnh từ room
+        videos: selectedRoom.videos || [], // Lấy video từ room
+        phone: user?.phone!, // Lấy số điện thoại từ user (đã validate ở trên)
+        email: user?.email!, // Lấy email từ user (đã validate ở trên)
       };
+
+      // Debug log để kiểm tra payload
+      console.log('Payload to submit:', payload);
+      console.log('User info:', user);
 
       if (postType === "roommate") {
         // Ensure personalInfo is properly formatted
@@ -246,8 +224,11 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
         return value;
       }));
 
-
-      await createPost(cleanPayload);
+      console.log('About to call createPost with payload:', cleanPayload);
+      
+      const result = await createPost(cleanPayload);
+      console.log('Create post result:', result);
+      
       showSuccess("Thành công", "Đăng bài thành công!");
       onSuccess();
     } catch (err: any) {
@@ -260,8 +241,8 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
 
   const commonFormFields = (
     <>
-      <div className="mb-4">
-        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="mb-6">
+        <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
           Tiêu đề bài đăng <span className="text-red-500">*</span>
         </label>
         <input
@@ -270,77 +251,13 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
           name="title"
           value={formData.title || ""}
           onChange={handleInputChange}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
+          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 text-lg"
+          placeholder="Ví dụ: Cho thuê phòng trọ giá rẻ, gần trường học"
           required
         />
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-          Mô tả chi tiết <span className="text-red-500">*</span>
-        </label>
-        <textarea
-          id="description"
-          name="description"
-          value={formData.description || ""}
-          onChange={handleInputChange}
-          rows={5}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          required
-        ></textarea>
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Hình ảnh</label>
-        <MediaPickerLocal 
-          mediaItems={localImages} 
-          onMediaChange={setLocalImages} 
-          accept="image/*" 
-          max={10} 
-        />
-      </div>
-
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Video</label>
-        <MediaPickerLocal 
-          mediaItems={localVideos} 
-          onMediaChange={setLocalVideos} 
-          accept="video/*" 
-          max={1} 
-        />
-      </div>
-
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin liên hệ</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-            Số điện thoại <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="tel"
-            id="phone"
-            name="phone"
-            value={formData.phone || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email || ""}
-            onChange={handleInputChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            required
-            placeholder="example@email.com"
-          />
-        </div>
+        <p className="text-sm text-gray-500 mt-1">
+          Hình ảnh, mô tả chi tiết và thông tin liên hệ sẽ được lấy từ thông tin phòng đã có
+        </p>
       </div>
     </>
   );
@@ -602,14 +519,25 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-        <p className="text-blue-700 text-sm font-medium">
-          Bạn đang đăng bài cho phòng:{" "}
-          <span className="font-semibold">Phòng {selectedRoom.roomNumber}</span> tại{" "}
-          <span className="font-semibold">
-            {selectedRoom.buildingName ? `${selectedRoom.buildingName} - ` : ''}
-            {selectedRoom.address ? `${selectedRoom.address.street}, ${selectedRoom.address.ward}, ${selectedRoom.address.city}` : 'Địa chỉ không xác định'}
-          </span>
-        </p>
+        <div className="flex items-start gap-3">
+          <div className="text-blue-600">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-blue-700 text-sm font-medium mb-1">
+              Bạn đang đăng bài cho phòng: <span className="font-semibold">Phòng {selectedRoom.roomNumber}</span>
+            </p>
+            <p className="text-blue-600 text-sm">
+              Tại: {selectedRoom.buildingName ? `${selectedRoom.buildingName} - ` : ''}
+              {selectedRoom.address ? `${selectedRoom.address.street}, ${selectedRoom.address.ward}, ${selectedRoom.address.city}` : 'Địa chỉ không xác định'}
+            </p>
+            <p className="text-blue-600 text-xs mt-1">
+              Hình ảnh, mô tả, thông tin liên hệ và tất cả thông tin chi tiết sẽ được lấy từ thông tin phòng đã có
+            </p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

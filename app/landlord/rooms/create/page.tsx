@@ -60,7 +60,8 @@ export default function CreateRoomPage() {
         setLoading(true);
         setError(null);
         await createRoom(payload);
-        router.push("/landlord/rooms");
+        // Redirect về trang quản lý dãy chứa phòng vừa tạo
+        router.push(`/landlord/buildings/${payload.buildingId}`);
       } catch (err: any) {
         setError(err.message || "Có lỗi xảy ra khi tạo phòng. Vui lòng thử lại.");
       } finally {
@@ -70,6 +71,8 @@ export default function CreateRoomPage() {
   };
 
   const handleCancel = () => {
+    // Redirect về trang quản lý dãy nếu có buildingId trong state
+    // Hoặc về trang rooms nếu không có
     router.push("/landlord/rooms");
   };
 

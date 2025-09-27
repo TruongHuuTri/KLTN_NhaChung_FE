@@ -444,7 +444,8 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
                           💰 {formatPrice(post.price)}đ/tháng
                         </span>
                         <span className="flex items-center gap-1">
-                          🏷️ {post.category === 'roommate' ? 'Ở ghép' : 
+                          🏷️ {post.postType === 'roommate' ? 'Ở ghép' : 
+                              post.postType === 'rent' ? 'Cho thuê' :
                               post.category === 'phong-tro' ? 'Phòng trọ' :
                               post.category === 'chung-cu' ? 'Chung cư' : 'Nhà nguyên căn'}
                         </span>

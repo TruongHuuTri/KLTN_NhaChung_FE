@@ -72,7 +72,12 @@ export default function EditRoomPage() {
       setError(null);
       
       await updateRoom(roomId, data);
-      router.push("/landlord/rooms");
+      // Redirect về trang quản lý dãy chứa phòng này
+      if (room?.buildingId) {
+        router.push(`/landlord/buildings/${room.buildingId}`);
+      } else {
+        router.push("/landlord/rooms");
+      }
     } catch (err: any) {
       setError(err.message || "Có lỗi xảy ra khi cập nhật phòng. Vui lòng thử lại.");
     } finally {
@@ -81,7 +86,12 @@ export default function EditRoomPage() {
   };
 
   const handleCancel = () => {
-    router.push("/landlord/rooms");
+    // Redirect về trang quản lý dãy chứa phòng này
+    if (room?.buildingId) {
+      router.push(`/landlord/buildings/${room.buildingId}`);
+    } else {
+      router.push("/landlord/rooms");
+    }
   };
 
   if (!user) {

@@ -20,14 +20,8 @@ export default function PostTypeSelector({
       description: 'Đăng bài cho thuê phòng trọ, chung cư, nhà nguyên căn',
       icon: '🏠',
       color: 'blue'
-    },
-    {
-      type: 'roommate' as PostType,
-      title: 'Tìm ở ghép',
-      description: 'Tìm người ở ghép phòng trọ, chung cư',
-      icon: '👥',
-      color: 'green'
     }
+    // Ẩn tùy chọn "Tìm ở ghép" vì chủ nhà không được đăng tìm ở ghép
   ];
 
   const getColorClasses = (color: string, isSelected: boolean) => {
@@ -54,7 +48,7 @@ export default function PostTypeSelector({
         <p className="text-gray-600">Bạn muốn đăng bài gì?</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 max-w-md mx-auto">
         {postTypes.map(({ type, title, description, icon, color }) => (
           <div
             key={type}

@@ -114,7 +114,7 @@ export default function RoomsContent({
           <div className="flex items-center justify-between">
             <div>
               <p className="text-blue-600 text-sm font-medium">Tổng phòng</p>
-              <p className="text-3xl font-bold text-blue-700">{rooms.length}</p>
+              <p className="text-3xl font-bold text-blue-700">{rooms?.length || 0}</p>
             </div>
             <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
               <span className="text-2xl">🏠</span>
@@ -127,7 +127,7 @@ export default function RoomsContent({
             <div>
               <p className="text-green-600 text-sm font-medium">Phòng hoạt động</p>
               <p className="text-3xl font-bold text-green-700">
-                {rooms.filter(r => r.isActive).length}
+                {rooms?.filter(r => r.isActive).length || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
@@ -141,7 +141,7 @@ export default function RoomsContent({
             <div>
               <p className="text-amber-600 text-sm font-medium">Có thể ở ghép</p>
               <p className="text-3xl font-bold text-amber-700">
-                {rooms.filter(r => r.canShare).length}
+                {rooms?.filter(r => r.canShare).length || 0}
               </p>
             </div>
             <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
@@ -155,7 +155,7 @@ export default function RoomsContent({
             <div>
               <p className="text-purple-600 text-sm font-medium">Giá trung bình</p>
               <p className="text-3xl font-bold text-purple-700">
-                {rooms.length > 0 
+                {rooms?.length > 0 
                   ? formatPrice(Math.round(rooms.reduce((sum, r) => sum + r.price, 0) / rooms.length))
                   : 0
                 }đ
@@ -210,6 +210,13 @@ export default function RoomsContent({
               >
                 Tìm kiếm
               </button>
+              <button
+                type="button"
+                onClick={onRefresh}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                🔄 Làm mới
+              </button>
               {searchQuery && (
                 <button
                   type="button"
@@ -225,7 +232,7 @@ export default function RoomsContent({
 
         {/* Rooms List */}
         <div className="divide-y divide-gray-100">
-          {rooms.length === 0 ? (
+          {rooms?.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-gray-400 text-2xl">🏠</span>
@@ -249,7 +256,7 @@ export default function RoomsContent({
               )}
             </div>
           ) : (
-            rooms.map((room) => (
+            rooms?.map((room) => (
               <div key={room.id} className="p-6 hover:bg-gray-50 transition-colors">
                 <div className="flex items-start gap-4">
                   {/* Image */}
@@ -310,10 +317,10 @@ export default function RoomsContent({
                             🪑 {getFurnitureText(room.furniture)}
                           </span>
                           <span className="flex items-center gap-1">
-                            🧭 {getDirectionText(room.direction)}
+                            🧭 {getDirectionText(room.direction || '')}
                           </span>
                           <span className="flex items-center gap-1">
-                            📄 {getLegalStatusText(room.legalStatus)}
+                            📄 {getLegalStatusText(room.legalStatus || '')}
                           </span>
                           <span className="flex items-center gap-1">
                             👥 Tối đa {room.maxOccupancy} người
@@ -336,19 +343,19 @@ export default function RoomsContent({
                       <div className="flex-shrink-0">
                         <div className="flex gap-2">
                           <button
-                            onClick={() => onView(room.id)}
+                            onClick={() => room.id && onView(room.id)}
                             className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
                           >
                             Xem chi tiết
                           </button>
                           <button
-                            onClick={() => onEdit(room.id)}
+                            onClick={() => room.id && onEdit(room.id)}
                             className="px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
                           >
                             Chỉnh sửa
                           </button>
                           <button
-                            onClick={() => onDelete(room.id)}
+                            onClick={() => room.id && onDelete(room.id)}
                             className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
                           >
                             Xóa
@@ -371,7 +378,7 @@ export default function RoomsContent({
               totalPages={totalPages}
               onPageChange={onPageChange}
               itemsPerPage={10}
-              totalItems={rooms.length}
+              totalItems={rooms?.length || 0}
             />
           </div>
         )}

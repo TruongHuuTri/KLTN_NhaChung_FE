@@ -64,6 +64,18 @@ export default function BuildingDetailsPage() {
   useEffect(() => {
     loadData();
   }, [id]);
+  
+  // Refresh when window gains focus (e.g., returning from edit page)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('Window focused - refreshing building data');
+      loadData();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [id]);
+  
   useEffect(() => {
     if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "auto" });
   }, []);
@@ -258,7 +270,16 @@ export default function BuildingDetailsPage() {
         <div className="lg:col-span-2">
           <div>
             <div className="mb-4 flex items-center justify-between gap-4">
-              <h2 className="text-lg font-semibold text-gray-900">Quản lý phòng</h2>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => router.push("/landlord/buildings")}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <span>←</span>
+                  <span>Trở về quản lý chung</span>
+                </button>
+                <h2 className="text-lg font-semibold text-gray-900">Quản lý phòng</h2>
+              </div>
               <div className="flex-1 max-w-xl">
                 <input
                   value={search}

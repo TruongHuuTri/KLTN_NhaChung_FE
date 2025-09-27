@@ -138,7 +138,7 @@ export async function getLandlordPosts(): Promise<Post[]> {
  * Lấy bài đăng theo phòng
  */
 export async function getPostsByRoom(roomId: number): Promise<Post[]> {
-  return apiGet(`/api/landlord/posts/room/${roomId}`);
+  return apiGet(`landlord/posts/room/${roomId}`);
 }
 
 // ==================== ADMIN ENDPOINTS ====================
