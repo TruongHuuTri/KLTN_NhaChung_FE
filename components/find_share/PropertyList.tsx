@@ -76,7 +76,6 @@ export default function RoomList() {
                 bathrooms = roomData.chungCuInfo?.bathrooms || roomData.nhaNguyenCanInfo?.bathrooms;
                 images = roomData.images?.length > 0 ? roomData.images : (post.images || []);
               } catch (error) {
-                console.warn(`Failed to fetch room data for roomId ${post.roomId}:`, error);
               }
             }
             

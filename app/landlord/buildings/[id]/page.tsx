@@ -54,7 +54,6 @@ export default function BuildingDetailsPage() {
       
       setRooms(roomsWithBuilding);
     } catch (e: any) {
-      console.error("Error loading data:", e);
       setError(e?.message || "Không thể tải dữ liệu");
     } finally {
       setLoading(false);
@@ -68,7 +67,6 @@ export default function BuildingDetailsPage() {
   // Refresh when window gains focus (e.g., returning from edit page)
   useEffect(() => {
     const handleFocus = () => {
-      console.log('Window focused - refreshing building data');
       loadData();
     };
 
@@ -147,7 +145,6 @@ export default function BuildingDetailsPage() {
     // Validate roomId
     const validRoomId = Number(roomId);
     if (!validRoomId || isNaN(validRoomId) || validRoomId <= 0) {
-      console.error("❌ Invalid room ID:", roomId, typeof roomId);
       showError(
         "ID phòng không hợp lệ",
         "Vui lòng thử lại hoặc liên hệ hỗ trợ."
@@ -155,14 +152,6 @@ export default function BuildingDetailsPage() {
       hideConfirm();
       return;
     }
-    
-    console.log("🗑️ Deleting room:", {
-      originalId: roomId,
-      originalType: typeof roomId,
-      validId: validRoomId,
-      validType: typeof validRoomId,
-      roomNumber: roomNumber
-    });
     
     try {
       setConfirmLoading(true);
@@ -179,9 +168,7 @@ export default function BuildingDetailsPage() {
           );
         }
       } catch (postErr) {
-        console.warn("Không thể xóa một số bài đăng liên quan tới phòng", postErr);
       }
-      console.log("✅ Delete successful:", result);
       
       // Cập nhật state ngay lập tức (theo integration guide)
       setRooms(prev => prev.filter(room => {
@@ -210,7 +197,6 @@ export default function BuildingDetailsPage() {
       );
       
     } catch (error: any) {
-      console.error("❌ Error deleting room:", error);
       
       // Xử lý lỗi theo integration guide
       let errorMessage = "Có lỗi xảy ra khi xóa phòng";
@@ -236,9 +222,14 @@ export default function BuildingDetailsPage() {
     }
   };
 
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 grid place-items-center">Đang tải...</div>
+      <div className="min-h-screen bg-gray-50 grid place-items-center">
+        <div className="text-center">
+          <p className="mb-3 text-gray-700">Đang tải...</p>
+        </div>
+      </div>
     );
   }
 

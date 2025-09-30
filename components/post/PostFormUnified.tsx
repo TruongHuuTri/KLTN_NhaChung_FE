@@ -26,23 +26,26 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
     postType: postType,
     roomId: selectedRoom.roomId,
     title: "",
-    personalInfo: {
-      fullName: "",
-      age: 0,
-      dateOfBirth: "",
-      gender: "male",
-      occupation: "",
-      hobbies: [],
-      habits: [],
-      lifestyle: "normal",
-      cleanliness: "normal",
-    },
-    requirements: {
-      ageRange: [0, 0],
-      gender: "male",
-      traits: [],
-      maxPrice: 0,
-    },
+    // Chỉ khởi tạo personalInfo và requirements cho "tìm ở ghép"
+    ...(postType === 'roommate' && {
+      personalInfo: {
+        fullName: "",
+        age: 0,
+        dateOfBirth: "",
+        gender: "male",
+        occupation: "",
+        hobbies: [],
+        habits: [],
+        lifestyle: "normal",
+        cleanliness: "normal",
+      },
+      requirements: {
+        ageRange: [0, 0],
+        gender: "male",
+        traits: [],
+        maxPrice: 0,
+      },
+    }),
   });
   const [loading, setLoading] = useState(false);
 
@@ -52,8 +55,23 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       postType: postType,
       roomId: selectedRoom.roomId,
       // Reset personalInfo/requirements if switching postType
-      personalInfo: postType === "roommate" ? prev.personalInfo : undefined,
-      requirements: postType === "roommate" ? prev.requirements : undefined,
+      personalInfo: postType === "roommate" ? (prev.personalInfo || {
+        fullName: "",
+        age: 0,
+        dateOfBirth: "",
+        gender: "male",
+        occupation: "",
+        hobbies: [],
+        habits: [],
+        lifestyle: "normal",
+        cleanliness: "normal",
+      }) : undefined,
+      requirements: postType === "roommate" ? (prev.requirements || {
+        ageRange: [0, 0],
+        gender: "male",
+        traits: [],
+        maxPrice: 0,
+      }) : undefined,
     }));
   }, [postType, selectedRoom]);
 
@@ -117,48 +135,51 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
     e.preventDefault();
     
     // Debug: Log user info
-    console.log('User info before validation:', user);
     
     // Kiểm tra thông tin liên hệ
     if (!user?.email) {
-      console.log('Missing email');
       showError("Lỗi", "Không tìm thấy thông tin email. Vui lòng đăng nhập lại.");
       return;
     }
     
     if (!user?.phone) {
-      console.log('Missing phone');
       showError("Lỗi", "Không tìm thấy thông tin số điện thoại. Vui lòng cập nhật thông tin cá nhân.");
       return;
     }
     
-    console.log('Validation passed, proceeding to submit...');
     
     setLoading(true);
     
     try {
-      console.log('Starting submit process...');
       const userId = user?.userId;
 
       if (!userId) {
         throw new Error('Không tìm thấy thông tin người dùng');
       }
       
-      console.log('UserId found:', userId);
 
       // Validate roomId
       if (!formData.roomId || formData.roomId <= 0) {
         throw new Error('Vui lòng chọn phòng hợp lệ');
       }
-      console.log('RoomId validated:', formData.roomId);
 
       // Validate required fields
       if (!formData.title?.trim()) {
         throw new Error('Vui lòng nhập tiêu đề bài đăng');
       }
-      console.log('Title validated:', formData.title);
 
-      // Skip roommate validation since we only use rent posts
+      // Validate roommate-specific fields
+      if (postType === 'roommate') {
+        if (!formData.personalInfo?.fullName?.trim()) {
+          throw new Error('Vui lòng nhập họ tên');
+        }
+        if (!formData.personalInfo?.age || formData.personalInfo.age <= 0) {
+          throw new Error('Vui lòng nhập tuổi hợp lệ');
+        }
+        if (!formData.personalInfo?.gender) {
+          throw new Error('Vui lòng chọn giới tính');
+        }
+      }
 
       // Không cần upload media vì sử dụng từ room
 
@@ -175,11 +196,8 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
         videos: selectedRoom.videos || [], // Lấy video từ room
         phone: user?.phone!, // Lấy số điện thoại từ user (đã validate ở trên)
         email: user?.email!, // Lấy email từ user (đã validate ở trên)
+        userId: userId, // Thêm userId
       };
-
-      // Debug log để kiểm tra payload
-      console.log('Payload to submit:', payload);
-      console.log('User info:', user);
 
       if (postType === "roommate") {
         // Ensure personalInfo is properly formatted
@@ -217,20 +235,30 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       }
 
       // Clean up payload - remove undefined/null values
-      const cleanPayload = JSON.parse(JSON.stringify(payload, (key, value) => {
-        if (value === null || value === undefined) {
-          return undefined; // Remove null/undefined values
+      const cleanPayload = { ...payload } as any;
+      
+      // Remove null/undefined values
+      Object.keys(cleanPayload).forEach(key => {
+        if (cleanPayload[key] === null || cleanPayload[key] === undefined) {
+          delete cleanPayload[key];
         }
-        return value;
-      }));
+      });
 
-      console.log('About to call createPost with payload:', cleanPayload);
+      // Remove personalInfo and requirements for rent posts
+      if (postType === 'rent') {
+        delete cleanPayload.personalInfo;
+        delete cleanPayload.requirements;
+      }
+
       
       const result = await createPost(cleanPayload);
-      console.log('Create post result:', result);
       
       showSuccess("Thành công", "Đăng bài thành công!");
-      onSuccess();
+      
+      // Delay onSuccess to ensure toast is visible
+      setTimeout(() => {
+        onSuccess();
+      }, 1000);
     } catch (err: any) {
       const errorMessage = extractApiErrorMessage(err);
       showError("Lỗi", errorMessage);

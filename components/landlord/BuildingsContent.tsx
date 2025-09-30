@@ -54,7 +54,6 @@ export default function BuildingsContent({
       const roomsData = response.rooms ?? response;
       setAllRooms(Array.isArray(roomsData) ? roomsData : []);
     } catch (error) {
-      console.error('Error loading rooms:', error);
       setAllRooms([]);
     } finally {
       setRoomsLoading(false);

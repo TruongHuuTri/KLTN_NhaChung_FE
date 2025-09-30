@@ -48,7 +48,6 @@ export default function BuildingsPage() {
       setCurrentPage(page);
     } catch (err: any) {
       setError('Không thể tải danh sách dãy. Vui lòng thử lại.');
-      console.error('Error loading buildings:', err);
     } finally {
       setLoading(false);
     }
@@ -101,11 +100,9 @@ export default function BuildingsPage() {
     if (confirm("Bạn có chắc chắn muốn xóa dãy này?")) {
       try {
         // TODO: Implement delete building
-        console.log("Delete building:", id);
         // Refresh list after delete
         loadBuildings(currentPage, searchQuery);
       } catch (error) {
-        console.error("Error deleting building:", error);
       }
     }
   };
@@ -213,7 +210,6 @@ export default function BuildingsPage() {
                     setShowCreate(false);
                     await loadBuildings(currentPage, searchQuery);
                   } catch (err) {
-                    console.error(err);
                     setError("Không thể tạo dãy. Vui lòng thử lại.");
                   } finally {
                     setLoading(false);

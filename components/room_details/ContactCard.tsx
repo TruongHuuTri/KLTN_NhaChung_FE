@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { getPosts } from "../../services/posts";
 import { getUserById } from "../../services/user";
-import { getUserPosts } from "../../services/posts";
 import { User } from "../../types/User";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface ContactCardProps {
   postData: any;
@@ -11,9 +12,35 @@ interface ContactCardProps {
 }
 
 export default function ContactCard({ postData, postType }: ContactCardProps) {
+  const { user } = useAuth();
   const [userInfo, setUserInfo] = useState<User | null>(null);
   const [userStats, setUserStats] = useState<{ postsCount: number; joinedDate: string | null }>({ postsCount: 0, joinedDate: null });
   const [loading, setLoading] = useState(true);
+
+  // Check if user is viewing their own post or if user is landlord
+  const shouldHideButtons = user?.role === 'landlord' || user?.userId === postData?.userId;
+
+  const refreshUserStats = useCallback(async () => {
+    if (!postData?.userId) return;
+    
+    try {
+      const userPostsResponse = await getPosts({ userId: postData.userId });
+      let totalPosts = 0;
+      
+      if (userPostsResponse && typeof userPostsResponse === 'object' && 'posts' in userPostsResponse) {
+        totalPosts = Array.isArray(userPostsResponse.posts) ? userPostsResponse.posts.length : 0;
+      } else if (Array.isArray(userPostsResponse)) {
+        totalPosts = (userPostsResponse as any[]).length;
+      }
+
+      setUserStats(prev => ({
+        ...prev,
+        postsCount: totalPosts
+      }));
+    } catch (error) {
+      // Silently fail
+    }
+  }, [postData?.userId]);
 
   useEffect(() => {
     const fetchUserInfo = async () => {
@@ -25,32 +52,39 @@ export default function ContactCard({ postData, postType }: ContactCardProps) {
         // Fetch user info and user statistics in parallel
         const [user, userPosts] = await Promise.allSettled([
           getUserById(postData.userId),
-          getUserPosts(postData.userId)
+          getPosts({ userId: postData.userId })
         ]);
 
         // Set user info
         if (user.status === 'fulfilled') {
           setUserInfo(user.value);
         } else {
-          throw new Error('User not found');
+          // Fallback to postData if API fails
+          const userInfoFromPost = {
+            userId: postData.userId,
+            name: postData.userName || 'Người dùng',
+            email: postData.email || '',
+            phone: postData.phone || '',
+            avatar: postData.userAvatar || null,
+            createdAt: postData.userCreatedAt || null,
+          };
+          setUserInfo(userInfoFromPost);
         }
 
         // Calculate total posts count
         let totalPosts = 0;
         if (userPosts.status === 'fulfilled') {
           const postsData = userPosts.value;
-          // Check if it's the new unified API response format
           if (postsData && typeof postsData === 'object' && 'posts' in postsData) {
             totalPosts = Array.isArray(postsData.posts) ? postsData.posts.length : 0;
           } else if (Array.isArray(postsData)) {
-            // Fallback for direct array response
-            totalPosts = postsData.length;
+            totalPosts = (postsData as any[]).length;
           }
         }
 
         setUserStats({
           postsCount: totalPosts,
-          joinedDate: user.status === 'fulfilled' ? (user.value.createdAt || null) : null
+          joinedDate: user.status === 'fulfilled' ? (user.value.createdAt || null) : (postData.userCreatedAt || null)
         });
 
       } catch (error) {
@@ -61,7 +95,18 @@ export default function ContactCard({ postData, postType }: ContactCardProps) {
     };
 
     fetchUserInfo();
-  }, [postData?.userId]);
+
+    // Refresh stats when window gains focus (user might have created a new post in another tab)
+    const handleFocus = () => {
+      refreshUserStats();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [postData?.userId, refreshUserStats]);
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -156,17 +201,19 @@ export default function ContactCard({ postData, postType }: ContactCardProps) {
         </div>
       </div>
 
-      <div className="space-y-3">
-        <button className="w-full px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-lg transition-colors">
-          {userInfo?.phone ? 
-            userInfo.phone.substring(0, 4) + '****' : 
-            '0789****'
-          }
-        </button>
-        <button className="w-full px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-lg transition-colors">
-          Chat Với Người {postType === 'roommate' ? 'Tìm Ghép' : 'Bán'}
-        </button>
-      </div>
+      {!shouldHideButtons && (
+        <div className="space-y-3">
+          <button className="w-full px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-lg transition-colors">
+            {userInfo?.phone ? 
+              userInfo.phone.substring(0, 4) + '****' : 
+              '0789****'
+            }
+          </button>
+          <button className="w-full px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-medium rounded-lg transition-colors">
+            Chat Với Người {postType === 'roommate' ? 'Tìm Ghép' : 'Bán'}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

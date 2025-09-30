@@ -88,7 +88,6 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         setLocalUser(userData);
         return;
       } catch (error) {
-        console.error("Error parsing stored user:", error);
       }
     } else if (registrationData && isRegistrationFlow === "true") {
       // Nếu có registrationData nhưng chưa có user (chưa login)
@@ -108,7 +107,6 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         setLocalUser(tempUser);
         return;
       } catch (error) {
-        console.error("Error parsing registration data:", error);
       }
     }
   }, []); // Empty dependency array - chỉ chạy 1 lần
@@ -392,8 +390,6 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
       if (isRegistrationFlow && registrationData && actualUser?.userId === 0) {
         try {
           const regData = JSON.parse(registrationData);
-          console.log("Registration data:", regData);
-          console.log("UserId from registration data:", regData.userId);
           
           // Tạo user object từ registration data với userId thật
           const userFromReg: User = {
@@ -406,10 +402,8 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
             isVerified: true,
             createdAt: regData.verifiedAt
           };
-          console.log("User from registration:", userFromReg);
           actualUser = userFromReg;
         } catch (error) {
-          console.error("Error parsing registration data:", error);
           setError("Không thể tải thông tin đăng ký. Vui lòng thử lại.");
           setLoading(false);
           return;
@@ -478,27 +472,20 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         additionalServices: normalizedAdditionalServices,
       } as UserProfile;
 
-      console.log("Creating profile with userId:", actualUser.userId);
-      console.log("Is registration flow:", isRegistrationFlow);
-      console.log("Payload:", payload);
       
       try {
         if (isRegistrationFlow) {
           // Trong registration flow, profile đã được tạo sau OTP, chỉ cần update
-          console.log("Updating profile in registration flow:", payload);
           await updateMyProfile(payload);
         } else {
           // User đã đăng nhập, thử tạo mới trước, nếu thất bại thì update
           try {
-            console.log("Creating profile with regular API:", payload);
             await createProfile(payload);
           } catch (createError) {
-            console.log("Create failed, trying to update profile instead");
             await updateMyProfile(payload);
           }
         }
       } catch (error) {
-        console.error("Profile operation error:", error);
         throw new Error("Không thể lưu profile. Vui lòng thử lại.");
       }
       
@@ -944,7 +931,6 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
                   try { URL.revokeObjectURL(tmpUrl); } catch {}
                 } catch (err: any) {
                   // Giữ preview tạm, có thể thông báo lỗi nếu cần
-                  console.error("Upload business license failed", err);
                   const msg = (err && typeof err.message === 'string') ? err.message : 'Tải ảnh thất bại. Vui lòng thử lại.';
                   setError(msg);
                 } finally {

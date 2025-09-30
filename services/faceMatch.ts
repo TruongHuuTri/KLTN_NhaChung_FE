@@ -87,7 +87,6 @@ export async function compareFaces(
       confidence
     };
   } catch (error) {
-    console.error('FaceMatch API error:', error);
     throw new Error(`Failed to compare faces: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
@@ -118,7 +117,6 @@ async function convertImageToBlob(image: string): Promise<Blob> {
     }
     return response.blob();
   } catch (error) {
-    console.error('Error converting image to blob:', error);
     throw new Error(`Failed to process image: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

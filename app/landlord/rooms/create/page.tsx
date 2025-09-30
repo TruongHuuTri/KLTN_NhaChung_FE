@@ -37,7 +37,6 @@ export default function CreateRoomPage() {
         const list = Array.isArray(res) ? res : (res.buildings ?? []);
         setBuildings(list);
       } catch (err) {
-        console.error('Error loading buildings:', err);
         setError('Không thể tải danh sách dãy. Vui lòng thử lại.');
       } finally {
         setLoadingBuildings(false);

@@ -27,8 +27,11 @@ export default function Suggestions() {
         // Load profile (nếu đã đăng nhập)
         let pf: UserProfile | null = null;
         try {
-          pf = (await getMyProfile()) as any;
-          setProfile(pf);
+          const token = localStorage.getItem("token");
+          if (token) {
+            pf = (await getMyProfile()) as any;
+            setProfile(pf);
+          }
         } catch {}
 
         const response = await searchPosts({});

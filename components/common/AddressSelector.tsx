@@ -102,12 +102,9 @@ export default function AddressSelector({ value, onChange, className = "", field
       const loadWards = async () => {
         setLoading(true);
         try {
-          console.log('Loading wards for province:', selectedProvince);
           const wardsData = await addressService.getWardsByProvince(selectedProvince);
-          console.log('Wards data received:', wardsData);
           setWards(wardsData);
         } catch (error) {
-          console.error('Error loading wards:', error);
         } finally {
           setLoading(false);
         }
@@ -160,7 +157,6 @@ export default function AddressSelector({ value, onChange, className = "", field
   }, [selectedProvince, selectedWard, street, specificAddress, showSpecificAddress, additionalInfo, provinces, wards, showWard]);
 
   const handleProvinceSelect = (province: Province) => {
-    console.log('Province selected:', province);
     setSelectedProvince(province.provinceCode);
     setProvinceSearch(province.provinceName);
     setShowProvinceDropdown(false);

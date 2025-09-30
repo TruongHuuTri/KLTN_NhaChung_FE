@@ -128,7 +128,6 @@ export default function BuildingRoomsPage() {
     // Validate roomId
     const validRoomId = Number(id);
     if (!validRoomId || isNaN(validRoomId) || validRoomId <= 0) {
-      console.error("❌ Invalid room ID:", id, typeof id);
       showError(
         "ID phòng không hợp lệ",
         "Vui lòng thử lại hoặc liên hệ hỗ trợ."
@@ -137,7 +136,6 @@ export default function BuildingRoomsPage() {
       return;
     }
     
-    console.log("🗑️ Deleting room:", {
       originalId: id,
       originalType: typeof id,
       validId: validRoomId,
@@ -158,7 +156,6 @@ export default function BuildingRoomsPage() {
           );
         }
       } catch (postErr) {
-        console.warn("Không thể xóa một số bài đăng liên quan tới phòng", postErr);
       }
       
       // Cập nhật state ngay lập tức (theo integration guide)
@@ -189,7 +186,6 @@ export default function BuildingRoomsPage() {
       );
       
     } catch (error: any) {
-      console.error("Error deleting room:", error);
       
       // Xử lý lỗi theo integration guide
       let errorMessage = "Có lỗi xảy ra khi xóa phòng";

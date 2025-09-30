@@ -50,20 +50,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (token) {
-        try {
-          // Nếu có token, gọi API để lấy thông tin user mới nhất
-          const userData = await getUserProfile();
-          setUser(userData);
-          // Cập nhật localStorage với dữ liệu mới
-          localStorage.setItem("user", JSON.stringify(userData));
-        } catch (error) {
-          // Nếu API call thất bại (có thể do 401/hết hạn), dọn dẹp để tránh UI sai
+        // Tạm thời sử dụng storedUser thay vì gọi API để tránh logout tự động
+        if (storedUser) {
           try {
-            localStorage.removeItem("token");
-            localStorage.removeItem("token_issued_at");
-            localStorage.removeItem("user");
-          } catch {}
-          setUser(null);
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+          } catch (error) {
+            setUser(null);
+          }
+        } else {
+          // Chỉ gọi API nếu không có storedUser
+          try {
+            const userData = await getUserProfile();
+            setUser(userData);
+            localStorage.setItem("user", JSON.stringify(userData));
+          } catch (error) {
+            // KHÔNG tự động logout, chỉ set user = null
+            setUser(null);
+          }
         }
       } else if (storedUser) {
         // Không có token nhưng còn dữ liệu user cũ: dọn dẹp để tránh UI hiển thị sai

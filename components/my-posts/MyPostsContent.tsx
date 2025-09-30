@@ -107,7 +107,6 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onRefr
         const normalizedResults = await Promise.all(posts.map(normalizePost));
         setNormalizedPosts(normalizedResults);
       } catch (error) {
-        console.error('Error normalizing posts:', error);
         setNormalizedPosts([]);
       } finally {
         setLoadingPosts(false);

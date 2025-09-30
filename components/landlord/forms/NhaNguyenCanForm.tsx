@@ -23,7 +23,6 @@ export default function NhaNguyenCanForm({
   loading?: boolean;
   existingRooms?: Array<{ roomNumber: string; id?: number }>; // Để kiểm tra trùng
 }) {
-  console.log("🏠 NhaNguyenCanForm initialized with existingRooms:", existingRooms);
   const { user } = useAuth();
   const [mediaImages, setMediaImages] = useState<LocalMediaItem[]>([]);
   const [mediaVideos, setMediaVideos] = useState<LocalMediaItem[]>([]);
@@ -147,9 +146,6 @@ export default function NhaNguyenCanForm({
 
   // Kiểm tra mã phòng trùng
   const checkRoomNumberDuplicate = (roomNumber: string) => {
-    console.log("🔍 Checking room number:", roomNumber);
-    console.log("📋 Existing rooms:", existingRooms);
-    console.log("🆔 Initial data ID:", (initialData as any)?.id);
     
     if (!roomNumber.trim()) {
       setRoomNumberError("");
@@ -159,11 +155,9 @@ export default function NhaNguyenCanForm({
     const isDuplicate = existingRooms.some(room => {
       const isSameNumber = room.roomNumber.toLowerCase() === roomNumber.toLowerCase();
       const isNotCurrentRoom = room.id !== (initialData as any)?.id;
-      console.log(`🔍 Room ${room.roomNumber} (ID: ${room.id}): same=${isSameNumber}, notCurrent=${isNotCurrentRoom}, duplicate=${isSameNumber && isNotCurrentRoom}`);
       return isSameNumber && isNotCurrentRoom;
     });
     
-    console.log("❌ Is duplicate:", isDuplicate);
     
     if (isDuplicate) {
       setRoomNumberError("Mã phòng này đã tồn tại trong dãy");
@@ -244,14 +238,11 @@ export default function NhaNguyenCanForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log("🚀 Submitting form with room number:", form.roomNumber);
     
     // Kiểm tra mã phòng trùng trước khi submit
     const isValid = checkRoomNumberDuplicate(form.roomNumber);
-    console.log("✅ Validation result:", isValid);
     
     if (!isValid) {
-      console.log("❌ Form submission blocked due to duplicate room number");
       return;
     }
     
@@ -299,7 +290,6 @@ export default function NhaNguyenCanForm({
       
       onSubmit(payload);
     } catch (error) {
-      console.error("Error creating room:", error);
     } finally {
       setUploading(false);
     }

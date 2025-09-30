@@ -125,9 +125,6 @@ export default function RegisterFlow() {
       const verifyResult = await verifyRegistration(form.email, otp);
       
       // Debug: Kiểm tra kết quả từ backend
-      console.log("Verify result:", verifyResult);
-      console.log("User from verify:", verifyResult.user);
-      console.log("UserId from verify:", verifyResult.user?.userId);
       
       // Nếu BE trả về token sau verify → LƯU local để dùng cho presign/upload, KHÔNG auto-login UI
       if (typeof window !== "undefined" && verifyResult?.access_token && verifyResult?.user) {
@@ -144,7 +141,6 @@ export default function RegisterFlow() {
             // Chỉ gửi thông tin cơ bản, survey sẽ bổ sung sau
           });
         } catch (profileError) {
-          console.log("Profile creation after OTP failed, will create in survey:", profileError);
           // Không throw error, để survey xử lý
         }
       }

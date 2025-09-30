@@ -20,9 +20,10 @@ export default function Header() {
     if (pathname === "/") return "trang-chu";
     if (pathname === "/find_share" || pathname.startsWith("/room_details")) return "tim-phong";
     if (pathname === "/post" || pathname === "/post/rent" || pathname === "/post/roommate") return "dang-tin";
-    if (pathname.startsWith("/landlord")) return "landlord";
     if (pathname === "/blog") return "blog";
     if (pathname === "/support") return "ho-tro";
+    // For landlord pages, don't highlight any main navigation
+    if (pathname.startsWith("/landlord")) return "";
     return "trang-chu";
   };
 
@@ -72,6 +73,7 @@ export default function Header() {
     { id: "blog", label: "Blog", href: "/blog" },
     { id: "ho-tro", label: "Hỗ trợ", href: "/support" },
   ];
+
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900/95 backdrop-blur-xl border-b border-white/10 shadow-2xl">
@@ -173,6 +175,28 @@ export default function Header() {
                 >
                   Bài đăng của tôi
                 </Link>
+                {user.role !== 'landlord' && (
+                  <>
+                    <Link
+                      href="/my-rentals"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Đăng ký thuê
+                    </Link>
+                    <Link
+                      href="/my-rooms"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Phòng của tôi
+                    </Link>
+                    <Link
+                      href="/payments"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Hóa đơn đã thanh toán
+                    </Link>
+                  </>
+                )}
                 <Link
                   href="/favorites"
                   className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -184,11 +208,18 @@ export default function Header() {
                     <div className="my-2 border-t border-gray-100" />
                     <p className="px-4 pb-1 text-xs font-semibold text-gray-500 uppercase">Quản lý</p>
                     <Link
+                      href="/landlord"
+                      className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                      onClick={() => setIsUserMenuOpen(false)}
+                    >
+                      Yêu cầu thuê
+                    </Link>
+                    <Link
                       href="/landlord/buildings"
                       className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                       onClick={() => setIsUserMenuOpen(false)}
                     >
-                      Quản lý dãy
+                      Quản lý tòa nhà
                     </Link>
                     <Link
                       href="/landlord/billing"

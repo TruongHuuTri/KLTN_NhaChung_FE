@@ -116,6 +116,7 @@ export interface CreatePostPayload {
   roomId: number; // Required - chọn từ danh sách phòng
   phone: string;
   email: string;
+  userId: number; // Required - ID của user tạo post
   personalInfo?: PersonalInfo; // Chỉ cho roommate posts
   requirements?: Requirements; // Chỉ cho roommate posts
 }

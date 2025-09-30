@@ -211,7 +211,6 @@ export default function PhongTroForm({
       
       onSubmit(payload);
     } catch (error) {
-      console.error("Error creating room:", error);
     } finally {
       setUploading(false);
     }

@@ -37,7 +37,6 @@ import { useAuth } from "../../contexts/AuthContext";
           
           setPosts(transformedPosts);
         } catch (error) {
-          console.error("Error loading roommate posts:", error);
           setPosts([]);
         } finally {
           setLoading(false);

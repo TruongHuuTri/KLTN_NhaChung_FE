@@ -226,7 +226,6 @@ export default function BuildingForm({
 
       onSubmit(submitData);
     } catch (error) {
-      console.error("Error uploading images:", error);
       setErrors({ images: "Có lỗi khi tải ảnh lên. Vui lòng thử lại." });
     } finally {
       setUploading(false);

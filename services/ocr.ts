@@ -76,7 +76,6 @@ export async function processOCRWithFPT(
     return extractDataFromFPTResponse(frontData, backData);
     
   } catch (error) {
-    console.error('OCR processing error:', error);
     throw new Error(`Failed to extract ID card information: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

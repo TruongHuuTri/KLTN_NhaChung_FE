@@ -54,28 +54,12 @@ export async function deleteRoom(id: number): Promise<{ message: string }> {
   const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
   const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/landlord/rooms/${id}`;
   
-  console.log("🔗 DELETE API call:", {
-    roomId: id,
-    roomIdType: typeof id,
-    url: apiUrl,
-    method: 'DELETE',
-    hasToken: !!token,
-    tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
-  });
-  
   const response = await fetch(apiUrl, {
     method: 'DELETE',
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { 'Authorization': `Bearer ${token}` } : {})
     }
-  });
-
-  console.log("📡 Response:", {
-    status: response.status,
-    statusText: response.statusText,
-    ok: response.ok,
-    headers: Object.fromEntries(response.headers.entries())
   });
 
   if (!response.ok) {
@@ -85,27 +69,22 @@ export async function deleteRoom(id: number): Promise<{ message: string }> {
     } catch {
       errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
     }
-    console.error("❌ Error response:", errorData);
     throw new Error(errorData.message || 'Failed to delete room');
   }
 
   // Kiểm tra xem response có content không
   const contentType = response.headers.get('content-type');
-  console.log("📄 Response content-type:", contentType);
   
   let result;
   if (contentType && contentType.includes('application/json')) {
     try {
       result = await response.json();
-      console.log("✅ Success response (JSON):", result);
     } catch (error) {
-      console.log("⚠️ JSON parse failed, treating as success");
       result = { message: "Room deleted successfully" };
     }
   } else {
     // Response không phải JSON (có thể là empty hoặc text)
     const text = await response.text();
-    console.log("✅ Success response (text):", text);
     result = { message: text || "Room deleted successfully" };
   }
   
@@ -133,4 +112,33 @@ export async function getRoomsByBuilding(
   limit: number = 10
 ): Promise<RoomListResponse> {
   return getRooms({ buildingId, page, limit });
+}
+
+// Interface cho phòng đã thuê của user (theo API response)
+export interface UserRoom {
+  roomId: number;
+  roomNumber: string;
+  buildingName: string;
+  buildingId: number;
+  contractId: number;
+  contractStatus: 'active' | 'expired';
+  startDate: string;
+  endDate: string;
+  monthlyRent: number;
+  deposit: number;
+  area: number;
+  maxOccupancy: number;
+  currentOccupants: number;
+  images?: string[]; // Thêm field ảnh
+  landlordInfo: {
+    landlordId: number;
+    name: string;
+    phone: string;
+    email: string;
+  };
+}
+
+// Lấy danh sách phòng user đã thuê
+export async function getUserRooms(): Promise<UserRoom[]> {
+  return apiGet("users/rooms");
 }

@@ -6,6 +6,7 @@ import { formatNumberVN, formatPriceWithSuffix } from "../../utils/format";
 import { AgeUtils } from "@/utils/ageUtils";
 import { Post } from "../../types/Post";
 import { getRoomById } from "../../services/rooms";
+import RentalRequestForm from "../rental/RentalRequestForm";
 
 interface PropertyDetailsProps {
   postData: Post | null;
@@ -14,6 +15,7 @@ interface PropertyDetailsProps {
 
 export default function PropertyDetails({ postData, postType }: PropertyDetailsProps) {
   const [roomData, setRoomData] = useState<any>(null);
+  const [showRentalForm, setShowRentalForm] = useState(false);
   const { user } = useAuth();
   
   // Fetch room data when postData changes
@@ -24,7 +26,6 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
           const room = await getRoomById(postData.roomId);
           setRoomData(room);
         } catch (error) {
-          console.warn('Failed to fetch room data:', error);
         }
       }
     };
@@ -530,22 +531,63 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
         </div>
       </div>
 
-      {/* Action Buttons - chỉ hiển thị cho user không phải chủ nhà */}
-      {user?.role !== 'landlord' && (
+      {/* Action Buttons - chỉ hiển thị cho user không phải chủ nhà và không phải bài đăng của chính mình */}
+      {user?.role !== 'landlord' && user && user?.userId !== postData?.userId && (
         <div className="flex gap-3 pt-4 border-t border-gray-200">
           <button className="flex-1 px-4 py-3 bg-teal-500 hover:bg-teal-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
             <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
             </svg>
-            Liên hệ: 0782926 ***
+            Liên hệ: {postData?.phone || '0782926 ***'}
           </button>
-          <button className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-            </svg>
-            Đăng ký thuê ngay
-          </button>
+          
+          {postType === 'rent' && (
+            <button 
+              onClick={() => setShowRentalForm(true)}
+              className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+              </svg>
+              Đăng ký thuê ngay
+            </button>
+          )}
+          
+          {postType === 'roommate' && (
+            <button 
+              onClick={() => setShowRentalForm(true)}
+              className="flex-1 px-4 py-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+            >
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+              </svg>
+              Đăng ký ở ghép
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Hiển thị thông báo đăng nhập nếu chưa đăng nhập */}
+      {!user && (
+        <div className="pt-4 border-t border-gray-200 text-center">
+          <p className="text-gray-600 mb-3">Vui lòng đăng nhập để đăng ký thuê phòng</p>
+          <a 
+            href="/login" 
+            className="inline-block px-6 py-3 bg-teal-600 text-white font-semibold rounded-lg hover:bg-teal-700 transition-colors"
+          >
+            Đăng nhập ngay
+          </a>
+        </div>
+      )}
+
+      {/* Rental Request Form Modal */}
+      {showRentalForm && postData && (
+        <RentalRequestForm
+          postId={postData.postId}
+          postTitle={postData.title}
+          onSuccess={() => setShowRentalForm(false)}
+          onCancel={() => setShowRentalForm(false)}
+        />
       )}
     </div>
   );

@@ -36,12 +36,9 @@ export default function RoomsPage() {
     if (!user?.userId) return;
     
     try {
-      console.log('Loading buildings...');
       const list = await getBuildings(); // Load tất cả dãy
-      console.log('Buildings loaded:', list);
-      setBuildings(list);
+      setBuildings(Array.isArray(list) ? list : list.buildings || []);
     } catch (err) {
-      console.error('Error loading buildings:', err);
     }
   };
 
@@ -60,21 +57,16 @@ export default function RoomsPage() {
         buildingId
       };
       
-      console.log('Loading rooms with params:', params);
-      console.log('User:', user);
       
       // Thử API khác để test
       try {
         const response = await getRooms(params);
-        console.log('Rooms API response:', response);
         
         setRooms(response.rooms);
         setTotalPages(Math.ceil(response.total / 10));
         setCurrentPage(page);
       } catch (err) {
-        console.log('getRooms failed, trying getLandlordRooms...');
         const landlordRooms = await getLandlordRooms();
-        console.log('Landlord rooms response:', landlordRooms);
         
         // Convert format để phù hợp với component
         setRooms(landlordRooms || []);
@@ -82,7 +74,6 @@ export default function RoomsPage() {
         setCurrentPage(1);
       }
     } catch (err: any) {
-      console.error('Error loading rooms:', err);
       setError('Không thể tải danh sách phòng. Vui lòng thử lại.');
     } finally {
       setLoading(false);
@@ -100,7 +91,6 @@ export default function RoomsPage() {
   useEffect(() => {
     const handleFocus = () => {
       if (user?.userId && user.role === "landlord") {
-        console.log('Window focused - refreshing data');
         loadRooms(currentPage, searchQuery, selectedBuildingId);
       }
     };
@@ -140,11 +130,9 @@ export default function RoomsPage() {
     if (confirm("Bạn có chắc chắn muốn xóa phòng này?")) {
       try {
         // TODO: Implement delete room
-        console.log("Delete room:", id);
         // Refresh list after delete
         loadRooms(currentPage, searchQuery, selectedBuildingId);
       } catch (error) {
-        console.error("Error deleting room:", error);
       }
     }
   };

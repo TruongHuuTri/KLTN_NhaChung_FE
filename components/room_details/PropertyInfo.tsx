@@ -22,7 +22,6 @@ export default function PropertyInfo({ postData, postType }: PropertyInfoProps) 
           const room = await getRoomById(postData.roomId);
           setRoomData(room);
         } catch (error) {
-          console.warn('Failed to fetch room data:', error);
         }
       }
     };

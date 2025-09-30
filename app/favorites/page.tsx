@@ -129,7 +129,6 @@ export default function FavoritesPage() {
 
         setFavoritedPosts(favoritedPostsData);
       } catch (error) {
-        console.error('Error loading favorited posts:', error);
         setFavoritedPosts([]);
       } finally {
         setLoadingPosts(false);

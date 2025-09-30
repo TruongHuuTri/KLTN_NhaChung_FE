@@ -82,13 +82,14 @@ export async function api<T = any>(
 export const apiGet = <T = any>(p: string, o?: RequestInit) =>
   api<T>(p, { ...o, method: "GET" });
 
-export const apiPost = <T = any>(p: string, body?: any, o?: RequestInit & { skipAuth?: boolean }) =>
-  api<T>(p, {
+export const apiPost = <T = any>(p: string, body?: any, o?: RequestInit & { skipAuth?: boolean }) => {
+  return api<T>(p, {
     ...o,
     method: "POST",
     body: body instanceof FormData ? body : JSON.stringify(body),
     skipAuth: o?.skipAuth,
   });
+};
 
 export const apiPut = <T = any>(p: string, body?: any, o?: RequestInit) =>
   api<T>(p, {
@@ -98,7 +99,6 @@ export const apiPut = <T = any>(p: string, body?: any, o?: RequestInit) =>
   });
 
 export const apiDel = <T = any>(p: string, o?: RequestInit) => {
-  console.log("🔗 apiDel called with:", { path: p, options: o });
   return api<T>(p, { ...o, method: "DELETE" });
 };
 

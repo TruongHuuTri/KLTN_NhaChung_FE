@@ -1,15 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PostType } from "@/types/Post";
 import { RoomForPost } from "@/types/Post";
-import PostTypeSelector from "./PostTypeSelector";
 import RoomSelector from "./RoomSelector";
 import PostFormUnified from "./PostFormUnified";
+import { useAuth } from "@/contexts/AuthContext";
 
 // Sử dụng RoomForPost type từ types/Post.ts
 
-type FlowStep = 'select-type' | 'select-room' | 'fill-form' | 'success';
+type FlowStep = 'select-room' | 'fill-form' | 'success';
 
 interface NewPostFlowProps {
   onClose: () => void;
@@ -17,15 +17,19 @@ interface NewPostFlowProps {
 }
 
 export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
-  const [currentStep, setCurrentStep] = useState<FlowStep>('select-type');
+  const { user } = useAuth();
+  const [currentStep, setCurrentStep] = useState<FlowStep>('select-room');
   const [selectedType, setSelectedType] = useState<PostType | null>(null);
   const [selectedRoom, setSelectedRoom] = useState<RoomForPost | null>(null);
 
-  const handleSelectType = (type: PostType) => {
-    setSelectedType(type);
-    setSelectedRoom(null); // Reset selectedRoom khi chọn type mới
-    setCurrentStep('select-room');
-  };
+  // Tự động xác định loại bài đăng theo role
+  useEffect(() => {
+    if (user?.role === 'landlord') {
+      setSelectedType('rent');
+    } else {
+      setSelectedType('roommate');
+    }
+  }, [user?.role]);
 
   const handleSelectRoom = (room: RoomForPost | null) => {
     setSelectedRoom(room);
@@ -39,10 +43,6 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
 
   const handleBack = () => {
     switch (currentStep) {
-      case 'select-room':
-        setCurrentStep('select-type');
-        setSelectedType(null);
-        break;
       case 'fill-form':
         setCurrentStep('select-room');
         setSelectedRoom(null);
@@ -61,16 +61,13 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
 
   const handleClose = () => {
     // Reset state
-    setCurrentStep('select-type');
-    setSelectedType(null);
+    setCurrentStep('select-room');
     setSelectedRoom(null);
     onClose();
   };
 
   const getStepTitle = () => {
     switch (currentStep) {
-      case 'select-type':
-        return 'Tạo bài đăng mới';
       case 'select-room':
         return 'Chọn phòng';
       case 'fill-form':
@@ -84,14 +81,12 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
 
   const getStepNumber = () => {
     switch (currentStep) {
-      case 'select-type':
-        return 1;
       case 'select-room':
-        return 2;
+        return 1;
       case 'fill-form':
-        return 3;
+        return 2;
       case 'success':
-        return 4;
+        return 3;
       default:
         return 1;
     }
@@ -99,14 +94,6 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
 
   const renderStepContent = () => {
     switch (currentStep) {
-      case 'select-type':
-        return (
-          <PostTypeSelector
-            selectedType={selectedType}
-            onSelectType={handleSelectType}
-          />
-        );
-
       case 'select-room':
         return (
           <RoomSelector
@@ -151,8 +138,7 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
               </button>
               <button
                 onClick={() => {
-                  setCurrentStep('select-type');
-                  setSelectedType(null);
+                  setCurrentStep('select-room');
                   setSelectedRoom(null);
                 }}
                 className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
@@ -180,7 +166,9 @@ export default function NewPostFlow({ onClose, onSuccess }: NewPostFlowProps) {
                   {getStepNumber()}
                 </span>
               </div>
-              <h2 className="text-xl font-bold text-gray-900">{getStepTitle()}</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                {user?.role === 'landlord' ? 'Đăng tin cho thuê' : 'Đăng tin tìm ở ghép'}
+              </h2>
             </div>
           </div>
           <button
