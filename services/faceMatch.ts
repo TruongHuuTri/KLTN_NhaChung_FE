@@ -137,7 +137,7 @@ export function validateFaceMatchResult(result: any): result is FaceMatchResult 
 }
 
 /**
- * Get status based on FaceMatch result
+ * Get status based on FaceMatch result - theo API guide mới
  * @param result - FaceMatch result
  * @returns Status string
  */
@@ -146,7 +146,7 @@ export function getStatusFromFaceMatch(result: FaceMatchResult): 'approved' | 'p
 }
 
 /**
- * Get status message for UI
+ * Get status message for UI - theo API guide mới
  * @param result - FaceMatch result
  * @returns Status message
  */
@@ -156,4 +156,12 @@ export function getStatusMessage(result: FaceMatchResult): string {
   } else {
     return `❌ Face Match: ${result.similarity}% (Low) - PENDING`;
   }
+}
+
+/**
+ * Create FaceMatchResult for backend submission
+ * Backend sẽ tự động tính confidence dựa trên similarity
+ */
+export function createFaceMatchResult(match: boolean, similarity: number): FaceMatchResult {
+  return { match, similarity };
 }

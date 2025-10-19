@@ -66,6 +66,12 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
                 <div>
                   <h4 className="font-medium text-gray-900">Đã xác thực danh tính</h4>
                   <p className="text-sm text-gray-600">Tài khoản đã được xác thực, có thể đăng tin cho thuê</p>
+                  {verificationStatus?.verification?.faceMatchResult && (
+                    <p className="text-xs text-gray-500">
+                      Face Match: {verificationStatus.verification.faceMatchResult.similarity}% 
+                      ({verificationStatus.verification.faceMatchResult.confidence === 'high' ? 'High' : 'Low'})
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full font-medium">
@@ -81,6 +87,12 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
                 <div>
                   <h4 className="font-medium text-gray-900">Đang chờ duyệt</h4>
                   <p className="text-sm text-gray-600">Hồ sơ xác thực đang được xem xét</p>
+                  {verificationStatus.verification.faceMatchResult && (
+                    <p className="text-xs text-gray-500">
+                      Face Match: {verificationStatus.verification.faceMatchResult.similarity}% 
+                      ({verificationStatus.verification.faceMatchResult.confidence === 'high' ? 'High' : 'Low'})
+                    </p>
+                  )}
                   <p className="text-xs text-gray-500">Gửi lúc: {new Date(verificationStatus.verification.submittedAt).toLocaleString('vi-VN')}</p>
                 </div>
               </div>

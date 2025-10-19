@@ -36,14 +36,18 @@ export interface VerificationData {
   gender: "male" | "female";
   issueDate: string;
   issuePlace: string;
-  faceMatchResult?: FaceMatchResult; // MỚI - Kết quả FaceMatch
+  faceMatchResult?: FaceMatchResult;
+  images?: {
+    frontImage?: string;
+    backImage?: string;
+    faceImage?: string;
+  };
 }
 
-// FaceMatch types
 export interface FaceMatchResult {
   match: boolean;
   similarity: number;
-  confidence?: 'high' | 'low'; // Chỉ có 2 trạng thái theo API guide
+  confidence?: 'high' | 'low';
 }
 
 export interface VerificationResponse {

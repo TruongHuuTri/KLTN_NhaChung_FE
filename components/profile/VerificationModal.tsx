@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { submitVerification } from "../../services/verification";
 import { VerificationData, FaceMatchResult } from "../../types/User";
-import { compareFaces, getStatusMessage, validateFaceMatchResult } from "../../services/faceMatch";
+import { compareFaces, getStatusMessage, validateFaceMatchResult, createFaceMatchResult } from "../../services/faceMatch";
 import { processOCRWithFPT } from "../../services/ocr";
+import { VERIFICATION_CONSTANTS } from "../../utils/verificationConstants";
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
   const [faceMatchResult, setFaceMatchResult] = useState<FaceMatchResult | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isFaceMatching, setIsFaceMatching] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, type: 'front' | 'back' | 'face') => {
     const file = e.target.files?.[0];
@@ -76,7 +78,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
   };
 
   const handleSubmit = async () => {
-    const normalized: VerificationData | null = (() => {
+    const normalized: VerificationData | null = await (async () => {
       const idNumber = (formData.idNumber || '').trim();
       const fullName = (formData.fullName || '').trim();
       const dateOfBirth = (formData.dateOfBirth || '').trim();
@@ -88,6 +90,61 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
         return null;
       }
       
+      // Tạo faceMatchResult theo API mới - chỉ gửi match và similarity
+      let faceMatchForSubmission: FaceMatchResult | undefined;
+      if (faceMatchResult) {
+        faceMatchForSubmission = createFaceMatchResult(
+          faceMatchResult.match,
+          faceMatchResult.similarity
+        );
+      }
+      
+      // Compress image theo API guide
+      const compressImage = async (imageUrl: string): Promise<string | undefined> => {
+        if (!imageUrl?.startsWith('blob:')) return undefined;
+        
+        try {
+          const response = await fetch(imageUrl);
+          const blob = await response.blob();
+          
+          return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+              const ratio = Math.min(VERIFICATION_CONSTANTS.MAX_IMAGE_WIDTH / img.width, VERIFICATION_CONSTANTS.MAX_IMAGE_WIDTH / img.height);
+              
+              canvas.width = img.width * ratio;
+              canvas.height = img.height * ratio;
+              ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+              
+              resolve(canvas.toDataURL('image/jpeg', VERIFICATION_CONSTANTS.IMAGE_QUALITY));
+            };
+            
+            img.src = imageUrl;
+          });
+        } catch {
+          return undefined;
+        }
+      };
+      
+      // Compress images to base64
+      const [frontBase64, backBase64, faceBase64] = await Promise.all([
+        compressImage(frontImage),
+        compressImage(backImage),
+        compressImage(faceImage)
+      ]);
+      
+      // Validate total size
+      const totalSize = (frontBase64?.length || 0) + (backBase64?.length || 0) + (faceBase64?.length || 0);
+      
+      if (totalSize > VERIFICATION_CONSTANTS.MAX_TOTAL_SIZE) {
+        const sizeInMB = (totalSize / (1024 * 1024)).toFixed(2);
+        alert(`⚠️ ${VERIFICATION_CONSTANTS.MESSAGES.IMAGE_TOO_LARGE} (${sizeInMB}MB)`);
+        return;
+      }
+      
       return { 
         idNumber, 
         fullName, 
@@ -95,21 +152,28 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
         issueDate, 
         issuePlace, 
         gender,
-        faceMatchResult: faceMatchResult || undefined
+        faceMatchResult: faceMatchForSubmission,
+        images: {
+          frontImage: frontBase64,
+          backImage: backBase64,
+          faceImage: faceBase64
+        }
       };
     })();
 
     if (!normalized) {
-      alert('⚠️ Vui lòng điền đầy đủ thông tin bắt buộc');
+      alert(`⚠️ ${VERIFICATION_CONSTANTS.MESSAGES.REQUIRED_FIELDS}`);
       return;
     }
 
+    setIsSubmitting(true);
     try {
       const response = await submitVerification(normalized);
       
+      // Hiển thị thông báo theo status từ backend
       const message = response.verification.status === 'approved'
-        ? '✅ Hồ sơ đã được xác thực thành công!\n\nBạn đã được tự động xác thực nhờ AI so sánh khuôn mặt.'
-        : '✅ Gửi yêu cầu xác thực thành công!\n\nHồ sơ của bạn đang chờ admin xem xét.';
+        ? `✅ Hồ sơ đã được xác thực thành công!\n\nBạn đã được tự động xác thực nhờ AI so sánh khuôn mặt.\nĐộ tương đồng: ${response.verification.faceMatchResult?.similarity || 0}%`
+        : `✅ ${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_SUCCESS}\n\nHồ sơ của bạn đang chờ admin xem xét.`;
       
       alert(message);
       onVerify(normalized);
@@ -126,7 +190,31 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
       }, 2000);
       
     } catch (error: any) {
-      alert('❌ Gửi yêu cầu xác thực thất bại: ' + (error.message || 'Vui lòng thử lại'));
+      // Fallback: thử gửi không có ảnh nếu bị lỗi kích thước
+      if (error.message?.includes('request entity too large') || error.message?.includes('413')) {
+        try {
+          await submitVerification({ ...normalized, images: undefined });
+          alert(`✅ ${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_SUCCESS_WITHOUT_IMAGES}\n\nHồ sơ của bạn đang chờ admin xem xét.`);
+          onVerify(normalized);
+          setStep('success');
+          setTimeout(() => {
+            onClose();
+            setStep('upload');
+            setFormData({});
+            setFrontImage('');
+            setBackImage('');
+            setFaceImage('');
+            setFaceMatchResult(null);
+          }, 2000);
+          return;
+        } catch (retryError) {
+          alert(`❌ ${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_ERROR} ${retryError.message || 'Vui lòng thử lại'}`);
+        }
+      } else {
+        alert(`❌ ${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_ERROR} ${error.message || 'Vui lòng thử lại'}`);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -581,9 +669,10 @@ export default function VerificationModal({ isOpen, onClose, onVerify }: Verific
                 </button>
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                  disabled={isSubmitting}
+                  className="flex-1 px-6 py-3 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  Xác thực
+                  {isSubmitting ? 'Đang xử lý...' : 'Xác thực'}
                 </button>
               </div>
             </div>
