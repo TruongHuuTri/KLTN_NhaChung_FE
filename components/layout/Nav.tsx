@@ -12,7 +12,8 @@ import {
   FaComments, 
   FaChartBar,
   FaSignOutAlt,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaIdCard
 } from 'react-icons/fa';
 
 const Nav = () => {
@@ -35,6 +36,11 @@ const Nav = () => {
       icon: FaUser,
       label: 'Người dùng',
       href: '/users'
+    },
+    {
+      icon: FaIdCard,
+      label: 'Xác thực',
+      href: '/verifications'
     },
     {
       icon: FaFileAlt,
