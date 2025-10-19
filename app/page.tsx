@@ -1,10 +1,10 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import DashboardContent from '@/components/content/DashboardContent';
+import Layout from '@/components/layout/Layout';
+import Dashboard from '@/components/content/Dashboard';
 
 export default function Home() {
   return (
-    <DashboardLayout>
-      <DashboardContent />
-    </DashboardLayout>
+    <Layout>
+      <Dashboard />
+    </Layout>
   );
 }

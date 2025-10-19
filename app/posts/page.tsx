@@ -1,11 +1,11 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import PostsContent from '@/components/content/PostsContent';
+import Layout from '@/components/layout/Layout';
+import Post from '@/components/content/Post';
 
 const PostsPage = () => {
   return (
-    <DashboardLayout>
-      <PostsContent />
-    </DashboardLayout>
+    <Layout>
+      <Post />
+    </Layout>
   );
 };
 

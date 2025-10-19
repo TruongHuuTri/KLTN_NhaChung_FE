@@ -1,11 +1,11 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import UsersContent from '@/components/content/UsersContent';
+import Layout from '@/components/layout/Layout';
+import User from '@/components/content/User';
 
 const UsersPage = () => {
   return (
-    <DashboardLayout>
-      <UsersContent />
-    </DashboardLayout>
+    <Layout>
+      <User />
+    </Layout>
   );
 };
 

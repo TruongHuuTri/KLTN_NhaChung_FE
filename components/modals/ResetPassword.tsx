@@ -1,21 +1,25 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { userService } from '@/services/userService';
 
 interface User {
   id: number;
   name: string;
   email: string;
+  username: string;
+  phone: string;
   avatar: string;
 }
 
-interface ResetUserPasswordModalProps {
+interface ResetPasswordProps {
   isOpen: boolean;
   onClose: () => void;
   user: User | null;
+  onSuccess?: () => void;
 }
 
-const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModalProps) => {
+const ResetPassword = ({ isOpen, onClose, user, onSuccess }: ResetPasswordProps) => {
   const [formData, setFormData] = useState({
     newPassword: '',
     confirmPassword: ''
@@ -25,13 +29,18 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && user) {
       setIsVisible(true);
+      setFormData({
+        newPassword: '',
+        confirmPassword: ''
+      });
+      setErrors({});
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, user]);
 
   if (!isVisible || !user) return null;
 
@@ -66,23 +75,26 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) return;
+    if (!validateForm() || !user) return;
 
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Call API to reset password
+      await userService.resetUserPassword(user.id, formData.newPassword);
       
       // Show success message
-      alert(`Đã cấp lại mật khẩu thành công cho user ${user.name}!`);
+      alert('Đặt lại mật khẩu thành công!');
       
       // Reset form and close modal
       setFormData({ newPassword: '', confirmPassword: '' });
       setErrors({});
+      onSuccess?.();
       onClose();
-    } catch (error) {
-      alert('Có lỗi xảy ra. Vui lòng thử lại!');
+    } catch (error: any) {
+      // Show specific error message
+      const errorMessage = error.message || 'Có lỗi xảy ra. Vui lòng thử lại!';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -105,13 +117,13 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
       ></div>
       
       {/* Modal */}
-      <div className={`relative bg-white rounded-lg shadow-lg max-w-lg w-full mx-auto p-6 transition-all duration-300 ease-out transform ${
+      <div className={`relative bg-white rounded-lg shadow-lg max-w-md w-full mx-auto p-6 transition-all duration-300 ease-out transform ${
         isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">
-            Cấp lại mật khẩu
+            Đặt lại mật khẩu
           </h3>
           <button
             onClick={handleClose}
@@ -127,8 +139,8 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
         <div className="mb-6 p-4 bg-gray-50 rounded-lg">
           <div className="flex items-center">
             <div className="h-12 w-12 flex-shrink-0">
-              <div className="h-12 w-12 rounded-full bg-gray-300 flex items-center justify-center text-xl">
-                {user.avatar}
+              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl">
+                {user.name.charAt(0).toUpperCase()}
               </div>
             </div>
             <div className="ml-4">
@@ -154,7 +166,7 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.newPassword ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Nhập mật khẩu mới cho user"
+              placeholder="Nhập mật khẩu mới"
             />
             {errors.newPassword && (
               <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
@@ -206,7 +218,7 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
                   Đang xử lý...
                 </div>
               ) : (
-                'Cấp lại mật khẩu'
+                'Đặt lại mật khẩu'
               )}
             </button>
           </div>
@@ -216,4 +228,4 @@ const ResetUserPasswordModal = ({ isOpen, onClose, user }: ResetUserPasswordModa
   );
 };
 
-export default ResetUserPasswordModal;
+export default ResetPassword;

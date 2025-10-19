@@ -1,16 +1,16 @@
 'use client';
 
 import React from 'react';
-import Sidebar from './Sidebar';
+import Nav from './Nav';
 
-interface DashboardLayoutProps {
+interface LayoutProps {
   children: React.ReactNode;
 }
 
-const DashboardLayout = ({ children }: DashboardLayoutProps) => {
+const Layout = ({ children }: LayoutProps) => {
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+      <Nav />
       <main className="flex-1 overflow-auto">
         {children}
       </main>
@@ -18,4 +18,4 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   );
 };
 
-export default DashboardLayout;
+export default Layout;

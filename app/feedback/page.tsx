@@ -1,11 +1,11 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import FeedbackContent from '@/components/content/FeedbackContent';
+import Layout from '@/components/layout/Layout';
+import Feedback from '@/components/content/Feedback';
 
 const FeedbackPage = () => {
   return (
-    <DashboardLayout>
-      <FeedbackContent />
-    </DashboardLayout>
+    <Layout>
+      <Feedback />
+    </Layout>
   );
 };
 

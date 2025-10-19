@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trust Stay - Hệ thống quản lý phòng trọ",
-  description: "Hệ thống quản lý phòng trọ Trust Stay - Sự tin cậy đặt lên hàng đầu",
+  title: "Nhà Chung - Quản lý phòng trọ",
+  description: "Nhà Chung - Quản lý phòng trọ hiệu quả và tin cậy",
 };
 
 export default function RootLayout({
@@ -23,9 +23,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
+    <html lang="vi" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
       </body>

@@ -1,11 +1,11 @@
-import DashboardLayout from '@/components/layout/DashboardLayout';
-import ActivityContent from '@/components/content/ActivityContent';
+import Layout from '@/components/layout/Layout';
+import Activity from '@/components/content/Activity';
 
 const ActivityPage = () => {
   return (
-    <DashboardLayout>
-      <ActivityContent />
-    </DashboardLayout>
+    <Layout>
+      <Activity />
+    </Layout>
   );
 };
 

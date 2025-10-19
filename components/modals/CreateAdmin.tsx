@@ -1,17 +1,21 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { adminService } from '@/services/adminService';
 
-interface ChangePasswordModalProps {
+interface CreateAdminProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: () => void;
 }
 
-const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
+const CreateAdmin = ({ isOpen, onClose, onSuccess }: CreateAdminProps) => {
   const [formData, setFormData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    phone: ''
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -20,6 +24,14 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
   useEffect(() => {
     if (isOpen) {
       setIsVisible(true);
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phone: ''
+      });
+      setErrors({});
     } else {
       const timer = setTimeout(() => setIsVisible(false), 300);
       return () => clearTimeout(timer);
@@ -40,20 +52,30 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.currentPassword) {
-      newErrors.currentPassword = 'Vui lòng nhập mật khẩu hiện tại';
+    if (!formData.name.trim()) {
+      newErrors.name = 'Vui lòng nhập tên';
     }
 
-    if (!formData.newPassword) {
-      newErrors.newPassword = 'Vui lòng nhập mật khẩu mới';
-    } else if (formData.newPassword.length < 6) {
-      newErrors.newPassword = 'Mật khẩu mới phải có ít nhất 6 ký tự';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Vui lòng nhập email';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Vui lòng nhập email hợp lệ';
+    }
+
+    if (!formData.password) {
+      newErrors.password = 'Vui lòng nhập mật khẩu';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu mới';
-    } else if (formData.newPassword !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu';
+    } else if (formData.password !== formData.confirmPassword) {
       newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp';
+    }
+
+    if (formData.phone && !/^[0-9+\-\s()]+$/.test(formData.phone)) {
+      newErrors.phone = 'Số điện thoại không hợp lệ';
     }
 
     setErrors(newErrors);
@@ -68,25 +90,36 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
     setLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Prepare admin data
+      const adminData = {
+        name: formData.name,
+        email: formData.email,
+        password: formData.password,
+        phone: formData.phone || undefined
+      };
+
+      // Call API to create admin
+      await adminService.createAdmin(adminData);
       
       // Show success message
-      alert('Đổi mật khẩu thành công!');
+      alert('Tạo quản trị viên mới thành công!');
       
       // Reset form and close modal
-      setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setFormData({ name: '', email: '', password: '', confirmPassword: '', phone: '' });
       setErrors({});
+      onSuccess?.();
       onClose();
-    } catch (error) {
-      alert('Có lỗi xảy ra. Vui lòng thử lại!');
+    } catch (error: any) {
+      // Show specific error message
+      const errorMessage = error.message || 'Có lỗi xảy ra. Vui lòng thử lại!';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    setFormData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setFormData({ name: '', email: '', password: '', confirmPassword: '', phone: '' });
     setErrors({});
     onClose();
   };
@@ -95,20 +128,20 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300 ease-out ${
       isOpen ? 'opacity-100' : 'opacity-0'
     }`}>
-      {/* Overlay - chỉ làm mờ nhẹ như ảnh mẫu */}
+      {/* Overlay */}
       <div 
         className="absolute inset-0 bg-black/40 transition-opacity duration-300 ease-out"
         onClick={handleClose}
       ></div>
       
       {/* Modal */}
-      <div className={`relative bg-white rounded-lg shadow-lg max-w-lg w-full mx-auto p-6 transition-all duration-300 ease-out transform ${
+      <div className={`relative bg-white rounded-lg shadow-lg max-w-2xl w-full mx-auto p-6 transition-all duration-300 ease-out transform ${
         isOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 translate-y-4'
       }`}>
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">
-            Đổi mật khẩu
+            Tạo quản trị viên mới
           </h3>
           <button
             onClick={handleClose}
@@ -122,52 +155,94 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Current Password */}
+          {/* Name */}
           <div>
-            <label htmlFor="currentPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Mật khẩu hiện tại *
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+              Tên quản trị viên *
             </label>
             <input
-              type="password"
-              id="currentPassword"
-              name="currentPassword"
-              value={formData.currentPassword}
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
               onChange={handleInputChange}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.currentPassword ? 'border-red-500' : 'border-gray-300'
+                errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Nhập mật khẩu hiện tại"
+              placeholder="Nhập tên quản trị viên"
             />
-            {errors.currentPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.currentPassword}</p>
+            {errors.name && (
+              <p className="mt-1 text-sm text-red-600">{errors.name}</p>
             )}
           </div>
 
-          {/* New Password */}
+          {/* Email */}
           <div>
-            <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Mật khẩu mới *
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              Email *
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.email ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Nhập email"
+            />
+            {errors.email && (
+              <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+            )}
+          </div>
+
+          {/* Phone */}
+          <div>
+            <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+              Số điện thoại
+            </label>
+            <input
+              type="tel"
+              id="phone"
+              name="phone"
+              value={formData.phone}
+              onChange={handleInputChange}
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.phone ? 'border-red-500' : 'border-gray-300'
+              }`}
+              placeholder="Nhập số điện thoại (tùy chọn)"
+            />
+            {errors.phone && (
+              <p className="mt-1 text-sm text-red-600">{errors.phone}</p>
+            )}
+          </div>
+
+          {/* Password */}
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              Mật khẩu *
             </label>
             <input
               type="password"
-              id="newPassword"
-              name="newPassword"
-              value={formData.newPassword}
+              id="password"
+              name="password"
+              value={formData.password}
               onChange={handleInputChange}
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                errors.newPassword ? 'border-red-500' : 'border-gray-300'
+                errors.password ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Nhập mật khẩu mới"
+              placeholder="Nhập mật khẩu"
             />
-            {errors.newPassword && (
-              <p className="mt-1 text-sm text-red-600">{errors.newPassword}</p>
+            {errors.password && (
+              <p className="mt-1 text-sm text-red-600">{errors.password}</p>
             )}
           </div>
 
           {/* Confirm Password */}
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Xác nhận mật khẩu mới *
+              Xác nhận mật khẩu *
             </label>
             <input
               type="password"
@@ -178,7 +253,7 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
               className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                 errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Nhập lại mật khẩu mới"
+              placeholder="Nhập lại mật khẩu"
             />
             {errors.confirmPassword && (
               <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
@@ -198,7 +273,7 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -206,10 +281,10 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Đang xử lý...
+                  Đang tạo...
                 </div>
               ) : (
-                'Đổi mật khẩu'
+                'Tạo quản trị viên'
               )}
             </button>
           </div>
@@ -219,4 +294,4 @@ const ChangePasswordModal = ({ isOpen, onClose }: ChangePasswordModalProps) => {
   );
 };
 
-export default ChangePasswordModal;
+export default CreateAdmin;
