@@ -3,15 +3,19 @@
 import React, { useState, useEffect } from 'react';
 import { userService, AdminUser } from '@/services/userService';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import UserAction from '@/components/modals/user/UserAction';
 
 const User = () => {
   const { admin: currentAdmin } = useAdminAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [verificationFilter, setVerificationFilter] = useState('all');
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isActionModalOpen, setIsActionModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
 
   // Load users from API
   useEffect(() => {
@@ -49,34 +53,46 @@ const User = () => {
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     
-    return matchesSearch && matchesStatus && matchesRole;
+    const matchesVerification = verificationFilter === 'all' ||
+      (verificationFilter === 'verified' && user.isVerified) ||
+      (verificationFilter === 'unverified' && !user.isVerified);
+    
+    return matchesSearch && matchesStatus && matchesRole && matchesVerification;
   });
 
-  const handleToggleUserStatus = async (user: AdminUser) => {
-    if (!window.confirm(`Bạn có chắc muốn ${user.isActive ? 'vô hiệu hóa' : 'kích hoạt'} người dùng "${user.name}"?`)) {
-      return;
-    }
+  const handleUserAction = (user: AdminUser) => {
+    setSelectedUser(user);
+    setIsActionModalOpen(true);
+  };
 
-    try {
-      const token = userService.getToken();
-      if (token) {
-        await userService.updateUserStatus(user.userId, !user.isActive);
+  const handleCloseActionModal = () => {
+    setSelectedUser(null);
+    setIsActionModalOpen(false);
+  };
+
+  const handleActionSuccess = () => {
+    // Reload users after successful action
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        setError(null);
         
-        // Update local state
-        setUsers(prevUsers => 
-          prevUsers.map(u => 
-            u.userId === user.userId 
-              ? { ...u, isActive: !u.isActive }
-              : u
-          )
-        );
-        
-        alert(`${user.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'} người dùng thành công!`);
+        if (currentAdmin) {
+          const token = userService.getToken();
+          if (token) {
+            const data = await userService.getAllUsersForAdmin();
+            setUsers(data);
+          }
+        }
+      } catch (err: any) {
+        console.error('Error loading users:', err);
+        setError(err.message || 'Không thể tải danh sách người dùng');
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      console.error('Error updating user status:', error);
-      alert(error.message || 'Có lỗi xảy ra khi cập nhật trạng thái người dùng');
-    }
+    };
+
+    loadUsers();
   };
 
   const formatDate = (dateString: string) => {
@@ -104,8 +120,7 @@ const User = () => {
   const getRoleBadge = (role: string) => {
     const roleConfig = {
       user: { color: 'bg-blue-100 text-blue-800', text: 'Người dùng' },
-      landlord: { color: 'bg-purple-100 text-purple-800', text: 'Chủ trọ' },
-      admin: { color: 'bg-orange-100 text-orange-800', text: 'Quản trị viên' }
+      landlord: { color: 'bg-purple-100 text-purple-800', text: 'Chủ trọ' }
     };
     
     const config = roleConfig[role as keyof typeof roleConfig] || { color: 'bg-gray-100 text-gray-800', text: role };
@@ -199,7 +214,19 @@ const User = () => {
                     <option value="all">Tất cả vai trò</option>
                     <option value="user">Người dùng</option>
                     <option value="landlord">Chủ trọ</option>
-                    <option value="admin">Quản trị viên</option>
+                  </select>
+                </div>
+
+                {/* Verification Filter */}
+                <div className="flex-shrink-0">
+                  <select
+                    value={verificationFilter}
+                    onChange={(e) => setVerificationFilter(e.target.value)}
+                    className="block w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                  >
+                    <option value="all">Tất cả xác thực</option>
+                    <option value="verified">Đã xác thực</option>
+                    <option value="unverified">Chưa xác thực</option>
                   </select>
                 </div>
               </div>
@@ -291,15 +318,11 @@ const User = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex items-center space-x-2">
                         <button 
-                              onClick={() => handleToggleUserStatus(user)}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition-colors ${
-                                user.isActive 
-                                  ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                                  : 'bg-green-100 text-green-700 hover:bg-green-200'
-                              }`}
-                              title={user.isActive ? 'Vô hiệu hóa người dùng' : 'Kích hoạt người dùng'}
+                          onClick={() => handleUserAction(user)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                          title="Thao tác người dùng"
                         >
-                          {user.isActive ? 'Vô hiệu hóa' : 'Kích hoạt'}
+                          Thao tác
                         </button>
                       </div>
                     </td>
@@ -308,7 +331,9 @@ const User = () => {
                   ) : (
                     <tr>
                       <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                        {searchTerm ? 'Không tìm thấy người dùng nào phù hợp' : 'Chưa có người dùng nào'}
+                        {searchTerm || statusFilter !== 'all' || roleFilter !== 'all' || verificationFilter !== 'all' 
+                          ? 'Không tìm thấy người dùng nào phù hợp' 
+                          : 'Chưa có người dùng nào'}
                       </td>
                     </tr>
                   )}
@@ -351,6 +376,14 @@ const User = () => {
           </svg>
         </button>
       </div>
+
+      {/* User Action Modal */}
+      <UserAction
+        isOpen={isActionModalOpen}
+        onClose={handleCloseActionModal}
+        user={selectedUser}
+        onSuccess={handleActionSuccess}
+      />
     </div>
   );
 };

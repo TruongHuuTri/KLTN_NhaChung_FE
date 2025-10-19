@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import UpdateAdmin from '@/components/modals/UpdateAdmin';
-import CreateAdmin from '@/components/modals/CreateAdmin';
+import UpdateAdmin from '@/components/modals/admin/UpdateAdmin';
+import CreateAdmin from '@/components/modals/admin/CreateAdmin';
 import { adminService } from '@/services/adminService';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 
@@ -144,7 +144,7 @@ const Admin = () => {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Quản trị viên</h1>
+              <h1 className="text-2xl font-bold text-gray-900">Quản lý quản trị viên</h1>
             </div>
           </div>
         </div>

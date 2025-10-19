@@ -1,90 +1,84 @@
 'use client';
 
-import React, { useState } from 'react';
-import PostDetail from '@/components/modals/PostDetail';
-
-interface Post {
-  id: number;
-  user: {
-    name: string;
-    avatar: string;
-  };
-  title: string;
-  description: string;
-  price: number;
-  address: string;
-  images: string[];
-  status: 'pending' | 'approved' | 'rejected';
-  createdAt: string;
-  updatedAt: string;
-}
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { postService, AdminPost, PostFilters, PaginatedResponse } from '@/services/postService';
+import { userService } from '@/services/userService';
+import PostDetail from '@/components/modals/post/PostDetail';
+import { FaEye, FaClock, FaCheckCircle, FaTimesCircle } from 'react-icons/fa';
 
 const Post = () => {
+  const { admin: currentAdmin } = useAdminAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [postTypeFilter, setPostTypeFilter] = useState('all');
+  const [posts, setPosts] = useState<AdminPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
+  const [selectedPost, setSelectedPost] = useState<AdminPost | null>(null);
+  const [userMap, setUserMap] = useState<Map<number, { name: string; email: string; phone: string }>>(new Map());
 
-  // Mock data - replace with actual API call
-  const posts: Post[] = [
-    {
-      id: 1,
-      user: {
-        name: 'Nguyễn Văn A',
-        avatar: '/avatars/user1.jpg'
-      },
-      title: 'Phòng trọ đẹp gần trường Đại học',
-      description: 'Phòng trọ rộng rãi, thoáng mát, có đầy đủ tiện nghi...',
-      price: 2500000,
-      address: '123 Đường ABC, Quận 1, TP.HCM',
-      images: ['/images/room1.jpg', '/images/room2.jpg'],
-      status: 'pending',
-      createdAt: '2024-01-15T10:30:00Z',
-      updatedAt: '2024-01-15T10:30:00Z'
-    },
-    {
-      id: 2,
-      user: {
-        name: 'Trần Thị B',
-        avatar: '/avatars/user2.jpg'
-      },
-      title: 'Chung cư mini giá rẻ',
-      description: 'Chung cư mini mới xây, gần chợ, trường học...',
-      price: 1800000,
-      address: '456 Đường XYZ, Quận 2, TP.HCM',
-      images: ['/images/room3.jpg'],
-      status: 'approved',
-      createdAt: '2024-01-14T14:20:00Z',
-      updatedAt: '2024-01-14T16:45:00Z'
-    },
-    {
-      id: 3,
-      user: {
-        name: 'Lê Văn C',
-        avatar: '/avatars/user3.jpg'
-      },
-      title: 'Nhà trọ có sân vườn',
-      description: 'Nhà trọ có sân vườn rộng, phù hợp cho sinh viên...',
-      price: 3200000,
-      address: '789 Đường DEF, Quận 3, TP.HCM',
-      images: ['/images/room4.jpg', '/images/room5.jpg', '/images/room6.jpg'],
-      status: 'rejected',
-      createdAt: '2024-01-13T09:15:00Z',
-      updatedAt: '2024-01-13T11:30:00Z'
+  // Load user information
+  const loadUserInfo = useCallback(async (userId: number) => {
+    try {
+      if (userMap.has(userId)) return;
+      
+      const user = await userService.getUserById(userId);
+      setUserMap(prev => new Map(prev).set(userId, {
+        name: user.name,
+        email: user.email,
+        phone: user.phone || 'Chưa cập nhật'
+      }));
+    } catch (error) {
+      console.error(`Error loading user ${userId}:`, error);
     }
-  ];
+  }, [userMap]);
 
+  // Load posts from API
+  const loadPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (currentAdmin) {
+        const token = postService.getToken();
+        if (token) {
+          const data: PaginatedResponse = await postService.getAllPosts({});
+          setPosts(data.posts);
+          
+          // Load user info for all unique user IDs
+          const uniqueUserIds = [...new Set(data.posts.map(post => post.userId))];
+          for (const userId of uniqueUserIds) {
+            await loadUserInfo(userId);
+          }
+        }
+      }
+    } catch (err: any) {
+      console.error('Error loading posts:', err);
+      setError(err.message || 'Không thể tải danh sách bài đăng');
+    } finally {
+      setLoading(false);
+    }
+  }, [currentAdmin, loadUserInfo]);
+
+  useEffect(() => {
+    loadPosts();
+  }, [loadPosts]);
+
+  // Client-side filtering
   const filteredPosts = posts.filter(post => {
-    const matchesSearch = post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.address.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !searchTerm || 
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || post.status === statusFilter;
+    const matchesType = postTypeFilter === 'all' || post.postType === postTypeFilter;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
-  const handleViewPost = (post: Post) => {
+  const handleViewPost = (post: AdminPost) => {
     setSelectedPost(post);
     setIsDetailModalOpen(true);
   };
@@ -94,14 +88,44 @@ const Post = () => {
     setIsDetailModalOpen(false);
   };
 
-  const handleApprovePost = (postId: number) => {
-    // Handle approve post
-    console.log('Approve post:', postId);
+  const handleStatusChange = async (postId: number, status: 'approve' | 'reject', reason?: string) => {
+    try {
+      if (status === 'approve') {
+        await postService.approvePost(postId);
+        alert('Duyệt bài đăng thành công!');
+        // Update local state
+        setPosts(posts.map(post => 
+          post.postId === postId 
+            ? { ...post, status: 'active', updatedAt: new Date().toISOString() }
+            : post
+        ));
+      } else if (status === 'reject' && reason) {
+        await postService.rejectPost(postId, reason);
+        alert('Từ chối bài đăng thành công!');
+        // Update local state
+        setPosts(posts.map(post => 
+          post.postId === postId 
+            ? { ...post, status: 'rejected', rejectionReason: reason, updatedAt: new Date().toISOString() }
+            : post
+        ));
+      }
+    } catch (error: any) {
+      alert(error.message || 'Có lỗi xảy ra khi cập nhật trạng thái bài đăng');
+    }
   };
 
-  const handleRejectPost = (postId: number) => {
-    // Handle reject post
-    console.log('Reject post:', postId);
+
+  // Filter handlers
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+  };
+
+  const handlePostTypeFilterChange = (value: string) => {
+    setPostTypeFilter(value);
   };
 
   const formatPrice = (price: number) => {
@@ -123,18 +147,46 @@ const Post = () => {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Chờ duyệt' },
-      approved: { color: 'bg-green-100 text-green-800', text: 'Đã duyệt' },
-      rejected: { color: 'bg-red-100 text-red-800', text: 'Từ chối' }
+      pending: { color: 'bg-yellow-100 text-yellow-800', text: 'Chờ duyệt', icon: FaClock },
+      active: { color: 'bg-green-100 text-green-800', text: 'Đã duyệt', icon: FaCheckCircle },
+      rejected: { color: 'bg-red-100 text-red-800', text: 'Từ chối', icon: FaTimesCircle }
     };
     
-    const config = statusConfig[status as keyof typeof statusConfig] || { color: 'bg-gray-100 text-gray-800', text: status };
+    const config = statusConfig[status as keyof typeof statusConfig] || { 
+      color: 'bg-gray-100 text-gray-800', 
+      text: status, 
+      icon: FaClock 
+    };
+    const IconComponent = config.icon;
     
     return (
-      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${config.color}`}>
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${config.color}`}>
+        <IconComponent className="mr-1" />
         {config.text}
       </span>
     );
+  };
+
+  const getUserDisplayName = (userId: number) => {
+    const userInfo = userMap.get(userId);
+    if (userInfo) {
+      return userInfo.name;
+    }
+    return `User #${userId}`;
+  };
+
+  const getUserContactInfo = (userId: number) => {
+    const userInfo = userMap.get(userId);
+    if (userInfo) {
+      return {
+        email: userInfo.email,
+        phone: userInfo.phone
+      };
+    }
+    return {
+      email: 'Chưa cập nhật',
+      phone: 'Chưa cập nhật'
+    };
   };
 
   return (
@@ -177,9 +229,9 @@ const Post = () => {
                   </div>
                   <input
                     type="text"
-                    placeholder="Tìm kiếm theo tiêu đề, người đăng hoặc địa chỉ..."
+                    placeholder="Tìm kiếm theo tiêu đề hoặc mô tả..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="block w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200"
                   />
                 </div>
@@ -188,123 +240,215 @@ const Post = () => {
                 <div className="flex-shrink-0">
                   <select
                     value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
+                    onChange={(e) => handleStatusFilterChange(e.target.value)}
                     className="block w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
                   >
                     <option value="all">Tất cả trạng thái</option>
                     <option value="pending">Chờ duyệt</option>
-                    <option value="approved">Đã duyệt</option>
+                    <option value="active">Đã duyệt</option>
                     <option value="rejected">Từ chối</option>
+                  </select>
+                </div>
+
+                {/* Post Type Filter */}
+                <div className="flex-shrink-0">
+                  <select
+                    value={postTypeFilter}
+                    onChange={(e) => handlePostTypeFilterChange(e.target.value)}
+                    className="block w-full sm:w-48 px-4 py-3 border border-gray-300 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                  >
+                    <option value="all">Tất cả loại</option>
+                    <option value="cho-thue">Cho thuê</option>
+                    <option value="tim-o-ghep">Tìm ở ghép</option>
                   </select>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Posts Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPosts.map((post) => (
-              <div key={post.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow duration-200">
-                {/* Post Image */}
-                <div className="h-48 bg-gray-200 relative">
-                  {post.images.length > 0 ? (
-                    <img
-                      src={post.images[0]}
-                      alt={post.title}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center text-gray-400">
-                      <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="absolute top-2 right-2">
-                    {getStatusBadge(post.status)}
-                  </div>
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
                 </div>
-
-                {/* Post Content */}
-                <div className="p-4">
-                  <div className="flex items-center mb-2">
-                    <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center mr-3">
-                      <span className="text-sm font-medium text-gray-600">
-                        {post.user.name.charAt(0)}
-                      </span>
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{post.user.name}</p>
-                      <p className="text-xs text-gray-500">{formatDate(post.createdAt)}</p>
-                    </div>
-                  </div>
-
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {post.title}
-                  </h3>
-
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                    {post.description}
-                  </p>
-
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-lg font-bold text-green-600">
-                      {formatPrice(post.price)}/tháng
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {post.images.length} ảnh
-                    </p>
-                  </div>
-
-                  <p className="text-sm text-gray-500 mb-4 flex items-center">
-                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    {post.address}
-                  </p>
-
-                  <div className="flex space-x-2">
+                <div className="ml-3 flex-1">
+                  <h3 className="text-sm font-medium text-red-800">Có lỗi xảy ra</h3>
+                  <p className="mt-1 text-sm text-red-700">{error}</p>
+                  <div className="mt-3">
                     <button
-                      onClick={() => handleViewPost(post)}
-                      className="flex-1 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                      onClick={() => loadPosts()}
+                      className="text-sm bg-red-100 text-red-800 px-3 py-1 rounded-md hover:bg-red-200 transition-colors"
                     >
-                      Xem chi tiết
+                      Thử lại
                     </button>
-                    {post.status === 'pending' && (
-                      <>
-                        <button
-                          onClick={() => handleApprovePost(post.id)}
-                          className="px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                        >
-                          Duyệt
-                        </button>
-                        <button
-                          onClick={() => handleRejectPost(post.id)}
-                          className="px-3 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors"
-                        >
-                          Từ chối
-                        </button>
-                      </>
-                    )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-
-          {/* Empty State */}
-          {filteredPosts.length === 0 && (
-            <div className="text-center py-12">
-              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">Không có bài đăng nào</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {searchTerm ? 'Không tìm thấy bài đăng nào phù hợp với tìm kiếm của bạn.' : 'Chưa có bài đăng nào được tạo.'}
-              </p>
             </div>
           )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+              <div className="flex justify-center items-center py-12">
+                <div className="flex flex-col items-center space-y-4">
+                  <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                  <div className="text-center">
+                    <p className="text-gray-600 font-medium">Đang tải danh sách bài đăng...</p>
+                    <p className="text-sm text-gray-500 mt-1">Vui lòng chờ trong giây lát</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Posts Table */}
+          {!loading && (
+            <div className="bg-white shadow-sm rounded-lg border border-gray-200 overflow-hidden">
+              <div className="overflow-x-auto max-h-[70vh]">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50 sticky top-0 z-10">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        STT
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Tiêu đề
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Loại
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Người đăng
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Trạng thái
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Ngày tạo
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                        Thao tác
+                      </th>
+                    </tr>
+                  </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredPosts.length > 0 ? (
+                    filteredPosts.map((post, index) => (
+                      <tr key={post.postId} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {index + 1}
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="text-sm font-medium text-gray-900 max-w-xs truncate" title={post.title}>
+                            {post.title}
+                          </div>
+                          <div className="text-sm text-gray-500 max-w-xs truncate" title={post.description}>
+                            {post.description}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                            post.postType === 'cho-thue' 
+                              ? 'bg-blue-100 text-blue-800' 
+                              : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {post.postType === 'cho-thue' ? 'Cho thuê' : 'Tìm ở ghép'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {getUserDisplayName(post.userId)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getStatusBadge(post.status)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {formatDate(post.createdAt)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => handleViewPost(post)}
+                            className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-xs flex items-center"
+                            title="Xem chi tiết"
+                          >
+                            <FaEye className="mr-1" />
+                            Xem
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center">
+                        <div className="flex flex-col items-center space-y-4">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                          </div>
+                          <div className="text-center">
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">
+                              {searchTerm || statusFilter !== 'all' || postTypeFilter !== 'all' 
+                                ? 'Không tìm thấy bài đăng nào' 
+                                : 'Chưa có bài đăng nào'}
+                            </h3>
+                            <p className="text-gray-500">
+                              {searchTerm || statusFilter !== 'all' || postTypeFilter !== 'all' 
+                                ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' 
+                                : 'Các bài đăng mới sẽ xuất hiện ở đây'}
+                            </p>
+                            {(searchTerm || statusFilter !== 'all' || postTypeFilter !== 'all') && (
+                              <button
+                                onClick={() => {
+                                  setSearchTerm('');
+                                  setStatusFilter('all');
+                                  setPostTypeFilter('all');
+                                }}
+                                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                              >
+                                Xóa bộ lọc
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Filter Status and Clear Button */}
+          {!loading && (searchTerm || statusFilter !== 'all' || postTypeFilter !== 'all') && (
+            <div className="mt-6 flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <span className="px-2 py-1 bg-yellow-50 text-yellow-700 rounded-md font-medium text-sm">
+                  Đã lọc
+                </span>
+                <span className="text-sm text-gray-600">
+                  {filteredPosts.length} / {posts.length} bài đăng
+                </span>
+              </div>
+              
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setStatusFilter('all');
+                  setPostTypeFilter('all');
+                }}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
+              >
+                Xóa bộ lọc
+              </button>
+            </div>
+          )}
+
         </div>
       </div>
 
@@ -313,9 +457,11 @@ const Post = () => {
         isOpen={isDetailModalOpen}
         onClose={handleCloseDetailModal}
         post={selectedPost}
-        onApprove={handleApprovePost}
-        onReject={handleRejectPost}
+        onStatusChange={handleStatusChange}
+        getUserDisplayName={getUserDisplayName}
+        getUserContactInfo={getUserContactInfo}
       />
+
     </div>
   );
 };

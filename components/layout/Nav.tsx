@@ -4,6 +4,16 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
+import { 
+  FaHome, 
+  FaUsers, 
+  FaUser, 
+  FaFileAlt, 
+  FaComments, 
+  FaChartBar,
+  FaSignOutAlt,
+  FaExclamationTriangle
+} from 'react-icons/fa';
 
 const Nav = () => {
   const pathname = usePathname();
@@ -12,32 +22,32 @@ const Nav = () => {
 
   const menuItems = [
     {
-      icon: '🏠',
+      icon: FaHome,
       label: 'Thống kê',
       href: '/'
     },
     {
-      icon: '👥',
+      icon: FaUsers,
       label: 'Quản trị viên',
       href: '/admins'
     },
     {
-      icon: '👤',
-      label: 'Quản lý người dùng',
+      icon: FaUser,
+      label: 'Người dùng',
       href: '/users'
     },
     {
-      icon: '📄',
+      icon: FaFileAlt,
       label: 'Bài đăng',
       href: '/posts'
     },
     {
-      icon: '💬',
+      icon: FaComments,
       label: 'Phản hồi',
       href: '/feedback'
     },
     {
-      icon: '📊',
+      icon: FaChartBar,
       label: 'Lịch sử hoạt động',
       href: '/activity'
     }
@@ -65,7 +75,7 @@ const Nav = () => {
       {/* Logo Section */}
       <div className="p-6 text-center border-b border-amber-500/30">
         <div className="w-16 h-16 mx-auto mb-3 bg-white/20 rounded-full flex items-center justify-center">
-          <div className="text-2xl">🏠</div>
+          <FaHome className="text-2xl text-white" />
         </div>
         <h1 className="text-xl font-bold text-white">Hệ thống Nhà Chung</h1>
         <p className="text-sm text-amber-100 mt-1">
@@ -76,21 +86,24 @@ const Nav = () => {
       {/* Navigation Menu */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          {menuItems.map((item, index) => (
-            <li key={index}>
-              <Link
-                href={item.href}
-                className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
-                  pathname === item.href
-                    ? 'bg-white/20 text-white font-medium'
-                    : 'text-amber-100 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <span className="mr-3 text-lg">{item.icon}</span>
-                <span className="text-sm font-medium">{item.label}</span>
-              </Link>
-            </li>
-          ))}
+          {menuItems.map((item, index) => {
+            const IconComponent = item.icon;
+            return (
+              <li key={index}>
+                <Link
+                  href={item.href}
+                  className={`flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
+                    pathname === item.href
+                      ? 'bg-white/20 text-white font-medium'
+                      : 'text-amber-100 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <IconComponent className="mr-3 text-lg" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </nav>
 
@@ -108,19 +121,7 @@ const Nav = () => {
               {admin?.email || 'Đang tải...'}
             </div>
           </div>
-          <svg
-            className="w-5 h-5 text-amber-100 hover:text-white transition-colors"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-            />
-          </svg>
+          <FaSignOutAlt className="w-5 h-5 text-amber-100 hover:text-white transition-colors" />
         </div>
       </div>
 
@@ -131,9 +132,7 @@ const Nav = () => {
           <div className="relative bg-white rounded-lg shadow-lg max-w-sm w-full mx-auto p-6">
             <div className="text-center">
               <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
+                <FaExclamationTriangle className="h-6 w-6 text-red-600" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">Xác nhận đăng xuất</h3>
               <p className="text-sm text-gray-500 mb-6">

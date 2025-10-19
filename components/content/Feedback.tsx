@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import FeedbackDetail from '@/components/modals/FeedbackDetail';
-import ReplyFeedback from '@/components/modals/ReplyFeedback';
+import FeedbackDetail from '@/components/modals/feedback/FeedbackDetail';
+import ReplyFeedback from '@/components/modals/feedback/ReplyFeedback';
 
 interface Feedback {
   id: number;

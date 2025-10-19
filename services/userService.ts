@@ -92,6 +92,16 @@ class UserService {
     }
   }
 
+  // Admin API for resetting user password (auto-generate new password)
+  async resetUserPasswordForAdmin(userId: number): Promise<{ message: string; newPassword: string }> {
+    try {
+      return await apiService.post(`/users/admin/${userId}/reset-password`, {}, this.getHeaders());
+    } catch (error) {
+      console.error('Reset user password for admin error:', error);
+      throw error;
+    }
+  }
+
   // Admin APIs for user management
   async getAllUsersForAdmin(): Promise<AdminUser[]> {
     try {
