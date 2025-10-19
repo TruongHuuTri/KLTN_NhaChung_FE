@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAdminVerifications } from '../../hooks/useAdminVerifications';
-import VerificationActionModal from '../modals/verification/VerificationActionModal';
+import VerificationDetailModal from '../modals/verification/VerificationDetailModal';
 
 export default function Verification() {
   const {
@@ -11,15 +11,15 @@ export default function Verification() {
     loading,
     error,
     fetchVerifications,
+    getVerificationImages,
+    getVerificationWithImages,
     approveVerification,
     rejectVerification
   } = useAdminVerifications();
 
   const [selectedStatus, setSelectedStatus] = useState<string>('all');
-  const [showActionModal, setShowActionModal] = useState(false);
-  const [selectedVerification, setSelectedVerification] = useState<any>(null);
-  const [actionType, setActionType] = useState<'approve' | 'reject'>('approve');
-  const [actionLoading, setActionLoading] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedVerificationId, setSelectedVerificationId] = useState<number | null>(null);
 
   const handleStatusFilter = (status: string) => {
     setSelectedStatus(status);
@@ -27,25 +27,9 @@ export default function Verification() {
     fetchVerifications(filters);
   };
 
-  const openActionModal = (verification: any, type: 'approve' | 'reject') => {
-    setSelectedVerification(verification);
-    setActionType(type);
-    setShowActionModal(true);
-  };
-
-  const handleConfirmAction = async (verificationId: number, adminNote: string) => {
-    setActionLoading(true);
-    try {
-      if (actionType === 'approve') {
-        await approveVerification(verificationId, adminNote);
-      } else {
-        await rejectVerification(verificationId, adminNote);
-      }
-    } catch (error) {
-      console.error('Action failed:', error);
-    } finally {
-      setActionLoading(false);
-    }
+  const openDetailModal = (verificationId: number) => {
+    setSelectedVerificationId(verificationId);
+    setShowDetailModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -207,24 +191,12 @@ export default function Verification() {
                       {formatDate(verification.submittedAt)}
                     </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        {verification.status === 'pending' ? (
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => openActionModal(verification, 'approve')}
-                              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                            >
-                              Duyệt
-                            </button>
-                            <button
-                              onClick={() => openActionModal(verification, 'reject')}
-                              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                            >
-                              Từ chối
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 text-sm">Không thể thao tác</span>
-                        )}
+                        <button
+                          onClick={() => openDetailModal(verification.verificationId)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                        >
+                          Xem chi tiết
+                        </button>
                       </td>
                   </tr>
                 ))
@@ -263,14 +235,16 @@ export default function Verification() {
             </div>
           )}
 
-          {/* Action Modal */}
-          <VerificationActionModal
-            isOpen={showActionModal}
-            onClose={() => setShowActionModal(false)}
-            verification={selectedVerification}
-            actionType={actionType}
-            onConfirm={handleConfirmAction}
-            loading={actionLoading}
+
+          {/* Detail Modal */}
+          <VerificationDetailModal
+            isOpen={showDetailModal}
+            onClose={() => setShowDetailModal(false)}
+            verificationId={selectedVerificationId}
+            getVerificationImages={getVerificationImages}
+            getVerificationWithImages={getVerificationWithImages}
+            approveVerification={approveVerification}
+            rejectVerification={rejectVerification}
           />
         </div>
       </div>

@@ -21,6 +21,56 @@ export interface Verification {
   };
 }
 
+export interface VerificationWithImages extends Verification {
+  images: {
+    frontImage: string;
+    backImage: string;
+    faceImage: string;
+  };
+}
+
+export interface VerificationImagesResponse {
+  verificationId: number;
+  userId: number;
+  fullName: string;
+  idNumber: string;
+  status: 'pending' | 'approved' | 'rejected';
+  images: {
+    frontImage: string; // Already full URL from API
+    backImage: string;  // Already full URL from API
+    faceImage: string;  // Already full URL from API
+  };
+  faceMatchResult: {
+    match: boolean;
+    similarity: number;
+    confidence: 'high' | 'low';
+  };
+  submittedAt: string;
+  reviewedAt: string | null;
+  adminNote: string | null;
+}
+
+export interface VerificationDetailsResponse {
+  verificationId: number;
+  userId: number;
+  idNumber: string;
+  fullName: string;
+  dateOfBirth: string;
+  gender: 'male' | 'female';
+  issueDate: string;
+  issuePlace: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+  reviewedAt: string | null;
+  reviewedBy: number | null;
+  adminNote: string | null;
+  faceMatchResult: {
+    match: boolean;
+    similarity: number;
+    confidence: 'high' | 'low';
+  };
+}
+
 export interface VerificationListResponse {
   verifications: Verification[];
   total: number;
@@ -90,6 +140,42 @@ class VerificationService {
       return await apiService.get<Verification>(`/verifications/user/${userId}`, this.getHeaders());
     } catch (error) {
       console.error('Get verification by user ID error:', error);
+      throw error;
+    }
+  }
+
+  async getVerificationDetails(verificationId: number) {
+    try {
+      return await apiService.get<VerificationDetailsResponse>(`/verifications/admin/${verificationId}`, this.getHeaders());
+    } catch (error) {
+      console.error('Get verification details error:', error);
+      throw error;
+    }
+  }
+
+  async getVerificationImages(verificationId: number) {
+    try {
+      const data = await apiService.get<VerificationImagesResponse>(`/verifications/admin/${verificationId}/images`, this.getHeaders());
+      return data as VerificationWithImages;
+    } catch (error) {
+      console.error('Get verification images error:', error);
+      throw error;
+    }
+  }
+
+  async getVerificationWithImages(verificationId: number) {
+    try {
+      const [detailsData, imagesData] = await Promise.all([
+        this.getVerificationDetails(verificationId),
+        this.getVerificationImages(verificationId)
+      ]);
+      
+      return {
+        ...detailsData,
+        images: imagesData.images
+      } as VerificationWithImages;
+    } catch (error) {
+      console.error('Get verification with images error:', error);
       throw error;
     }
   }

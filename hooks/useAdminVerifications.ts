@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { verificationService, Verification, VerificationFilters, VerificationListResponse } from '../services/verificationService';
+import { verificationService, Verification, VerificationFilters, VerificationListResponse, VerificationWithImages } from '../services/verificationService';
 
 export interface UseAdminVerificationsReturn {
   verifications: Verification[];
@@ -11,6 +11,8 @@ export interface UseAdminVerificationsReturn {
   loading: boolean;
   error: string | null;
   fetchVerifications: (filters?: VerificationFilters) => Promise<void>;
+  getVerificationImages: (verificationId: number) => Promise<VerificationWithImages>;
+  getVerificationWithImages: (verificationId: number) => Promise<VerificationWithImages>;
   approveVerification: (verificationId: number, adminNote?: string) => Promise<void>;
   rejectVerification: (verificationId: number, adminNote: string) => Promise<void>;
   refreshVerifications: () => Promise<void>;
@@ -74,6 +76,26 @@ export function useAdminVerifications(initialFilters?: VerificationFilters): Use
     }
   };
 
+  const getVerificationImages = async (verificationId: number) => {
+    try {
+      return await verificationService.getVerificationImages(verificationId);
+    } catch (err) {
+      console.error('Error getting verification images:', err);
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi tải hình ảnh');
+      throw err;
+    }
+  };
+
+  const getVerificationWithImages = async (verificationId: number) => {
+    try {
+      return await verificationService.getVerificationWithImages(verificationId);
+    } catch (err) {
+      console.error('Error getting verification with images:', err);
+      setError(err instanceof Error ? err.message : 'Có lỗi xảy ra khi tải thông tin xác thực');
+      throw err;
+    }
+  };
+
   const refreshVerifications = async () => {
     await fetchVerifications();
   };
@@ -89,6 +111,8 @@ export function useAdminVerifications(initialFilters?: VerificationFilters): Use
     loading,
     error,
     fetchVerifications,
+    getVerificationImages,
+    getVerificationWithImages,
     approveVerification,
     rejectVerification,
     refreshVerifications
