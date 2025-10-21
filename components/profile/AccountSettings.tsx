@@ -31,7 +31,7 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
     loadVerificationStatus();
   }, []);
 
-  const handleVerificationComplete = (data: VerificationData) => {
+  const handleVerificationComplete = async (data: VerificationData) => {
     onVerificationComplete?.(data);
     setIsVerificationModalOpen(false);
     
@@ -44,7 +44,7 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
         // Failed to reload verification status
       }
     };
-    loadVerificationStatus();
+    await loadVerificationStatus();
   };
 
   const handleChangePasswordSuccess = (message: string) => {

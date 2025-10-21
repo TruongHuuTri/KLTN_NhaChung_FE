@@ -103,6 +103,9 @@ export default function ProfilePage() {
     if (refreshUser) {
       await refreshUser();
     }
+    
+    // Cập nhật trạng thái isVerified ngay lập tức
+    setIsVerified(true);
   };
 
   // Refresh user data khi component mount để đảm bảo có dữ liệu mới nhất

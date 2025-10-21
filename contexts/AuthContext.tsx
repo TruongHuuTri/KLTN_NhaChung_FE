@@ -54,6 +54,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (storedUser) {
           try {
             const parsedUser = JSON.parse(storedUser);
+            
+            // Đồng bộ trạng thái xác thực từ API verification khi khởi tạo
+            try {
+              const { getMyVerificationStatus } = await import("@/services/verification");
+              const verificationStatus = await getMyVerificationStatus();
+              parsedUser.isVerified = verificationStatus.isVerified;
+              localStorage.setItem("user", JSON.stringify(parsedUser));
+            } catch (verificationError) {
+              // Nếu không lấy được verification status, giữ nguyên giá trị từ storedUser
+              console.warn("Không thể lấy trạng thái xác thực khi khởi tạo:", verificationError);
+            }
+            
             setUser(parsedUser);
           } catch (error) {
             setUser(null);
@@ -62,6 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Chỉ gọi API nếu không có storedUser
           try {
             const userData = await getUserProfile();
+            
+            // Đồng bộ trạng thái xác thực từ API verification
+            try {
+              const { getMyVerificationStatus } = await import("@/services/verification");
+              const verificationStatus = await getMyVerificationStatus();
+              userData.isVerified = verificationStatus.isVerified;
+            } catch (verificationError) {
+              // Nếu không lấy được verification status, giữ nguyên giá trị từ userData
+              console.warn("Không thể lấy trạng thái xác thực:", verificationError);
+            }
+            
             setUser(userData);
             localStorage.setItem("user", JSON.stringify(userData));
           } catch (error) {
@@ -103,12 +126,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const { access_token, user } = await loginService(email, password);
+      
+      // Đồng bộ trạng thái xác thực từ API verification
+      let userWithVerification = user;
+      try {
+        const { getMyVerificationStatus } = await import("@/services/verification");
+        const verificationStatus = await getMyVerificationStatus();
+        userWithVerification = { ...user, isVerified: verificationStatus.isVerified };
+      } catch (verificationError) {
+        // Nếu không lấy được verification status, giữ nguyên giá trị từ user
+        console.warn("Không thể lấy trạng thái xác thực khi đăng nhập:", verificationError);
+      }
+      
       if (typeof window !== 'undefined') {
         localStorage.setItem("token", access_token);
         localStorage.setItem("token_issued_at", String(Date.now()));
-        localStorage.setItem("user", JSON.stringify(user));
+        localStorage.setItem("user", JSON.stringify(userWithVerification));
       }
-      setUser(user);
+      setUser(userWithVerification);
       return { success: true, message: "Đăng nhập thành công" };
     } catch (err: any) {
       return { success: false, message: err.message || "Đăng nhập thất bại" };
@@ -124,6 +159,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token) {
       try {
         const userData = await getUserProfile();
+        
+        // Đồng bộ trạng thái xác thực từ API verification
+        try {
+          const { getMyVerificationStatus } = await import("@/services/verification");
+          const verificationStatus = await getMyVerificationStatus();
+          userData.isVerified = verificationStatus.isVerified;
+        } catch (verificationError) {
+          // Nếu không lấy được verification status, giữ nguyên giá trị từ userData
+          console.warn("Không thể lấy trạng thái xác thực:", verificationError);
+        }
+        
         setUser(userData);
         localStorage.setItem("user", JSON.stringify(userData));
         return { success: true };
