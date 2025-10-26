@@ -83,11 +83,13 @@ export const apiGet = <T = any>(p: string, o?: RequestInit) =>
   api<T>(p, { ...o, method: "GET" });
 
 export const apiPost = <T = any>(p: string, body?: any, o?: RequestInit & { skipAuth?: boolean }) => {
+  const skipAuth = o?.skipAuth;
+  const { skipAuth: _, ...restOptions } = o || {};
   return api<T>(p, {
-    ...o,
+    ...restOptions,
     method: "POST",
     body: body instanceof FormData ? body : JSON.stringify(body),
-    skipAuth: o?.skipAuth,
+    skipAuth,
   });
 };
 

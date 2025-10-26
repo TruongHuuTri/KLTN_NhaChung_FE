@@ -365,19 +365,13 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         roomType: data.roomType,
         contactMethod: data.contactMethod,
       };
-
       
       try {
-        if (isRegistrationFlow) {
-          // Trong registration flow, dùng API public (không cần token)
-          await createProfilePublic(payload);
-        } else {
-          // User đã đăng nhập, thử tạo mới trước, nếu thất bại thì update
-          try {
-            await createProfile(payload);
-          } catch (createError) {
-            await updateMyProfile(payload);
-          }
+        // Dùng token bình thường cho cả registration flow và user đã đăng nhập
+        try {
+          await createProfile(payload);
+        } catch (createError) {
+          await updateMyProfile(payload);
         }
       } catch (error) {
         throw new Error("Không thể lưu profile. Vui lòng thử lại.");

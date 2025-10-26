@@ -71,7 +71,7 @@ export default function LandlordVerificationPage() {
       const response = await submitVerification({
         ...verificationData,
         businessLicense: licensePreview
-      });
+      }); // Dùng token bình thường
 
       // Xóa registration data nếu đang trong registration flow
       const isRegistrationFlow = typeof window !== "undefined" && localStorage.getItem("isRegistrationFlow") === "true";

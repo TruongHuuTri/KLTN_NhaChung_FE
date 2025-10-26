@@ -8,8 +8,8 @@ import { VerificationData, VerificationResponse, VerificationStatus } from "@/ty
  * - Tính confidence dựa trên similarity
  * - Auto-approve nếu similarity >= 50%
  */
-export async function submitVerification(verificationData: VerificationData): Promise<VerificationResponse> {
-  return apiPost('verifications', verificationData);
+export async function submitVerification(verificationData: VerificationData, skipAuth = false): Promise<VerificationResponse> {
+  return apiPost('verifications', verificationData, { skipAuth });
 }
 
 /**

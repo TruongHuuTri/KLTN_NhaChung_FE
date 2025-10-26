@@ -124,8 +124,11 @@ export default function RegisterFlow() {
       }
       const verifyResult = await verifyRegistration(form.email, otp);
       
-      // KHÔNG LƯU TOKEN - chỉ lưu thông tin đăng ký để dùng cho survey/verification
-      if (typeof window !== "undefined") {
+      // LƯU TOKEN để dùng cho survey/verification
+      if (typeof window !== "undefined" && verifyResult?.access_token && verifyResult?.user) {
+        localStorage.setItem("token", verifyResult.access_token);
+        localStorage.setItem("user", JSON.stringify(verifyResult.user));
+        
         localStorage.setItem("registrationData", JSON.stringify({
           name: form.name,
           email: form.email,
@@ -133,7 +136,7 @@ export default function RegisterFlow() {
           role: form.role,
           phone: form.phone,
           avatar: form.avatar,
-          userId: verifyResult.user?.userId || 0, // Lưu userId thật từ backend
+          userId: verifyResult.user?.userId || 0,
           verifiedAt: new Date().toISOString()
         }));
         localStorage.setItem("isRegistrationFlow", "true");
