@@ -125,10 +125,7 @@ export default function Verification() {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User ID
+                  STT
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Họ tên
@@ -153,18 +150,15 @@ export default function Verification() {
             <tbody className="bg-white divide-y divide-gray-200">
               {verifications.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     Không có dữ liệu xác thực
                   </td>
                 </tr>
               ) : (
-                verifications.map((verification) => (
+                verifications.map((verification, index) => (
                   <tr key={verification.verificationId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {verification.verificationId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {verification.userId}
+                      {(pagination.page - 1) * 10 + index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {verification.fullName}
