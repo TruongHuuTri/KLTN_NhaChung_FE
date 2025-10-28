@@ -220,7 +220,7 @@ export default function BuildingForm({
       }
       
       // Upload ảnh local mới
-      const files = mediaItems.map((item) => item.file);
+      const files = mediaItems.filter(item => item.file).map((item) => item.file!);
       const uploadedUrls: string[] = files.length ? await uploadFiles(files, user.userId, "images") : [];
 
       const submitData = {

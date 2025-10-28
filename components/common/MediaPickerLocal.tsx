@@ -29,6 +29,8 @@ type Props = {
   // Ảnh bìa: cho phép đặt bìa cho item local
   coverLocalId?: string;
   onSetCoverLocal?: (localId: string) => void;
+  // Callback khi bắt đầu/kết thúc picking files
+  onPickingChange?: (isPicking: boolean) => void;
 };
 
 export default function MediaPickerPanel({
@@ -48,6 +50,7 @@ export default function MediaPickerPanel({
   extraTop,
   coverLocalId,
   onSetCoverLocal,
+  onPickingChange,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -59,11 +62,13 @@ export default function MediaPickerPanel({
   const effectiveMax = typeof maxImages === "number" ? maxImages : max;
   const changeFn = onMediaChange || onChange || (() => {});
   const canAdd = items.length < effectiveMax;
-
-  // thu hồi preview url khi unmount/remove
+  
+  const [picking, setPicking] = React.useState(false);
+  
+  // Notify parent about picking state
   useEffect(() => {
-    return () => items.forEach((v) => URL.revokeObjectURL(v.previewUrl));
-  }, [items]);
+    onPickingChange?.(picking);
+  }, [picking, onPickingChange]);
 
   const pickFiles = useCallback(
     (filesLike: FileList | File[]) => {
@@ -82,7 +87,12 @@ export default function MediaPickerPanel({
   );
 
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) pickFiles(e.target.files);
+    if (e.target.files) {
+      setPicking(true);
+      pickFiles(e.target.files);
+      // Reset picking state ngay sau khi xử lý xong
+      setTimeout(() => setPicking(false), 0);
+    }
     e.target.value = ""; // cho phép chọn lại cùng file
   };
 
@@ -100,7 +110,12 @@ export default function MediaPickerPanel({
     e.preventDefault();
     onDragLeave();
     const dt = e.dataTransfer;
-    if (dt?.files?.length) pickFiles(dt.files);
+    if (dt?.files?.length) {
+      setPicking(true);
+      pickFiles(dt.files);
+      // Reset picking state ngay sau khi xử lý xong
+      setTimeout(() => setPicking(false), 0);
+    }
   };
 
   // drag-drop reorder
@@ -127,7 +142,12 @@ export default function MediaPickerPanel({
   const removeAt = (i: number) => {
     const next = [...items];
     const [rm] = next.splice(i, 1);
-    URL.revokeObjectURL(rm.previewUrl);
+    
+    // Chỉ revoke URL của file local (không phải remote URL)
+    if (rm.file) {
+      URL.revokeObjectURL(rm.previewUrl);
+    }
+    
     changeFn(next);
   };
 

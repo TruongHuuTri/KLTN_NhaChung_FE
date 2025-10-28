@@ -136,6 +136,7 @@ export default function BuildingRoomsPage() {
       return;
     }
     
+    console.debug("Deleting room", {
       originalId: id,
       originalType: typeof id,
       validId: validRoomId,

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import React from "react";
 import { Building } from "@/types/Building";
 import { Address } from "@/types/RentPost";
 import { CreateRoomPayload, DirectionType, FurnitureType, LegalStatusType } from "@/types/Room";
@@ -8,7 +9,7 @@ import { uploadFiles } from "@/utils/upload";
 import { useAuth } from "@/contexts/AuthContext";
 import MediaPickerPanel, { LocalMediaItem } from "../../common/MediaPickerLocal";
 
-export default function PhongTroForm({
+function PhongTroForm({
   building,
   initialData,
   onSubmit,
@@ -27,7 +28,21 @@ export default function PhongTroForm({
   const [mediaImages, setMediaImages] = useState<LocalMediaItem[]>([]);
   const [mediaVideos, setMediaVideos] = useState<LocalMediaItem[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [roomNumberError, setRoomNumberError] = useState<string>("");
+  
+  // Seed media từ initialData
+  useEffect(() => {
+    if (!initialData) return;
+    setMediaImages([]); // Reset local images - chỉ upload ảnh đang có trong initialData.images
+    setMediaVideos([]); // Reset local videos - chỉ upload video đang có trong initialData.videos
+  }, [initialData?.images, initialData?.videos]); // Ổn định, không re-mount khi chọn ảnh local
+  
+  // Debug mount
+  useEffect(() => {
+    console.log("PhongTroForm MOUNT");
+    return () => console.log("PhongTroForm UNMOUNT");
+  }, []);
 
   // Kiểm tra form có đầy đủ không
   const isFormValid = () => {
@@ -236,21 +251,38 @@ export default function PhongTroForm({
           <div className="lg:col-span-1 p-6 space-y-6 border-r border-gray-100 max-h-[70vh] overflow-y-auto pr-2 nice-scrollbar">
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-3">Ảnh</h3>
-              <MediaPickerPanel mediaItems={mediaImages} onMediaChange={setMediaImages} maxImages={12} maxVideos={0} extraTop={
-                form.images?.length ? (
-                  <div className="mb-3 grid grid-cols-3 gap-3">
-                    {form.images.map((u, i) => (
-                      <div key={i} className="relative pb-[133%] rounded-2xl overflow-hidden border">
-                        <img src={u} className="absolute inset-0 w-full h-full object-cover" />
-                      </div>
-                    ))}
-                  </div>
-                ) : null
-              } />
+              <MediaPickerPanel 
+                mediaItems={mediaImages} 
+                onMediaChange={setMediaImages} 
+                maxImages={12} 
+                maxVideos={0} 
+                helper={picking ? "Đang tải ảnh..." : "Kéo-thả hoặc bấm để chọn"}
+                onPickingChange={setPicking}
+                extraTop={
+                  form.images?.length ? (
+                    <div className="mb-3 grid grid-cols-3 gap-3">
+                      {form.images.map((u, i) => (
+                        <div key={i} className="relative pb-[133%] rounded-2xl overflow-hidden border">
+                          <img src={u} className="absolute inset-0 w-full h-full object-cover" />
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
+                } 
+              />
             </div>
             <div>
               <h3 className="text-base font-semibold text-gray-900 mb-3">Video</h3>
-              <MediaPickerPanel accept="video/*" pillText="Video hợp lệ" mediaItems={mediaVideos} onMediaChange={setMediaVideos} maxImages={2} maxVideos={2} />
+              <MediaPickerPanel 
+                accept="video/*" 
+                pillText="Video hợp lệ" 
+                mediaItems={mediaVideos} 
+                onMediaChange={setMediaVideos} 
+                maxImages={2} 
+                maxVideos={2}
+                helper={picking ? "Đang tải video..." : "Kéo-thả hoặc bấm để chọn"}
+                onPickingChange={setPicking}
+              />
             </div>
           </div>
 
@@ -582,3 +614,4 @@ function stripLeadingZeros(s: string): string {
   return s.replace(/^0+/, "") || "0";
 }
 
+export default React.memo(PhongTroForm);
