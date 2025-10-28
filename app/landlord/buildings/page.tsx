@@ -6,7 +6,7 @@ import { useAuth } from "../../../contexts/AuthContext";
 import Footer from "../../../components/common/Footer";
 import BuildingsContent from "../../../components/landlord/BuildingsContent";
 import BuildingForm from "../../../components/landlord/BuildingForm";
-import { getBuildings, createBuilding } from "../../../services/buildings";
+import { getBuildings, createBuilding, deleteBuilding } from "../../../services/buildings";
 import { Building } from "../../../types/Building";
 
 export default function BuildingsPage() {
@@ -99,10 +99,14 @@ export default function BuildingsPage() {
   const handleDeleteBuilding = async (id: number) => {
     if (confirm("Bạn có chắc chắn muốn xóa dãy này?")) {
       try {
-        // TODO: Implement delete building
+        setLoading(true);
+        await deleteBuilding(id);
         // Refresh list after delete
-        loadBuildings(currentPage, searchQuery);
+        await loadBuildings(currentPage, searchQuery);
       } catch (error) {
+        setError("Không thể xóa dãy. Vui lòng thử lại.");
+      } finally {
+        setLoading(false);
       }
     }
   };
@@ -191,14 +195,6 @@ export default function BuildingsPage() {
       {showCreate && (
         <div className="fixed inset-0 z-[100]">
           <div className="absolute inset-0 bg-black/40 z-0" onClick={() => setShowCreate(false)} />
-          <button
-            onClick={() => setShowCreate(false)}
-            aria-label="Đóng"
-            className="absolute top-4 right-4 h-9 w-9 grid place-items-center rounded-full bg-white/90 text-gray-700 shadow hover:bg-white z-10"
-            title="Đóng"
-          >
-            ×
-          </button>
           <div className="absolute inset-0 flex items-center justify-center p-4">
             {/* Render form trực tiếp, bản thân form đã có khung/tiêu đề riêng */}
             <div className="max-w-5xl w-full max-h-[92vh] overflow-auto relative z-10">
@@ -206,16 +202,21 @@ export default function BuildingsPage() {
                 onSubmit={async (data) => {
                   try {
                     setLoading(true);
+                    setError(null);
                     await createBuilding(data as any);
                     setShowCreate(false);
                     await loadBuildings(currentPage, searchQuery);
                   } catch (err) {
                     setError("Không thể tạo dãy. Vui lòng thử lại.");
+                    throw err; // Re-throw để BuildingForm biết có lỗi
                   } finally {
                     setLoading(false);
                   }
                 }}
-                onCancel={() => setShowCreate(false)}
+                onCancel={() => {
+                  setError(null);
+                  setShowCreate(false);
+                }}
                 loading={loading}
               />
             </div>

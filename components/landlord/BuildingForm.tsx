@@ -109,7 +109,7 @@ export default function BuildingForm({
       showSpecificAddress: false,
       additionalInfo: "",
     },
-    totalRooms: 1,
+    totalRooms: 0,
     buildingType: "chung-cu",
     images: [],
     description: "",
@@ -124,6 +124,7 @@ export default function BuildingForm({
   const [warnOpen, setWarnOpen] = useState(false);
   const [warnList, setWarnList] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
+  const [addressModalKey, setAddressModalKey] = useState(0);
 
   // Đồng bộ ảnh đã có (khi chỉnh sửa)
   useEffect(() => {
@@ -148,11 +149,19 @@ export default function BuildingForm({
   };
 
   const commitAddress = () => {
+    console.log('=== COMMIT ADDRESS ===');
+    console.log('addressDraft:', addressDraft);
+    console.log('formData.address before:', formData.address);
+    
     if (addressDraft) {
       setFormData(prev => ({ ...prev, address: addressDraft }));
       if (errors.city || errors.ward) setErrors(prev => ({ ...prev, city: "", ward: "" }));
+      console.log('Address committed successfully');
+    } else {
+      console.log('addressDraft is null, cannot commit');
     }
     setOpenAddressModal(false);
+    console.log('=== COMMIT COMPLETE ===');
   };
 
   const handleMediaChange = (items: LocalMediaItem[]) => {
@@ -180,11 +189,6 @@ export default function BuildingForm({
     if (!formData.address.ward) {
       newErrors.ward = "Phường/xã là bắt buộc";
       warnings.push("Vui lòng chọn Phường/Xã (địa chỉ)");
-    }
-
-    if (formData.totalRooms < 1) {
-      newErrors.totalRooms = "Số lượng phải lớn hơn 0";
-      warnings.push("Số lượng phải ≥ 1");
     }
 
     const total = existingImages.length + mediaItems.length;
@@ -309,32 +313,20 @@ export default function BuildingForm({
               </label>
             </div>
 
-            {/* Số lượng (phòng/căn) */}
-            <div className="relative">
-              <input
-                type="number"
-                min="1"
-                value={Number.isFinite(formData.totalRooms) && formData.totalRooms >= 1 ? formData.totalRooms : 1}
-                onChange={(e) => {
-                  const raw = e.target.value;
-                  const val = raw === "" ? 1 : parseInt(raw, 10);
-                  const safe = Number.isNaN(val) ? 1 : Math.max(1, val);
-                  handleInputChange("totalRooms", safe);
-                }}
-                placeholder=" "
-                className={`peer w-full rounded-2xl border-2 px-4 pt-6 pb-3 outline-none transition-colors focus:border-teal-500 ${
-                  errors.totalRooms ? "border-red-300" : "border-gray-300"
-                }`}
-              />
-              <label className="pointer-events-none absolute left-4 top-2 bg-white px-1 text-xs text-gray-500">
-                {formData.buildingType === 'nha-nguyen-can' ? 'Số căn' : 'Số phòng'} <span className="text-red-500">*</span>
-              </label>
-            </div>
-
             {/* Địa chỉ (mở modal chọn) */}
             <div
               className="relative rounded-2xl border-2 border-gray-300 bg-white px-4 pt-6 pb-3 cursor-pointer transition-colors hover:border-teal-500"
-              onClick={() => { setAddressDraft(formData.address as Address); setOpenAddressModal(true); }}
+              onClick={() => { 
+                console.log('=== OPENING MODAL ===');
+                console.log('formData.address:', formData.address);
+                const address = formData.address as Address;
+                console.log('Setting addressDraft to:', address);
+                console.log('Current addressModalKey:', addressModalKey);
+                setAddressDraft(address); 
+                setAddressModalKey(prev => prev + 1); 
+                setOpenAddressModal(true); 
+                console.log('=== MODAL OPENED ===');
+              }}
               aria-label="Địa chỉ"
             >
               <div className="pointer-events-none absolute left-4 top-2 text-xs text-gray-500 bg-white px-1">Địa chỉ <span className="text-red-500">*</span></div>
@@ -366,7 +358,15 @@ export default function BuildingForm({
           onSave={commitAddress}
           title="Chọn địa chỉ dãy"
         >
-          <AddressSelector value={addressDraft} onChange={setAddressDraft as any} />
+          {openAddressModal && (
+            <AddressSelector 
+              value={addressDraft} 
+              onChange={(newAddress) => {
+                console.log('AddressSelector onChange called with:', newAddress);
+                setAddressDraft(newAddress);
+              }} 
+            />
+          )}
         </Modal>
 
         {/* Warning Modal */}

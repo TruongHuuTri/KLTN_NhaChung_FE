@@ -27,13 +27,14 @@ export default function AddressSelector({ value, onChange, className = "", field
   const showWard = fields?.ward ?? true;
   const [provinces, setProvinces] = useState<Province[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedProvince, setSelectedProvince] = useState<string>(value?.provinceCode || '');
-  const [selectedWard, setSelectedWard] = useState<string>(value?.wardCode || '');
-  const [street, setStreet] = useState(value?.street || '');
-  const [specificAddress, setSpecificAddress] = useState(value?.specificAddress || '');
-  const [showSpecificAddress, setShowSpecificAddress] = useState(value?.showSpecificAddress || false);
-  const [additionalInfo, setAdditionalInfo] = useState(value?.additionalInfo || '');
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+  const [selectedProvince, setSelectedProvince] = useState<string>('');
+  const [selectedWard, setSelectedWard] = useState<string>('');
+  const [street, setStreet] = useState('');
+  const [specificAddress, setSpecificAddress] = useState('');
+  const [showSpecificAddress, setShowSpecificAddress] = useState(false);
+  const [additionalInfo, setAdditionalInfo] = useState('');
   
   // Track last emitted value to avoid redundant onChange causing loops
   const lastEmittedRef = useRef<string | null>(null);
@@ -43,78 +44,123 @@ export default function AddressSelector({ value, onChange, className = "", field
   const [wardSearch, setWardSearch] = useState('');
   const [showProvinceDropdown, setShowProvinceDropdown] = useState(false);
   const [showWardDropdown, setShowWardDropdown] = useState(false);
-
+  
+  // Track if component has been hydrated to prevent initial onChange emission
+  const hasHydrated = useRef(false);
+  const userTouchedRef = useRef(false);
+  const lastHydratedJSON = useRef<string | null>(null);
+  const isHydratingRef = useRef(false);
+  const prevProvinceRef = useRef<string | null>(null);
+  
   // Sync with value prop changes (hydrate once or when value truly changes externally)
   useEffect(() => {
     // If parent cleared value and we currently have something, reset
     if (!value) {
-      if (selectedProvince || selectedWard || street || specificAddress || additionalInfo) {
-        setSelectedProvince('');
-        setSelectedWard('');
-        setStreet('');
-        setSpecificAddress('');
-        setShowSpecificAddress(false);
-        setAdditionalInfo('');
-        setProvinceSearch('');
-        setWardSearch('');
-      }
+      hasHydrated.current = false;
+      lastHydratedJSON.current = null;
+      isHydratingRef.current = false;
+      prevProvinceRef.current = null;
+      setSelectedProvince('');
+      setSelectedWard('');
+      setProvinceSearch('');
+      setWardSearch('');
+      setStreet('');
+      setSpecificAddress('');
+      setShowSpecificAddress(false);
+      setAdditionalInfo('');
       return;
     }
 
-    // Hydrate only when local state is empty (initial open) or when codes differ
-    const needHydrate = (!selectedProvince && !selectedWard && !street && !specificAddress && !additionalInfo)
-      || selectedProvince !== (value.provinceCode || '')
-      || selectedWard !== (value.wardCode || '');
+    const incoming = JSON.stringify(value);
+    // 1) Skip echo from our own emit
+    if (incoming === lastEmittedRef.current) return;
+    // 2) Skip if identical to last hydration
+    if (incoming === lastHydratedJSON.current) return;
 
-    if (needHydrate) {
+    isHydratingRef.current = true;
+    hasHydrated.current = true;
+    lastHydratedJSON.current = incoming;
+
+    const provinceChanged = value.provinceCode !== prevProvinceRef.current;
+
+    // Always sync text fields
+    if (value.street !== undefined) setStreet(value.street || '');
+    if (value.specificAddress !== undefined) setSpecificAddress(value.specificAddress || '');
+    setShowSpecificAddress(!!value.showSpecificAddress);
+    if (value.additionalInfo !== undefined) setAdditionalInfo(value.additionalInfo || '');
+
+    // Province and its name only when changed
+    if (provinceChanged) {
       setSelectedProvince(value.provinceCode || '');
-      setSelectedWard(value.wardCode || '');
-      setStreet(value.street || '');
-      setSpecificAddress(value.specificAddress || '');
-      setShowSpecificAddress(value.showSpecificAddress || false);
-      setAdditionalInfo(value.additionalInfo || '');
       setProvinceSearch(value.provinceName || '');
-      setWardSearch(value.wardName || '');
+    }
+
+    // Ward handling
+    if (provinceChanged && value.provinceCode) {
+      (async () => {
+        try {
+          const ws = await addressService.getWardsByProvince(value.provinceCode!);
+          setWards(ws);
+          if (value.wardCode) {
+            const found = ws.find(w => w.wardCode === value.wardCode);
+            if (found) {
+              setSelectedWard(found.wardCode);
+              setWardSearch(found.wardName);
+            } else {
+              setSelectedWard('');
+              setWardSearch(value.wardName || '');
+            }
+          } else {
+            setSelectedWard('');
+            setWardSearch(value.wardName || '');
+          }
+        } finally {
+          prevProvinceRef.current = value.provinceCode || null;
+          isHydratingRef.current = false;
+        }
+      })();
+    } else {
+      if (value.wardName !== undefined) setWardSearch(value.wardName || '');
+      if (value.wardCode !== undefined) setSelectedWard(value.wardCode || '');
+      isHydratingRef.current = false;
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value]);
 
-  // Load provinces on mount
+
+  // Load provinces on mount (separate loading flag)
   useEffect(() => {
-    const loadProvinces = async () => {
-      setLoading(true);
+    (async () => {
+      setLoadingProvinces(true);
       try {
         const provincesData = await addressService.getProvinces();
         setProvinces(provincesData);
-      } catch (error) {
-        // Handle error silently
       } finally {
-        setLoading(false);
+        setLoadingProvinces(false);
       }
-    };
-
-    loadProvinces();
+    })();
   }, []);
 
-  // Load wards when province changes
+  // Load wards when province changes (separate loading flag)
   useEffect(() => {
-    if (selectedProvince) {
-      const loadWards = async () => {
-        setLoading(true);
-        try {
-          const wardsData = await addressService.getWardsByProvince(selectedProvince);
-          setWards(wardsData);
-        } catch (error) {
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadWards();
-    } else {
+    if (!selectedProvince) {
       setWards([]);
       setSelectedWard('');
+      return;
     }
+    (async () => {
+      setLoadingWards(true);
+      try {
+        const ws = await addressService.getWardsByProvince(selectedProvince);
+        setWards(ws);
+        if (!selectedWard && wardSearch) {
+          const found = ws.find(w => w.wardName.toLowerCase().trim() === wardSearch.toLowerCase().trim());
+          if (found) setSelectedWard(found.wardCode);
+        }
+      } finally {
+        setLoadingWards(false);
+      }
+    })();
   }, [selectedProvince]);
 
   // Filter provinces based on search
@@ -131,32 +177,56 @@ export default function AddressSelector({ value, onChange, className = "", field
   useEffect(() => {
     let emitted: Address | null = null;
 
-    const province = selectedProvince ? provinces.find(p => p.provinceCode === selectedProvince) : undefined;
-    const ward = selectedWard ? wards.find(w => w.wardCode === selectedWard) : undefined;
+    // Do not emit while hydrating
+    if (isHydratingRef.current) return;
 
-    if (province && (!showWard || (showWard && ward))) {
+    // Prefer resolving names from lists, but fall back to current search text to avoid races
+    const provinceObj = selectedProvince ? provinces.find(p => p.provinceCode === selectedProvince) : undefined;
+    const wardObj = selectedWard ? wards.find(w => w.wardCode === selectedWard) : undefined;
+
+    const provinceNameResolved = provinceObj?.provinceName || provinceSearch || '';
+    const wardNameResolved = wardObj?.wardName || wardSearch || '';
+
+    // Build emitted value as long as codes are present (and ward if required)
+    if (selectedProvince && (!showWard || wardNameResolved)) {
       emitted = {
         street: street || '',
-        ward: ward?.wardName || '',
-        city: province.provinceName,
+        ward: wardNameResolved,
+        city: provinceNameResolved,
         specificAddress: specificAddress || undefined,
         showSpecificAddress,
         provinceCode: selectedProvince,
-        provinceName: province.provinceName,
-        wardCode: ward?.wardCode || '',
-        wardName: ward?.wardName || '',
+        provinceName: provinceNameResolved,
+        wardCode: selectedWard || '',
+        wardName: wardNameResolved,
         additionalInfo: additionalInfo || undefined
       } as Address;
     }
 
     const serialized = emitted ? JSON.stringify(emitted) : 'null';
-    if (lastEmittedRef.current !== serialized) {
+    // If equal to lastHydratedJSON, skip to avoid ping-pong
+    if (serialized !== 'null' && serialized === lastHydratedJSON.current) {
       lastEmittedRef.current = serialized;
+      return;
+    }
+    
+    // Only emit if we have a valid address (not empty) and have hydrated
+    if (
+      lastEmittedRef.current !== serialized &&
+      (hasHydrated.current || userTouchedRef.current) &&
+      emitted &&
+      selectedProvince &&
+      (!showWard || wardNameResolved)
+    ) {
+      lastEmittedRef.current = serialized;
+      console.log('AddressSelector emitting onChange with:', emitted);
       onChange(emitted);
     }
-  }, [selectedProvince, selectedWard, street, specificAddress, showSpecificAddress, additionalInfo, provinces, wards, showWard]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedProvince, selectedWard, street, specificAddress, showSpecificAddress, additionalInfo, showWard, onChange, provinces, wards, provinceSearch, wardSearch]);
 
   const handleProvinceSelect = (province: Province) => {
+    userTouchedRef.current = true;
     setSelectedProvince(province.provinceCode);
     setProvinceSearch(province.provinceName);
     setShowProvinceDropdown(false);
@@ -171,37 +241,20 @@ export default function AddressSelector({ value, onChange, className = "", field
   };
 
   const handleWardSelect = (ward: Ward) => {
+    userTouchedRef.current = true;
     setSelectedWard(ward.wardCode);
     setWardSearch(ward.wardName);
     setShowWardDropdown(false);
   };
 
   const handleProvinceSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setProvinceSearch(value);
+    setProvinceSearch(e.target.value);
     setShowProvinceDropdown(true);
-    
-    // Clear selection if search doesn't match selected province
-    if (selectedProvince) {
-      const selectedProvinceData = provinces.find(p => p.provinceCode === selectedProvince);
-      if (!selectedProvinceData || !selectedProvinceData.provinceName.toLowerCase().includes(value.toLowerCase())) {
-        setSelectedProvince('');
-      }
-    }
   };
 
   const handleWardSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setWardSearch(value);
+    setWardSearch(e.target.value);
     setShowWardDropdown(true);
-    
-    // Clear selection if search doesn't match selected ward
-    if (selectedWard) {
-      const selectedWardData = wards.find(w => w.wardCode === selectedWard);
-      if (!selectedWardData || !selectedWardData.wardName.toLowerCase().includes(value.toLowerCase())) {
-        setSelectedWard('');
-      }
-    }
   };
 
   // Close dropdowns when clicking outside
@@ -234,7 +287,7 @@ export default function AddressSelector({ value, onChange, className = "", field
           onChange={handleProvinceSearchChange}
           onFocus={() => setShowProvinceDropdown(true)}
           placeholder="Tìm kiếm tỉnh/thành phố..."
-          disabled={loading}
+          disabled={loadingProvinces}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100"
         />
         
@@ -273,14 +326,14 @@ export default function AddressSelector({ value, onChange, className = "", field
           onChange={handleWardSearchChange}
           onFocus={() => setShowWardDropdown(true)}
           placeholder="Tìm kiếm phường/xã..."
-          disabled={loading || !selectedProvince}
+          disabled={loadingWards || !selectedProvince}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-transparent disabled:bg-gray-100"
         />
         
         {/* Ward Dropdown */}
         {showWardDropdown && selectedProvince && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
-            {loading ? (
+            {loadingWards ? (
               <div className="px-3 py-2 text-gray-500 text-sm">
                 Đang tải danh sách phường/xã...
               </div>
