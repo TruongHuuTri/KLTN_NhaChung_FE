@@ -8,6 +8,7 @@ import { createPost } from "@/services/posts";
 import { extractApiErrorMessage } from "@/utils/api";
 import { useNotification } from "@/hooks/useNotification";
 import { addressService } from "@/services/address";
+import { getMyProfile } from "@/services/userProfiles";
 import { useAuth } from "@/contexts/AuthContext";
 
 // Sử dụng RoomForPost type từ types/Post.ts
@@ -48,6 +49,7 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
     }),
   });
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -74,6 +76,22 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       }) : undefined,
     }));
   }, [postType, selectedRoom]);
+
+  // Load user profile để tự điền personalInfo cho bài đăng ở ghép
+  useEffect(() => {
+    (async () => {
+      try {
+        if (postType === 'roommate') {
+          const pf = await getMyProfile();
+          setProfile(pf as any);
+        } else {
+          setProfile(null);
+        }
+      } catch {
+        setProfile(null);
+      }
+    })();
+  }, [postType]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -136,23 +154,13 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
     
     // Debug: Log user info
     
-    // Kiểm tra thông tin liên hệ
-    if (!user?.email) {
-      showError("Lỗi", "Không tìm thấy thông tin email. Vui lòng đăng nhập lại.");
-      return;
-    }
-    
-    if (!user?.phone) {
-      showError("Lỗi", "Không tìm thấy thông tin số điện thoại. Vui lòng cập nhật thông tin cá nhân.");
-      return;
-    }
+    // Không chặn nếu thiếu email/phone; sẽ cố gắng lấy từ profile hoặc bỏ qua
     
     
     setLoading(true);
     
     try {
       const userId = user?.userId;
-
       if (!userId) {
         throw new Error('Không tìm thấy thông tin người dùng');
       }
@@ -168,18 +176,7 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
         throw new Error('Vui lòng nhập tiêu đề bài đăng');
       }
 
-      // Validate roommate-specific fields
-      if (postType === 'roommate') {
-        if (!formData.personalInfo?.fullName?.trim()) {
-          throw new Error('Vui lòng nhập họ tên');
-        }
-        if (!formData.personalInfo?.age || formData.personalInfo.age <= 0) {
-          throw new Error('Vui lòng nhập tuổi hợp lệ');
-        }
-        if (!formData.personalInfo?.gender) {
-          throw new Error('Vui lòng chọn giới tính');
-        }
-      }
+      // Roommate: không yêu cầu nhập thông tin cá nhân thủ công
 
       // Không cần upload media vì sử dụng từ room
 
@@ -194,35 +191,54 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
         description: selectedRoom.description || '', // Lấy mô tả từ room
         images: selectedRoom.images || [], // Lấy hình ảnh từ room
         videos: selectedRoom.videos || [], // Lấy video từ room
-        phone: user?.phone!, // Lấy số điện thoại từ user (đã validate ở trên)
-        email: user?.email!, // Lấy email từ user (đã validate ở trên)
-        userId: userId, // Thêm userId
+        // Liên hệ: ưu tiên user, fallback profile, nếu không có thì để undefined để BE xử lý
+        phone: (user as any)?.phone || (profile as any)?.phone || undefined,
+        email: (user as any)?.email || (profile as any)?.email || undefined,
+        userId: userId,
       };
 
       if (postType === "roommate") {
-        // Ensure personalInfo is properly formatted
-        if (formData.personalInfo) {
-          // Calculate dateOfBirth if not already set
-          let dateOfBirth = formData.personalInfo.dateOfBirth;
-          if (!dateOfBirth && formData.personalInfo.age > 0) {
-            const currentYear = new Date().getFullYear();
-            const birthYear = currentYear - formData.personalInfo.age;
-            dateOfBirth = `${birthYear}-01-01T00:00:00.000Z`;
+        // Tự động lấy personalInfo từ user + profile
+        const fullName = (user as any)?.fullName || (profile as any)?.fullName || (user as any)?.name || "";
+        const gender = (profile as any)?.gender || (user as any)?.gender || "any";
+        const occupation = (profile as any)?.occupation || "";
+        const lifestyle = (profile as any)?.lifestyle || "normal";
+        const cleanliness = (profile as any)?.cleanliness || "normal";
+        const hobbies = Array.isArray((profile as any)?.hobbies) ? (profile as any).hobbies : [];
+        const habits = Array.isArray((profile as any)?.habits) ? (profile as any).habits : [];
+        // Chuẩn hóa dateOfBirth ISO 8601
+        const pfDob = (profile as any)?.dateOfBirth;
+        const pfAge = (profile as any)?.age;
+        let dateOfBirthISO: string;
+        try {
+          if (pfDob) {
+            dateOfBirthISO = new Date(pfDob).toISOString();
+          } else if (typeof pfAge === 'number' && pfAge > 0) {
+            const year = new Date().getFullYear() - pfAge;
+            dateOfBirthISO = new Date(Date.UTC(year, 0, 1, 0, 0, 0)).toISOString();
+          } else if ((user as any)?.dateOfBirth) {
+            dateOfBirthISO = new Date((user as any).dateOfBirth).toISOString();
+          } else {
+            const defaultYear = new Date().getFullYear() - 25;
+            dateOfBirthISO = new Date(Date.UTC(defaultYear, 0, 1, 0, 0, 0)).toISOString();
           }
-
-          payload.personalInfo = {
-            fullName: formData.personalInfo.fullName?.trim() || "",
-            age: Number(formData.personalInfo.age) || 0,
-            dateOfBirth: dateOfBirth || `${new Date().getFullYear() - 25}-01-01T00:00:00.000Z`, // Default to 25 years old
-            gender: formData.personalInfo.gender || "male",
-            occupation: formData.personalInfo.occupation?.trim() || "",
-            hobbies: Array.isArray(formData.personalInfo.hobbies) ? formData.personalInfo.hobbies : [],
-            habits: Array.isArray(formData.personalInfo.habits) ? formData.personalInfo.habits : [],
-            lifestyle: formData.personalInfo.lifestyle || "normal",
-            cleanliness: formData.personalInfo.cleanliness || "normal"
-          };
+        } catch {
+          const defaultYear = new Date().getFullYear() - 25;
+          dateOfBirthISO = new Date(Date.UTC(defaultYear, 0, 1, 0, 0, 0)).toISOString();
         }
-        
+
+        payload.personalInfo = {
+          fullName,
+          age: (profile as any)?.age || 0,
+          dateOfBirth: dateOfBirthISO,
+          gender,
+          occupation,
+          hobbies,
+          habits,
+          lifestyle,
+          cleanliness,
+        } as any;
+
         // Ensure requirements is properly formatted
         if (formData.requirements) {
           payload.requirements = {
@@ -244,6 +260,9 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
         }
       });
 
+      // Remove fields undefined/null and userId to let BE infer from JWT
+      delete (cleanPayload as any).userId;
+
       // Remove personalInfo and requirements for rent posts
       if (postType === 'rent') {
         delete cleanPayload.personalInfo;
@@ -255,6 +274,9 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       
       showSuccess("Thành công", "Đăng bài thành công!");
       
+      // Phát tín hiệu toàn cục để các trang/listen reload
+      try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('posts:changed')); } catch {}
+
       // Delay onSuccess to ensure toast is visible
       setTimeout(() => {
         onSuccess();
@@ -292,156 +314,6 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
 
   const roommateSpecificFields = (
     <>
-      <h3 className="text-lg font-semibold text-gray-900 mb-3">Thông tin cá nhân của bạn</h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-            Họ và tên <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="text"
-            id="fullName"
-            name="fullName"
-            value={formData.personalInfo?.fullName || ""}
-            onChange={(e) => handlePersonalInfoChange("fullName", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-1">
-            Tuổi <span className="text-red-500">*</span>
-          </label>
-          <input
-            type="number"
-            id="age"
-            name="age"
-            value={formData.personalInfo?.age || ""}
-            onChange={(e) => handlePersonalInfoChange("age", Number(e.target.value))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            required
-          />
-        </div>
-        <div>
-          <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-1">
-            Giới tính <span className="text-red-500">*</span>
-          </label>
-          <select
-            id="gender"
-            name="gender"
-            value={formData.personalInfo?.gender || "any"}
-            onChange={(e) => handlePersonalInfoChange("gender", e.target.value as "male" | "female" | "other")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-            required
-          >
-            <option value="any">Không yêu cầu</option>
-            <option value="male">Nam</option>
-            <option value="female">Nữ</option>
-            <option value="other">Khác</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="occupation" className="block text-sm font-medium text-gray-700 mb-1">
-            Nghề nghiệp
-          </label>
-          <input
-            type="text"
-            id="occupation"
-            name="occupation"
-            value={formData.personalInfo?.occupation || ""}
-            onChange={(e) => handlePersonalInfoChange("occupation", e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          />
-        </div>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="hobbies" className="block text-sm font-medium text-gray-700 mb-1">
-          Sở thích (chọn nhiều)
-        </label>
-        <select
-          id="hobbies"
-          name="hobbies"
-          multiple
-          value={formData.personalInfo?.hobbies || []}
-          onChange={(e) =>
-            handleMultiSelectChange(
-              "hobbies",
-              Array.from(e.target.selectedOptions, (option) => option.value)
-            )
-          }
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 h-24"
-        >
-          <option value="đọc sách">Đọc sách</option>
-          <option value="xem phim">Xem phim</option>
-          <option value="nghe nhạc">Nghe nhạc</option>
-          <option value="chơi game">Chơi game</option>
-          <option value="thể thao">Thể thao</option>
-          <option value="nấu ăn">Nấu ăn</option>
-        </select>
-      </div>
-
-      <div className="mb-4">
-        <label htmlFor="habits" className="block text-sm font-medium text-gray-700 mb-1">
-          Thói quen (chọn nhiều)
-        </label>
-        <select
-          id="habits"
-          name="habits"
-          multiple
-          value={formData.personalInfo?.habits || []}
-          onChange={(e) =>
-            handleMultiSelectChange(
-              "habits",
-              Array.from(e.target.selectedOptions, (option) => option.value)
-            )
-          }
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 h-24"
-        >
-          <option value="dậy sớm">Dậy sớm</option>
-          <option value="ngủ muộn">Ngủ muộn</option>
-          <option value="tập thể dục">Tập thể dục</option>
-          <option value="hút thuốc">Hút thuốc</option>
-          <option value="uống rượu">Uống rượu</option>
-        </select>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="lifestyle" className="block text-sm font-medium text-gray-700 mb-1">
-            Lối sống
-          </label>
-          <select
-            id="lifestyle"
-            name="lifestyle"
-            value={formData.personalInfo?.lifestyle || "normal"}
-            onChange={(e) => handlePersonalInfoChange("lifestyle", e.target.value as "early" | "normal" | "late")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          >
-            <option value="early">Dậy sớm</option>
-            <option value="normal">Bình thường</option>
-            <option value="late">Ngủ muộn</option>
-          </select>
-        </div>
-        <div>
-          <label htmlFor="cleanliness" className="block text-sm font-medium text-gray-700 mb-1">
-            Mức độ sạch sẽ
-          </label>
-          <select
-            id="cleanliness"
-            name="cleanliness"
-            value={formData.personalInfo?.cleanliness || "normal"}
-            onChange={(e) => handlePersonalInfoChange("cleanliness", e.target.value as "very_clean" | "clean" | "normal" | "flexible")}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
-          >
-            <option value="very_clean">Rất sạch sẽ</option>
-            <option value="clean">Sạch sẽ</option>
-            <option value="normal">Bình thường</option>
-            <option value="flexible">Linh hoạt</option>
-          </select>
-        </div>
-      </div>
-
       <h3 className="text-lg font-semibold text-gray-900 mb-3">Yêu cầu đối với người ở ghép</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>

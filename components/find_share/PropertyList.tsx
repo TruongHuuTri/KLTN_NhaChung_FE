@@ -28,6 +28,22 @@ export default function RoomList() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16;
 
+  // Reload khi có bài đăng mới/đổi trạng thái
+  useEffect(() => {
+    const reloadOnPostsChanged = () => {
+      const val = (typeof window !== 'undefined') ? (new URL(window.location.href)).searchParams.get('q') || '' : '';
+      window.dispatchEvent(new CustomEvent('app:nlp-search', { detail: { q: val } }));
+    };
+    if (typeof window !== 'undefined') {
+      window.addEventListener('posts:changed', reloadOnPostsChanged as any);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('posts:changed', reloadOnPostsChanged as any);
+      }
+    };
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     (async () => {

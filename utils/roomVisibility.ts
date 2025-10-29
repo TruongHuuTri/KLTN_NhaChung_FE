@@ -33,15 +33,16 @@ export async function checkRoomVisibility(
 
     // Logic theo luồng mới:
     
-    // 1. Phòng trống hoàn toàn (currentOccupancy = 0)
-    if (currentOccupancy === 0) {
-      // Chỉ hiển thị bài đăng thuê (rent)
-      if (mappedPostType === 'rent') {
-        return { shouldShow: true, reason: 'Empty room - rent post' };
-      } else {
-        return { shouldShow: false, reason: 'Empty room - roommate post should not show' };
-      }
+  // 1. Phòng trống hoàn toàn (currentOccupancy = 0)
+  if (currentOccupancy === 0) {
+    // Chỉ hiển thị bài đăng thuê (rent)
+    if (mappedPostType === 'rent') {
+      return { shouldShow: true, reason: 'Empty room - rent post' };
+    } else if (mappedPostType === 'roommate') {
+      // Logic mới: cho phép hiển thị roommate post ngay cả khi phòng trống (FE đã thay đổi để user chỉ cần có phòng)
+      return { shouldShow: true, reason: 'Empty room - roommate post allowed per new logic' };
     }
+  }
 
     // 2. Phòng đã có người thuê (currentOccupancy > 0)
     if (currentOccupancy > 0) {
@@ -131,8 +132,9 @@ export function checkRoomVisibilitySync(
     // Chỉ hiển thị bài đăng thuê (rent)
     if (mappedPostType === 'rent') {
       return { shouldShow: true, reason: 'Empty room - rent post' };
-    } else {
-      return { shouldShow: false, reason: 'Empty room - roommate post should not show' };
+    } else if (mappedPostType === 'roommate') {
+      // Logic mới: cho phép hiển thị roommate post ngay cả khi phòng trống (FE đã thay đổi để user chỉ cần có phòng)
+      return { shouldShow: true, reason: 'Empty room - roommate post allowed per new logic' };
     }
   }
 

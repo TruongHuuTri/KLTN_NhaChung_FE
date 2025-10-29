@@ -69,8 +69,8 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
   const translateWaterBillingType = (t?: string) => {
     if (!t) return undefined;
     const map: Record<string, string> = {
-      'per_m3': 'Theo m³',
-      'per_person': 'Theo đầu người',
+      'per_m3': 'khối',
+      'per_person': 'người',
     };
     return map[t] || t;
   };
@@ -233,37 +233,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
             <span className="text-gray-900">{getAreaString()}</span>
           </div>
           
-          {/* Room Occupancy Information */}
-          <div className="flex justify-between">
-            <span className="text-gray-600">Số người hiện tại:</span>
-            <span className="text-gray-900">
-              {roomData?.currentOccupants || roomData?.currentOccupancy || 0} / {roomData?.maxOccupancy || 1} người
-            </span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-gray-600">Trạng thái:</span>
-            <span className={`font-medium ${(() => {
-              const currentOccupancy = roomData?.currentOccupants || roomData?.currentOccupancy || 0;
-              const maxOccupancy = roomData?.maxOccupancy || 1;
-              const hasTenant = currentOccupancy > 0;
-              const isFull = currentOccupancy >= maxOccupancy;
-              
-              if (!hasTenant) return 'text-green-600';
-              if (isFull) return 'text-red-600';
-              return 'text-blue-600';
-            })()}`}>
-              {(() => {
-                const currentOccupancy = roomData?.currentOccupants || roomData?.currentOccupancy || 0;
-                const maxOccupancy = roomData?.maxOccupancy || 1;
-                const hasTenant = currentOccupancy > 0;
-                const isFull = currentOccupancy >= maxOccupancy;
-                
-                if (!hasTenant) return 'Phòng trống';
-                if (isFull) return 'Phòng đầy';
-                return 'Có thể ở ghép';
-              })()}
-            </span>
-          </div>
+          {/* Occupancy fields removed per new spec */}
 
           {/* Fields specific to chung cu */}
           {roomData?.category === 'chung-cu' && roomData?.chungCuInfo && (
@@ -308,22 +278,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
                 <span className="text-gray-600">Nội thất:</span>
                 <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người tối đa:</span>
-                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Có thể ở ghép:</span>
-                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người hiện tại:</span>
-                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Chỗ trống còn lại:</span>
-                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
-              </div>
+              {/* Occupancy fields removed per new spec */}
             </>
           )}
 
@@ -382,22 +337,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
                 <span className="text-gray-600">Nội thất:</span>
                 <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người tối đa:</span>
-                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Có thể ở ghép:</span>
-                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người hiện tại:</span>
-                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Chỗ trống còn lại:</span>
-                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
-              </div>
+              {/* Occupancy fields removed per new spec */}
             </>
           )}
 
@@ -408,22 +348,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
                 <span className="text-gray-600">Nội thất:</span>
                 <span className="text-gray-900">{translateFurniture(roomData.furniture) || 'Chưa có thông tin'}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người tối đa:</span>
-                <span className="text-gray-900">{roomData.maxOccupancy ? String(roomData.maxOccupancy) : 'Chưa có thông tin'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Có thể ở ghép:</span>
-                <span className="text-gray-900">{roomData.canShare ? 'Có' : 'Không'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Số người hiện tại:</span>
-                <span className="text-gray-900">{roomData.currentOccupants ? String(roomData.currentOccupants) : '0'}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Chỗ trống còn lại:</span>
-                <span className="text-gray-900">{roomData.availableSpots ? String(roomData.availableSpots) : '0'}</span>
-              </div>
+              {/* Occupancy fields removed per new spec */}
             </>
           )}
         </div>
@@ -448,7 +373,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
                 <span className="text-gray-600">Giá nước:</span>
                 <span className="text-gray-900">
                   {roomData.utilities.waterPrice 
-                    ? `${formatPriceWithSuffix(roomData.utilities.waterPrice, '', 'auto')}/${translateWaterBillingType(roomData.utilities.waterBillingType)}`
+                    ? `${formatPriceWithSuffix(roomData.utilities.waterPrice, '', 'auto')}${roomData.utilities.waterBillingType ? `/${translateWaterBillingType(roomData.utilities.waterBillingType)}` : ''}`
                     : 'Chưa có thông tin'}
                 </span>
               </div>
@@ -586,32 +511,23 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
           {/* Logic hiển thị buttons dựa trên room occupancy và postType */}
           {(() => {
             const currentOccupancy = roomData?.currentOccupants || roomData?.currentOccupancy || 0;
-            const maxOccupancy = roomData?.maxOccupancy || 1;
-            const isFull = currentOccupancy >= maxOccupancy;
             const hasTenant = currentOccupancy > 0;
 
-            // Phòng trống hoàn toàn: Chỉ cho đăng ký thuê khi postType = 'rent'
-            if (!hasTenant && postType === 'rent') {
-              return (
-                <button 
-                  onClick={() => setShowRentalForm(true)}
-                  className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
-                >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Đăng ký thuê ngay
-                </button>
-              );
-            }
-
-            // Phòng trống nhưng postType = 'roommate': Không hiển thị gì (vì chưa có ai thuê)
-            if (!hasTenant && postType === 'roommate') {
-              return null;
-            }
-
-            // Phòng đã có người thuê và postType = 'rent': Không cho đăng ký thuê nữa
-            if (hasTenant && postType === 'rent') {
+            // Cho thuê: phòng trống thì cho đăng ký, có người thuê thì khóa
+            if (postType === 'rent') {
+              if (!hasTenant) {
+                return (
+                  <button 
+                    onClick={() => setShowRentalForm(true)}
+                    className="flex-1 px-4 py-3 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
+                    </svg>
+                    Đăng ký thuê ngay
+                  </button>
+                );
+              }
               return (
                 <div className="flex-1 px-4 py-3 bg-gray-300 text-gray-600 font-semibold rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
                   <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
@@ -622,8 +538,8 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
               );
             }
 
-            // Phòng có người thuê, user đã đăng bài tìm ở ghép, chưa full: Cho đăng ký ở ghép
-            if (hasTenant && postType === 'roommate' && !isFull) {
+            // Ở ghép: luôn cho đăng ký, không kiểm tra full người theo logic mới
+            if (postType === 'roommate') {
               return (
                 <button 
                   onClick={() => setShowSharingForm(true)}
@@ -634,18 +550,6 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
                   </svg>
                   Đăng ký ở ghép
                 </button>
-              );
-            }
-
-            // Phòng đã full và postType = 'roommate': Không cho đăng ký ở ghép nữa
-            if (hasTenant && postType === 'roommate' && isFull) {
-              return (
-                <div className="flex-1 px-4 py-3 bg-gray-300 text-gray-600 font-semibold rounded-lg flex items-center justify-center gap-2 cursor-not-allowed">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clipRule="evenodd" />
-                  </svg>
-                  Phòng đã đầy
-                </div>
               );
             }
 
@@ -680,8 +584,8 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
       {/* Room Sharing Request Form Modal */}
       {showSharingForm && postData && (
         <RoomSharingRequestForm
-          roomId={postData.roomId}
-          postId={postData.postId}
+          roomId={Number(postData.roomId)}
+          postId={Number(postData.postId)}
           onSuccess={() => setShowSharingForm(false)}
           onClose={() => setShowSharingForm(false)}
         />

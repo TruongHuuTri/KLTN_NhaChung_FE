@@ -182,7 +182,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    logoutService();
+    try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem("token");
+        localStorage.removeItem("token_issued_at");
+        localStorage.removeItem("user");
+      }
+    } catch {}
+    try { logoutService(); } catch {}
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   };
 
   return (

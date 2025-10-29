@@ -19,28 +19,28 @@ export interface AddFavoriteRequest {
  * Get all favorites for a user
  */
 export async function getUserFavorites(userId: number): Promise<Favorite[]> {
-  // TODO: API endpoint có thể gây lỗi "Invalid user ID"
-  return [];
-  // const allFavorites = await apiGet('favourites');
-  // return allFavorites.filter((fav: Favorite) => fav.userId === userId);
+  const params = new URLSearchParams();
+  if (userId) params.append('userId', String(userId));
+  const query = params.toString();
+  const res = await apiGet(`favourites${query ? `?${query}` : ''}`);
+  return Array.isArray(res) ? res : (Array.isArray(res?.favourites) ? res.favourites : []);
 }
 
 /**
  * Add to favorites
  */
 export async function addToFavorites(request: AddFavoriteRequest): Promise<Favorite> {
-  // TODO: API endpoint có thể gây lỗi
-  throw new Error("API endpoint chưa được implement");
-  // return apiPost('favourites', request);
+  // Use dedicated add endpoint; BE will validate and create
+  const res = await apiPost('favourites', request);
+  // Response can be the favourite itself or wrapper
+  return (res && res.favourite) ? res.favourite : res;
 }
 
 /**
  * Remove from favorites
  */
 export async function removeFromFavorites(userId: number, postType: 'rent' | 'roommate', postId: number): Promise<void> {
-  // TODO: API endpoint có thể gây lỗi
-  throw new Error("API endpoint chưa được implement");
-  // return apiDel(`favourites/user/${userId}/post/${postType}/${postId}`);
+  await apiDel(`favourites/user/${userId}/post/${postType}/${postId}`);
 }
 
 /**

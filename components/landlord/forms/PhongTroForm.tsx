@@ -97,13 +97,25 @@ function PhongTroForm({
       additionalInfo: building.address.additionalInfo || (initialData?.address as Address)?.additionalInfo || "",
     },
     maxOccupancy: 2,
-    canShare: false,
+    canShare: true,
     sharePrice: undefined,
     images: [],
     videos: [],
     description: "",
     ...initialData
   });
+
+  // Đồng bộ giá trị parkingFee từ BE vào trường hiển thị (parkingMotorbikeFee)
+  useEffect(() => {
+    const beParkingFee = (initialData as any)?.utilities?.parkingFee;
+    if (beParkingFee !== undefined) {
+      setForm((p) => ({
+        ...p,
+        utilities: { ...(p.utilities || {}), parkingMotorbikeFee: beParkingFee },
+      }));
+      setNums((prev) => ({ ...prev, parkingFee: numberToDisplay(beParkingFee) }));
+    }
+  }, [initialData?.utilities && (initialData as any).utilities.parkingFee]);
 
   const [nums, setNums] = useState({
     area: numberToDisplay(form.area) || String(form.area),
@@ -116,8 +128,7 @@ function PhongTroForm({
     internetFee: numberToDisplay(form.utilities?.internetFee),
     garbageFee: numberToDisplay(form.utilities?.garbageFee),
     cleaningFee: numberToDisplay(form.utilities?.cleaningFee),
-    parkingMotorbikeFee: numberToDisplay(form.utilities?.parkingMotorbikeFee),
-    parkingCarFee: numberToDisplay(form.utilities?.parkingCarFee),
+    parkingFee: numberToDisplay((form.utilities as any)?.parkingFee) || numberToDisplay(form.utilities?.parkingMotorbikeFee),
     managementFee: numberToDisplay(form.utilities?.managementFee),
   });
 
@@ -132,8 +143,6 @@ function PhongTroForm({
     internet: "internetFee",
     garbage: "garbageFee",
     cleaning: "cleaningFee",
-    parkingMotorbike: "parkingMotorbikeFee",
-    parkingCar: "parkingCarFee",
     managementFee: "managementFee",
   };
 
@@ -209,22 +218,37 @@ function PhongTroForm({
       
       // Nếu includedInRent true thì đảm bảo phí = 0
       const normalizedUtilities = (() => {
-        const u = { ...(form.utilities || {}) } as any;
-        const inc = (u.includedInRent || {}) as Record<string, boolean>;
-        Object.entries(includedFeeMap).forEach(([incKey, feeKey]) => {
-          if (inc[incKey]) u[feeKey] = 0;
-        });
-        return u;
+        const src = { ...(form.utilities || {}) } as any;
+        const parkingFeeValue = src.parkingFee ?? src.parkingMotorbikeFee ?? 0;
+        // Chỉ giữ lại các key BE yêu cầu
+        return {
+          electricityPricePerKwh: Number(src.electricityPricePerKwh || 0),
+          waterPrice: Number(src.waterPrice || 0),
+          internetFee: Number(src.internetFee || 0),
+          garbageFee: Number(src.garbageFee || 0),
+          cleaningFee: Number(src.cleaningFee || 0),
+          parkingFee: Number(parkingFeeValue || 0),
+          managementFee: Number(src.managementFee || 0),
+        } as any;
       })();
       
-      const payload: CreateRoomPayload = {
+      // Tạo payload gửi BE và loại bỏ các trường ở ghép
+      const payloadAny: any = {
         ...form,
+        category: "phong-tro",
         images: [...(form.images || []), ...imgUrls],
         videos: [...(form.videos || []), ...vidUrls],
         utilities: normalizedUtilities
       };
-      
-      onSubmit(payload);
+      delete payloadAny.canShare;
+      delete payloadAny.maxOccupancy;
+      delete payloadAny.sharePrice;
+
+      console.log("[PhongTroForm] Submit payload:", {
+        ...payloadAny,
+        utilities: normalizedUtilities,
+      });
+      onSubmit(payloadAny as any);
     } catch (error) {
     } finally {
       setUploading(false);
@@ -352,78 +376,13 @@ function PhongTroForm({
               </div>
             </section>
 
-            {/* Ở ghép */}
-            <section className="space-y-4">
-              <h3 className="text-base font-semibold text-gray-900">Ở ghép</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Cho phép ở ghép</label>
-                  <select className="w-full px-4 py-2 border rounded-lg" value={form.canShare ? "true" : "false"} onChange={(e) => {
-                    const canShare = e.target.value === "true";
-                    setField("canShare", canShare);
-                    // Reset maxOccupancy về 1 khi tắt ở ghép
-                    if (!canShare) {
-                      setField("maxOccupancy", 1);
-                      setNumDisp("maxOccupancy", "1");
-                    }
-                  }}>
-                    <option value="false">Không</option>
-                    <option value="true">Có</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Số người tối đa</label>
-                  <input 
-                    type="number" 
-                    min={1} 
-                    className={`w-full px-4 py-2 border rounded-lg ${!form.canShare ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    value={nums.maxOccupancy} 
-                    onChange={(e) => setNumDisp("maxOccupancy", e.target.value)} 
-                    onBlur={() => commitNum("maxOccupancy", (s) => parseInt(s, 10), 1, (n) => setField("maxOccupancy", n))}
-                    disabled={!form.canShare}
-                  />
-                </div>
-
-                {form.canShare && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Giá mỗi người (đ)</label>
-                      <input type="number" min={0} className="w-full px-4 py-2 border rounded-lg" value={nums.sharePrice} onChange={(e) => setNumDisp("sharePrice", e.target.value)} onBlur={() => commitNum("sharePrice", (s) => parseInt(s, 10), 0, (n) => setField("sharePrice", n))} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </section>
+            {/* Đã loại bỏ phần Ở ghép theo yêu cầu */}
 
             {/* Tiện ích & chi phí (bao gồm giá thuê) */}
             <section className="space-y-4">
               <h3 className="text-base font-semibold text-gray-900">Tiện ích & chi phí</h3>
               
-              {/* Mục bao gồm trong tiền thuê - đặt trước */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Mục bao gồm trong tiền thuê</label>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm">
-                  {[
-                    { key: "electricity", label: "Điện" },
-                    { key: "water", label: "Nước" },
-                    { key: "internet", label: "Internet" },
-                    { key: "garbage", label: "Rác" },
-                    { key: "cleaning", label: "Vệ sinh" },
-                    { key: "parkingMotorbike", label: "Giữ xe máy" },
-                    { key: "parkingCar", label: "Giữ ô tô" },
-                    { key: "managementFee", label: "Phí quản lý" },
-                  ].map((it) => (
-                    <label key={it.key} className="inline-flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(form.utilities?.includedInRent?.[it.key as keyof typeof form.utilities.includedInRent])}
-                        onChange={(e) => handleIncludedChange(it.key as keyof NonNullable<CreateRoomPayload["utilities"]>["includedInRent"], e.target.checked)}
-                      />
-                      {it.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
+              {/* Đã loại bỏ phần 'Mục bao gồm trong tiền thuê' theo yêu cầu */}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -451,31 +410,18 @@ function PhongTroForm({
                     placeholder={Boolean(form.utilities?.includedInRent?.electricity) ? "Miễn phí" : undefined}
                   />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Nước (đ/đơn vị)</label>
-                    <input 
-                      type="number" 
-                      min={0} 
-                      className={`w-full px-4 py-2 border rounded-lg ${Boolean(form.utilities?.includedInRent?.water) ? 'bg-gray-100 text-gray-500' : ''}`}
-                      value={nums.waterPrice} 
-                      onChange={(e) => setNumDisp("waterPrice", e.target.value)} 
-                      onBlur={() => commitNum("waterPrice", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), waterPrice: n } })))} 
-                      disabled={Boolean(form.utilities?.includedInRent?.water)}
-                      placeholder={Boolean(form.utilities?.includedInRent?.water) ? "Miễn phí" : undefined}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Cách tính nước</label>
-                    <select 
-                      className="w-full px-4 py-2 border rounded-lg" 
-                      value={form.utilities?.waterBillingType || "per_person"} 
-                      onChange={(e) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), waterBillingType: e.target.value as any } }))}
-                    >
-                      <option value="per_m3">Theo m³</option>
-                      <option value="per_person">Theo đầu người</option>
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nước (đ/khối)</label>
+                  <input 
+                    type="number" 
+                    min={0} 
+                    className={`w-full px-4 py-2 border rounded-lg ${Boolean(form.utilities?.includedInRent?.water) ? 'bg-gray-100 text-gray-500' : ''}`}
+                    value={nums.waterPrice} 
+                    onChange={(e) => setNumDisp("waterPrice", e.target.value)} 
+                    onBlur={() => commitNum("waterPrice", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), waterPrice: n } })))} 
+                    disabled={Boolean(form.utilities?.includedInRent?.water)}
+                    placeholder={Boolean(form.utilities?.includedInRent?.water) ? "Miễn phí" : undefined}
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Internet (đ)</label>
@@ -517,53 +463,14 @@ function PhongTroForm({
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quản lý (đ)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Phí giữ xe (đ)</label>
                   <input 
                     type="number" 
                     min={0} 
-                    className={`w-full px-4 py-2 border rounded-lg ${Boolean(form.utilities?.includedInRent?.managementFee) ? 'bg-gray-100 text-gray-500' : ''}`}
-                    value={nums.managementFee} 
-                    onChange={(e) => setNumDisp("managementFee", e.target.value)} 
-                    onBlur={() => commitNum("managementFee", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), managementFee: n } })))} 
-                    disabled={Boolean(form.utilities?.includedInRent?.managementFee)}
-                    placeholder={Boolean(form.utilities?.includedInRent?.managementFee) ? "Miễn phí" : undefined}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phí quản lý theo</label>
-                  <select 
-                    className="w-full px-4 py-2 border rounded-lg" 
-                    value={form.utilities?.managementFeeUnit || "per_month"} 
-                    onChange={(e) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), managementFeeUnit: e.target.value as any } }))}
-                  >
-                    <option value="per_month">Theo tháng</option>
-                    <option value="per_m2_per_month">Theo m²/tháng</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Giữ xe ô tô (đ)</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    className={`w-full px-4 py-2 border rounded-lg ${Boolean(form.utilities?.includedInRent?.parkingCar) ? 'bg-gray-100 text-gray-500' : ''}`}
-                    value={nums.parkingCarFee} 
-                    onChange={(e) => setNumDisp("parkingCarFee", e.target.value)} 
-                    onBlur={() => commitNum("parkingCarFee", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), parkingCarFee: n } })))} 
-                    disabled={Boolean(form.utilities?.includedInRent?.parkingCar)}
-                    placeholder={Boolean(form.utilities?.includedInRent?.parkingCar) ? "Miễn phí" : undefined}
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Giữ xe máy (đ)</label>
-                  <input 
-                    type="number" 
-                    min={0} 
-                    className={`w-full px-4 py-2 border rounded-lg ${Boolean(form.utilities?.includedInRent?.parkingMotorbike) ? 'bg-gray-100 text-gray-500' : ''}`}
-                    value={nums.parkingMotorbikeFee || ""} 
-                    onChange={(e) => setNumDisp("parkingMotorbikeFee", e.target.value)} 
-                    onBlur={() => commitNum("parkingMotorbikeFee", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), parkingMotorbikeFee: n } })))} 
-                    disabled={Boolean(form.utilities?.includedInRent?.parkingMotorbike)}
-                    placeholder={Boolean(form.utilities?.includedInRent?.parkingMotorbike) ? "Miễn phí" : undefined}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    value={(nums as any).parkingFee || ""} 
+                    onChange={(e) => setNumDisp("parkingFee", e.target.value)} 
+                    onBlur={() => commitNum("parkingFee", (s) => parseInt(s, 10), 0, (n) => setForm((p) => ({ ...p, utilities: { ...(p.utilities || {}), parkingMotorbikeFee: n } })))} 
                   />
                 </div>
               </div>

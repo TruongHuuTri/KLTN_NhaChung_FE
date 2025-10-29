@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { PostType } from "@/types/Post";
-import { Room } from "@/types/Room";
-import { RoomForPost } from "@/types/Post";
-import { getUserRooms, getPostsByRoom, getPosts } from "@/services/posts";
-import { addressService } from "@/services/address";
+import { PostType, RoomForPost } from "@/types/Post";
+import { getUserRooms } from "@/services/posts";
 import { formatPrice } from "@/utils/format";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -31,7 +28,6 @@ export default function RoomSelector({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoadingRooms, setIsLoadingRooms] = useState(false);
-  const [postedRoomIds, setPostedRoomIds] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
 
   // Helper function để validate image URL
@@ -41,43 +37,7 @@ export default function RoomSelector({
     return url.length > 0 && !url.startsWith('url');
   };
 
-  // Helper function để kiểm tra phòng đã được đăng bài roommate active hay chưa
-  const checkRoomPostedStatus = async (roomIds: number[]) => {
-    try {
-      const postedIds = new Set<number>();
-      
-      // Kiểm tra từng phòng xem có bài đăng active không
-      for (const roomId of roomIds) {
-        try {
-          // User thường không được gọi API landlord, nên dùng endpoint public khi không phải landlord
-          if (user?.role === 'landlord') {
-            const posts = await getPostsByRoom(roomId);
-            const hasActivePost = posts.some((post: any) => {
-              const t = String(post?.postType || '').toLowerCase();
-              return post?.status === 'active' && (t === 'roommate' || t === 'tim-o-ghep');
-            });
-            if (hasActivePost) postedIds.add(roomId);
-            continue;
-          }
-
-          // Không truyền postType/status để tránh BE filter sai key; lọc client-side
-          const res: any = await getPosts({ roomId } as any);
-          const list: any[] = Array.isArray(res?.posts) ? res.posts : Array.isArray(res) ? res : [];
-          const hasActivePost = list.some((post: any) => {
-            const t = String(post?.postType || '').toLowerCase();
-            return post?.status === 'active' && (t === 'roommate' || t === 'tim-o-ghep');
-          });
-          if (hasActivePost) {
-            postedIds.add(roomId);
-          }
-        } catch (err) {
-        }
-      }
-      
-      setPostedRoomIds(postedIds);
-    } catch (err) {
-    }
-  };
+  // BE đã filter theo postType; FE không còn cần tự kiểm tra bài đăng/phòng trống
 
   // Tạo selectedRoomId để so sánh chính xác
   const selectedRoomId = useMemo(() => {
@@ -124,68 +84,13 @@ export default function RoomSelector({
       // Clear rooms state
       setRooms([]);
       
-      let filteredRooms: RoomForPost[] = [];
-      
-      if (user?.role === 'landlord') {
-        // Landlord: Đăng phòng của mình lên để cho thuê
-        const apiPostType = postType === 'rent' ? 'cho-thue' : 'tim-o-ghep';
-        const roomsData = await getUserRooms(apiPostType);
-        
-        filteredRooms = roomsData.filter(room => {
-          return room.landlordId === user.userId;
-        });
-      } else {
-        // User: Đăng phòng mà mình đang thuê để tìm ở ghép
-        const { getUserRooms: getUserRentedRooms, getRoomById } = await import('@/services/rooms');
-        const userRooms = await getUserRentedRooms();
-        
-        // Lấy thêm thông tin chi tiết phòng để có ảnh
-        const roomsWithDetails = await Promise.all(
-          userRooms.map(async (room) => {
-            try {
-              const roomDetail = await getRoomById(room.roomId);
-              return { ...room, images: roomDetail.images || [] };
-            } catch {
-              return { ...room, images: [] };
-            }
-          })
-        );
-        
-        filteredRooms = roomsWithDetails.map(room => ({
-          roomId: room.roomId,
-          roomNumber: room.roomNumber,
-          buildingName: room.buildingName,
-          buildingId: room.buildingId,
-          landlordId: room.landlordInfo.landlordId,
-          floor: 1, // Default value
-          category: 'phong-tro' as const, // Default value
-          area: room.area,
-          price: room.monthlyRent,
-          deposit: room.deposit,
-          furniture: 'Cơ bản', // Default value
-          maxOccupancy: room.maxOccupancy,
-          canShare: room.currentOccupants < room.maxOccupancy,
-          sharePrice: Math.floor(room.monthlyRent / room.maxOccupancy),
-          currentOccupants: room.currentOccupants,
-          availableSpots: room.maxOccupancy - room.currentOccupants,
-          status: 'available' as const,
-          images: room.images || [], // Sử dụng ảnh từ room
-          videos: [],
-          description: `Phòng ${room.roomNumber} - ${room.buildingName}`,
-          address: {
-            street: '',
-            ward: '',
-            city: '',
-            provinceCode: '',
-            provinceName: '',
-            wardCode: '',
-            wardName: ''
-          },
-          utilities: {},
-          amenities: [],
-          houseRules: []
-        }));
-      }
+      // Dùng API thống nhất: /api/posts/user/rooms
+      // Yêu cầu mới: user thường đăng ở ghép chỉ cần có phòng là được
+      // → Nếu user không phải landlord và postType = 'roommate' thì không truyền postType để lấy tất cả phòng
+      const apiPostType = postType === 'rent' ? 'cho-thue' : 'tim-o-ghep';
+      const shouldPassPostType = !(user?.role !== 'landlord' && postType !== 'rent');
+      const roomsData = await getUserRooms(shouldPassPostType ? (apiPostType as 'cho-thue' | 'tim-o-ghep') : undefined);
+      const filteredRooms: RoomForPost[] = Array.isArray(roomsData) ? roomsData : [];
 
       // Remove duplicates - keep only the first occurrence of each roomId
       const uniqueRooms = filteredRooms.filter((room, index, self) => 
@@ -194,10 +99,6 @@ export default function RoomSelector({
       
       // Set rooms to state (use unique rooms)
       setRooms(uniqueRooms);
-      
-      // Kiểm tra trạng thái đăng bài của các phòng
-      const roomIds = uniqueRooms.map(room => room.roomId);
-      await checkRoomPostedStatus(roomIds);
     } catch (err: any) {
       setError('Không thể tải danh sách phòng. Vui lòng thử lại.');
     } finally {
@@ -253,7 +154,7 @@ export default function RoomSelector({
           <p className="text-gray-600">
             {postType === 'rent' ? 
               'Chọn phòng trống để cho thuê' : 
-              'Chọn phòng có chỗ trống để tìm ở ghép'
+              'Chọn phòng để tìm ở ghép'
             }
           </p>
         </div>
@@ -276,7 +177,7 @@ export default function RoomSelector({
           <p className="text-gray-600">
             {postType === 'rent' ? 
               'Chọn phòng trống để cho thuê' : 
-              'Chọn phòng có chỗ trống để tìm ở ghép'
+              'Chọn phòng để tìm ở ghép'
             }
           </p>
         </div>
@@ -300,43 +201,20 @@ export default function RoomSelector({
     );
   }
 
-  // Filter rooms based on postType logic, posted status, and search query
+  // Filter rooms chỉ theo search query (BE đã filter theo postType)
   const validRooms = rooms.filter(room => {
-    // Ẩn phòng đã được đăng bài
-    if (postedRoomIds.has(room.roomId)) {
-      return false;
-    }
-    
-    // Filter theo search query (tìm theo tên phòng, mã phòng, địa chỉ)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      const roomNumber = room.roomNumber.toLowerCase();
+      const roomNumber = (room.roomNumber || '').toLowerCase();
       const buildingName = (room.buildingName || '').toLowerCase();
       const address = room.address ? 
-        `${room.address.street} ${room.address.ward} ${room.address.city}`.toLowerCase() : '';
-      
-      // Tìm kiếm linh hoạt: tìm trong tên phòng, tòa nhà, hoặc địa chỉ
+        `${room.address.street || ''} ${room.address.ward || ''} ${room.address.city || ''}`.toLowerCase() : '';
       const matchesRoomNumber = roomNumber.includes(query);
       const matchesBuildingName = buildingName.includes(query);
       const matchesAddress = address.includes(query);
-      
-      if (!matchesRoomNumber && !matchesBuildingName && !matchesAddress) {
-        return false;
-      }
+      if (!matchesRoomNumber && !matchesBuildingName && !matchesAddress) return false;
     }
-    
-    if (user?.role === 'landlord') {
-      // Landlord: Cho thuê - chỉ hiển thị phòng 100% trống
-      if (postType === 'rent') {
-        return room.currentOccupants === 0 && room.status === 'available';
-      } else {
-        // Landlord không nên đăng "tìm ở ghép" cho phòng của mình
-        return false;
-      }
-    } else {
-      // User: Tìm ở ghép - phòng phải có ít nhất 1 người ở và còn chỗ trống
-      return room.currentOccupants > 0 && room.currentOccupants < room.maxOccupancy && room.status === 'available';
-    }
+    return true;
   });
 
   if (validRooms.length === 0) {
@@ -379,7 +257,7 @@ export default function RoomSelector({
           <h3 className="text-lg font-medium text-yellow-800 mb-2">
             {searchQuery.trim() ? 
               'Không tìm thấy phòng phù hợp' : 
-              (user?.role === 'landlord' ? 'Không có phòng trống' : 'Không có phòng cho ở ghép')
+              (user?.role === 'landlord' ? 'Không có phòng trống' : 'Bạn chưa có phòng nào để đăng ở ghép')
             }
           </h3>
           <p className="text-yellow-600 mb-4">
@@ -387,7 +265,7 @@ export default function RoomSelector({
               `Không tìm thấy phòng nào phù hợp với từ khóa "${searchQuery}". Hãy thử tìm kiếm với từ khóa khác.` :
               (user?.role === 'landlord' ? 
                 'Hiện tại không có phòng nào 100% trống để cho thuê. Chỉ những phòng hoàn toàn trống mới có thể đăng cho thuê.' :
-                'Bạn chưa có phòng nào đang thuê để đăng tìm ở ghép. Chỉ những phòng bạn đang thuê mới có thể đăng tìm người ở ghép.')
+                'Bạn chưa có phòng nào để đăng tìm ở ghép. Hãy thuê hoặc liên kết phòng trước khi đăng.')
             }
           </p>
           <div className="flex gap-3 justify-center">
@@ -423,10 +301,7 @@ export default function RoomSelector({
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Chọn phòng</h2>
           <p className="text-gray-600">
-            {user?.role === 'landlord' ? 
-              'Chọn phòng 100% trống để cho thuê' : 
-              'Chọn phòng bạn đang thuê để tìm ở ghép'
-            }
+            {postType === 'rent' ? 'Chọn phòng trống để cho thuê' : 'Chọn phòng có chỗ trống để tìm ở ghép'}
           </p>
         </div>
 
@@ -525,31 +400,29 @@ export default function RoomSelector({
                 <h3 className="text-lg font-semibold text-gray-900">
                   Phòng {room.roomNumber}
                 </h3>
-                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getRoomStatusColor(room)} ${
-                  user?.role === 'landlord' ? 'bg-green-100' : 'bg-blue-100'
-                }`}>
-                  {user?.role === 'landlord' ? 'Trống' : 'Có thể ở ghép'}
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${getRoomStatusColor(room)} ${postType === 'rent' ? 'bg-green-100' : 'bg-blue-100'}`}>
+                  {postType === 'rent' ? 'Trống' : 'Có thể ở ghép'}
                 </span>
               </div>
               
               <div className="space-y-1 text-sm text-gray-600 mb-3">
                 <p className="font-medium text-gray-900 truncate">{room.buildingName || 'Tòa nhà'}</p>
                 <p className="text-xs text-gray-500 truncate">
-                  {room.address ? `${room.address.street}, ${room.address.ward}, ${room.address.city}` : 'Địa chỉ không xác định'}
+                  {room.address ? `${room.address.street || ''}, ${room.address.ward || ''}, ${room.address.city || ''}` : 'Địa chỉ không xác định'}
                 </p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span>{room.area}m²</span>
+                  <span>{room.area ?? '-'}m²</span>
                 </div>
               </div>
               
               <div className="flex items-center justify-between">
                 <span className="text-lg font-bold text-teal-600">
-                  {formatPrice(room.price)}đ/tháng
+                  {formatPrice(room.price ?? 0)}đ/tháng
                 </span>
                 <span className="text-xs text-gray-500">
-                  {room.currentOccupants}/{room.maxOccupancy} người
-                  {user?.role === 'user' && room.currentOccupants < room.maxOccupancy && (
-                    <span className="ml-1 text-blue-600 font-medium">({room.maxOccupancy - room.currentOccupants} chỗ trống)</span>
+                  {(room.currentOccupants ?? 0)}/{room.maxOccupancy ?? 0} người
+                  {postType !== 'rent' && (room.maxOccupancy ?? 0) > (room.currentOccupants ?? 0) && (
+                    <span className="ml-1 text-blue-600 font-medium">({(room.maxOccupancy ?? 0) - (room.currentOccupants ?? 0)} chỗ trống)</span>
                   )}
                 </span>
               </div>
