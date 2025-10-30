@@ -5,12 +5,28 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getUserRooms, UserRoom } from '@/services/rooms';
 import { getUserRentalRequests } from '@/services/rentalRequests';
 import Link from 'next/link';
+import { createReview } from '@/services/reviews';
+import { useToast } from '@/contexts/ToastContext';
+import { extractApiErrorMessage } from '@/utils/api';
+import { uploadFiles } from '@/utils/upload';
 
 const MyRoomsPage = () => {
   const { user, isLoading } = useAuth();
   const [rooms, setRooms] = useState<UserRoom[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ratings, setRatings] = useState<Record<number, number>>({});
+  const [reviews, setReviews] = useState<Record<number, string>>({});
+  const [anonymousMap, setAnonymousMap] = useState<Record<number, boolean>>({});
+  const [mediaMap, setMediaMap] = useState<Record<number, string[]>>({});
+  const [uploaderVersionMap, setUploaderVersionMap] = useState<Record<number, number>>({});
+  const [landlordRatings, setLandlordRatings] = useState<Record<number, number>>({});
+  const [landlordReviews, setLandlordReviews] = useState<Record<number, string>>({});
+  const [landlordAnonymousMap, setLandlordAnonymousMap] = useState<Record<number, boolean>>({});
+  const [landlordMediaMap, setLandlordMediaMap] = useState<Record<number, string[]>>({});
+  const [landlordUploaderVersionMap, setLandlordUploaderVersionMap] = useState<Record<number, number>>({});
+  const [reviewTargetMap, setReviewTargetMap] = useState<Record<number, 'ROOM' | 'USER'>>({});
+  const { showError, showSuccess } = useToast();
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -216,6 +232,261 @@ const MyRoomsPage = () => {
                       Xem hợp đồng
                     </Link>
                   </div>
+
+                  {/* Đánh giá (gộp) */}
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-sm font-semibold text-gray-900">Đánh giá</h4>
+                        <select
+                          className="text-sm border rounded-md px-2 py-1"
+                          value={reviewTargetMap[room.roomId] || 'ROOM'}
+                          onChange={(e) => setReviewTargetMap(prev => ({ ...prev, [room.roomId]: e.target.value as 'ROOM' | 'USER' }))}
+                        >
+                          <option value="ROOM">Phòng</option>
+                          <option value="USER">Chủ trọ</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-1" aria-label="Chọn số sao">
+                        {[1,2,3,4,5].map((star) => {
+                          const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                          const currentRating = isUser ? (landlordRatings[room.landlordInfo.landlordId] || 0) : (ratings[room.roomId] || 0);
+                          const active = currentRating >= star;
+                          return (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => {
+                                if (isUser) {
+                                  setLandlordRatings(prev => ({ ...prev, [room.landlordInfo.landlordId]: star }));
+                                } else {
+                                  setRatings(prev => ({ ...prev, [room.roomId]: star }));
+                                }
+                              }}
+                              className={`p-1 transition-colors ${active ? 'text-yellow-400' : 'text-gray-300 hover:text-gray-400'}`}
+                              aria-pressed={active}
+                              aria-label={`${star} sao`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                                <path d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.347l5.518.442c.499.04.701.663.321.988l-4.204 3.57a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.562.562 0 00-.586 0l-4.725 2.885a.562.562 0 01-.84-.61l1.285-5.385a.563.563 0 00-.182-.557l-4.204-3.57a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.347l2.125-5.111z" />
+                              </svg>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div>
+                      {(() => {
+                        const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                        const textId = isUser ? `review-landlord-${room.landlordInfo.landlordId}` : `review-${room.roomId}`;
+                        const value = isUser ? (landlordReviews[room.landlordInfo.landlordId] || '') : (reviews[room.roomId] || '');
+                        return (
+                          <>
+                            <label htmlFor={textId} className="sr-only">Nhận xét</label>
+                            <textarea
+                              id={textId}
+                              value={value}
+                              onChange={(e) => {
+                                if (isUser) {
+                                  setLandlordReviews(prev => ({ ...prev, [room.landlordInfo.landlordId]: e.target.value }));
+                                } else {
+                                  setReviews(prev => ({ ...prev, [room.roomId]: e.target.value }));
+                                }
+                              }}
+                              placeholder={isUser ? 'Chia sẻ về chủ trọ (tùy chọn)' : 'Chia sẻ về phòng (tùy chọn)'}
+                              className="w-full rounded-md border border-gray-200 focus:border-blue-500 focus:ring-blue-500 text-sm p-2 min-h-[80px]"
+                            />
+                            <div className="mt-2">
+                              <input
+                                key={
+                                  (isUser
+                                    ? `landlord-uploader-${room.landlordInfo.landlordId}-${landlordUploaderVersionMap[room.landlordInfo.landlordId] || 0}`
+                                    : `room-uploader-${room.roomId}-${uploaderVersionMap[room.roomId] || 0}`)
+                                }
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={async (e) => {
+                                  const files = Array.from(e.target.files || []);
+                                  if (files.length === 0) return;
+                                  try {
+                                    const uploaded = await uploadFiles(files);
+                                    if (isUser) {
+                                      const k = room.landlordInfo.landlordId;
+                                      setLandlordMediaMap(prev => ({ ...prev, [k]: [ ...(prev[k] || []), ...uploaded ] }));
+                                    } else {
+                                      setMediaMap(prev => ({ ...prev, [room.roomId]: [ ...(prev[room.roomId] || []), ...uploaded ] }));
+                                    }
+                                    showSuccess('Đã tải ảnh', 'Ảnh đã được tải lên.');
+                                  } catch (err: any) {
+                                    const msg = extractApiErrorMessage(err);
+                                    showError('Tải ảnh thất bại', msg);
+                                  } finally {
+                                    e.currentTarget.value = '';
+                                  }
+                                }}
+                                className="block text-sm text-gray-600"
+                              />
+                              {isUser ? (
+                                Boolean(landlordMediaMap[room.landlordInfo.landlordId]?.length) && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {(landlordMediaMap[room.landlordInfo.landlordId] || []).map((url, idx) => (
+                                      <div key={idx} className="relative w-14 h-14 border rounded overflow-hidden">
+                                        <img src={url} alt="media" className="w-full h-full object-cover" />
+                                        <button
+                                          type="button"
+                                          onClick={() => setLandlordMediaMap(prev => ({
+                                            ...prev,
+                                            [room.landlordInfo.landlordId]: (prev[room.landlordInfo.landlordId] || []).filter((_, i) => i !== idx),
+                                          }))}
+                                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                                          aria-label="Xóa ảnh"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )
+                              ) : (
+                                Boolean(mediaMap[room.roomId]?.length) && (
+                                  <div className="mt-2 flex flex-wrap gap-2">
+                                    {(mediaMap[room.roomId] || []).map((url, idx) => (
+                                      <div key={idx} className="relative w-14 h-14 border rounded overflow-hidden">
+                                        <img src={url} alt="media" className="w-full h-full object-cover" />
+                                        <button
+                                          type="button"
+                                          onClick={() => setMediaMap(prev => ({
+                                            ...prev,
+                                            [room.roomId]: (prev[room.roomId] || []).filter((_, i) => i !== idx),
+                                          }))}
+                                          className="absolute -top-2 -right-2 bg-red-600 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center"
+                                          aria-label="Xóa ảnh"
+                                        >
+                                          ×
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )
+                              )}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-4">
+                      {(() => {
+                        const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                        const checked = isUser ? !!landlordAnonymousMap[room.landlordInfo.landlordId] : !!anonymousMap[room.roomId];
+                        return (
+                          <label className="inline-flex items-center text-sm text-gray-600 select-none">
+                            <input
+                              type="checkbox"
+                              className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              checked={checked}
+                              onChange={(e) => {
+                                if (isUser) {
+                                  setLandlordAnonymousMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: e.target.checked }));
+                                } else {
+                                  setAnonymousMap(prev => ({ ...prev, [room.roomId]: e.target.checked }));
+                                }
+                              }}
+                            />
+                            Ẩn danh khi hiển thị
+                          </label>
+                        );
+                      })()}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                            if (isUser) {
+                              setLandlordRatings(prev => ({ ...prev, [room.landlordInfo.landlordId]: 0 }));
+                              setLandlordReviews(prev => ({ ...prev, [room.landlordInfo.landlordId]: '' }));
+                              setLandlordAnonymousMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: false }));
+                              setLandlordMediaMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: [] }));
+                            } else {
+                              setRatings(prev => ({ ...prev, [room.roomId]: 0 }));
+                              setReviews(prev => ({ ...prev, [room.roomId]: '' }));
+                              setAnonymousMap(prev => ({ ...prev, [room.roomId]: false }));
+                              setMediaMap(prev => ({ ...prev, [room.roomId]: [] }));
+                            }
+                          }}
+                          className="px-3 py-1 text-xs text-gray-600 hover:text-gray-700"
+                        >
+                          Xóa
+                        </button>
+                        <button
+                          type="button"
+                          disabled={(() => {
+                            const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                            const rating = isUser ? landlordRatings[room.landlordInfo.landlordId] : ratings[room.roomId];
+                            return !rating;
+                          })()}
+                          className={`px-3 py-1 text-xs rounded-lg transition-colors ${(() => {
+                            const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                            const rating = isUser ? landlordRatings[room.landlordInfo.landlordId] : ratings[room.roomId];
+                            return rating ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-200 text-gray-500 cursor-not-allowed';
+                          })()}`}
+                          onClick={async () => {
+                            try {
+                              if (!user) return;
+                              const isUser = (reviewTargetMap[room.roomId] || 'ROOM') === 'USER';
+                              const payload = isUser ? {
+                                writerId: Number((user as any).userId ?? (user as any).id),
+                                targetType: 'USER' as const,
+                                targetId: Number(room.landlordInfo.landlordId),
+                                contractId: Number(room.contractId),
+                                rating: Number(landlordRatings[room.landlordInfo.landlordId]),
+                                content: (landlordReviews[room.landlordInfo.landlordId] || '').trim() || undefined,
+                                isAnonymous: !!landlordAnonymousMap[room.landlordInfo.landlordId],
+                                media: landlordMediaMap[room.landlordInfo.landlordId] || [],
+                              } : {
+                                writerId: Number((user as any).userId ?? (user as any).id),
+                                targetType: 'ROOM' as const,
+                                targetId: Number(room.roomId),
+                                contractId: Number(room.contractId),
+                                rating: Number(ratings[room.roomId]),
+                                content: (reviews[room.roomId] || '').trim() || undefined,
+                                isAnonymous: !!anonymousMap[room.roomId],
+                                media: mediaMap[room.roomId] || [],
+                              };
+                              await createReview(payload);
+                              showSuccess('Đã gửi đánh giá', 'Cảm ơn bạn đã chia sẻ trải nghiệm.');
+                              if (isUser) {
+                                setLandlordRatings(prev => ({ ...prev, [room.landlordInfo.landlordId]: 0 }));
+                                setLandlordReviews(prev => ({ ...prev, [room.landlordInfo.landlordId]: '' }));
+                                setLandlordAnonymousMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: false }));
+                                setLandlordMediaMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: [] }));
+                                setLandlordUploaderVersionMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: (prev[room.landlordInfo.landlordId] || 0) + 1 }));
+                                // Đồng thời dọn luôn media phía phòng (tránh còn ảnh cũ nếu người dùng chuyển dropdown)
+                                setMediaMap(prev => ({ ...prev, [room.roomId]: [] }));
+                                setUploaderVersionMap(prev => ({ ...prev, [room.roomId]: (prev[room.roomId] || 0) + 1 }));
+                              } else {
+                                setRatings(prev => ({ ...prev, [room.roomId]: 0 }));
+                                setReviews(prev => ({ ...prev, [room.roomId]: '' }));
+                                setAnonymousMap(prev => ({ ...prev, [room.roomId]: false }));
+                                setMediaMap(prev => ({ ...prev, [room.roomId]: [] }));
+                                setUploaderVersionMap(prev => ({ ...prev, [room.roomId]: (prev[room.roomId] || 0) + 1 }));
+                                // Dọn media phía chủ trọ phòng trường hợp người dùng đã từng chọn USER
+                                setLandlordMediaMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: [] }));
+                                setLandlordUploaderVersionMap(prev => ({ ...prev, [room.landlordInfo.landlordId]: (prev[room.landlordInfo.landlordId] || 0) + 1 }));
+                              }
+                            } catch (err: any) {
+                              const msg = extractApiErrorMessage(err);
+                              showError('Không thể gửi đánh giá', msg);
+                            }
+                          }}
+                        >
+                          Gửi đánh giá
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  
                 </div>
               </div>
             ))}

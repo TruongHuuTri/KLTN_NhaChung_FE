@@ -431,7 +431,7 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
             <>
               <Row label="Loại phòng:" value={translateRoomType(roomData?.category)} />
               
-              <Row label="Cách chia tiền điện nước:" value={translateShareMethod(roomData?.shareMethod)} />
+              {/* Bỏ hiển thị cách chia tiền điện nước theo yêu cầu */}
             </>
           )}
         </div>
