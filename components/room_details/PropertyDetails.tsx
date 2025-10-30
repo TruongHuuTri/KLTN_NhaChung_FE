@@ -8,6 +8,9 @@ import { Post } from "../../types/Post";
 import { getRoomById } from "../../services/rooms";
 import RentalRequestForm from "../rental/RentalRequestForm";
 import RoomSharingRequestForm from "../room_sharing/RoomSharingRequestForm";
+import { getUserById } from "@/services/user";
+import { getMyProfile as getUserProfileApi } from "@/services/userProfiles";
+import { apiGet } from "@/utils/api";
 
 interface PropertyDetailsProps {
   postData: Post | null;
@@ -34,6 +37,21 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
     
     fetchRoomData();
   }, [postData]);
+
+  // --- BEGIN: custom fetch - chỉ lấy 3 trường thông tin cá nhân
+  const [infoUser, setInfoUser] = useState<any>();
+  const [infoProfile, setInfoProfile] = useState<any>();
+  const [infoVerification, setInfoVerification] = useState<any>();
+
+  useEffect(() => {
+    if (postType === 'roommate' && postData?.userId) {
+      getUserById(postData.userId).then(setInfoUser).catch(() => setInfoUser(undefined));
+      apiGet('user-profiles/' + postData.userId).then(setInfoProfile).catch(() => setInfoProfile(undefined));
+      apiGet(`users/${postData.userId}/verification`).then(setInfoVerification).catch(() => setInfoVerification(undefined));
+    }
+  }, [postData, postType]);
+// --- END: custom fetch
+
   const Row = ({ label, value }: { label: string; value?: string | number | null }) => (
     <div className="flex justify-between">
       <span className="text-gray-600">{label}</span>
@@ -172,6 +190,28 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
       'flexible': 'Không quá khắt khe',
     };
     return map[t] || t;
+  };
+
+  const translateOccupation = (occupation?: string) => {
+    if (!occupation) return undefined;
+    const map: Record<string, string> = {
+      'office_worker': 'Nhân viên văn phòng',
+      'student': 'Sinh viên',
+      'freelancer': 'Freelancer',
+      'worker': 'Công nhân',
+      'teacher': 'Giáo viên',
+      'engineer': 'Kỹ sư',
+      'doctor': 'Bác sĩ',
+      'doctor_nurse': 'Cán bộ ngành Y',
+      'driver': 'Tài xế',
+      'business': 'Kinh doanh',
+      'it': 'IT',
+      'designer': 'Thiết kế',
+      'retired': 'Đã nghỉ hưu',
+      'unemployed': 'Thất nghiệp',
+      'other': 'Khác',
+    };
+    return map[occupation] || occupation;
   };
 
   const rentCategory: string | undefined = postType === 'rent' ? roomData?.category : undefined;
@@ -440,24 +480,13 @@ export default function PropertyDetails({ postData, postType }: PropertyDetailsP
 
 
       {/* Thông Tin Cá Nhân (chỉ cho roommate) */}
-      {postType === 'roommate' && postData?.personalInfo && (
+      {postType === 'roommate' && postData?.userId && (
         <div className="mb-6">
           <h4 className="text-base font-semibold text-gray-800 mb-3">Thông Tin Cá Nhân</h4>
           <div className="border-t border-gray-200 pt-3 space-y-2">
-            <Row label="Họ và tên:" value={postData.personalInfo.fullName} />
-            {postData.personalInfo.age && (
-              <Row label="Tuổi:" value={`${postData.personalInfo.age} tuổi`} />
-            )}
-            <Row label="Giới tính:" value={translateGender(postData.personalInfo.gender)} />
-            <Row label="Nghề nghiệp:" value={postData.personalInfo.occupation} />
-            {Array.isArray(postData.personalInfo.hobbies) && postData.personalInfo.hobbies.length > 0 && (
-              <Row label="Sở thích:" value={postData.personalInfo.hobbies.join(', ')} />
-            )}
-            {Array.isArray(postData.personalInfo.habits) && postData.personalInfo.habits.length > 0 && (
-              <Row label="Thói quen:" value={postData.personalInfo.habits.join(', ')} />
-            )}
-            <Row label="Thói quen sinh hoạt:" value={translateLifestyle(postData.personalInfo.lifestyle)} />
-            <Row label="Mức độ sạch sẽ:" value={translateCleanliness(postData.personalInfo.cleanliness)} />
+            <Row label="Họ và tên:" value={infoUser?.name ?? 'Chưa có thông tin'} />
+            <Row label="Giới tính:" value={translateGender(infoVerification?.gender ?? infoVerification?.verification?.gender)} />
+            <Row label="Nghề nghiệp:" value={translateOccupation(infoProfile?.occupation) ?? 'Chưa có thông tin'} />
           </div>
         </div>
       )}
