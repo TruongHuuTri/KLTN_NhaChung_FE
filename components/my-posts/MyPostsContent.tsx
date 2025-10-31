@@ -330,17 +330,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
           </div>
         </div>
 
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-purple-600 text-sm font-medium">Lượt xem</p>
-              <p className="text-3xl font-bold text-purple-700">0</p>
-            </div>
-            <div className="w-12 h-12 bg-purple-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👁️</span>
-            </div>
-          </div>
-        </div>
+        {/* Lượt xem đã được loại bỏ theo yêu cầu */}
       </div>
 
       {/* Main Content */}
@@ -453,7 +443,6 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
 
                       <div className="flex items-center gap-4 text-sm text-gray-500">
                         <span>📅 Đăng ngày: {formatDate(post.createdAt)}</span>
-                        <span>👁️ {post.views} lượt xem</span>
                       </div>
                     </div>
 
