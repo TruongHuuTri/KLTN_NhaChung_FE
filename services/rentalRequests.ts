@@ -68,6 +68,31 @@ export async function getUserContracts(): Promise<any[]> {
 }
 
 /**
+ * Lấy danh sách hợp đồng của CHỦ NHÀ (landlord)
+ */
+export interface LandlordContractSummary {
+  contractId: number;
+  landlordId: number;
+  roomId: number;
+  contractType?: 'single' | 'shared';
+  status: string;
+  startDate: string;
+  endDate: string;
+  monthlyRent: number;
+  deposit: number;
+  tenants?: Array<{ tenantId: number; status: string; monthlyRent?: number }>;
+  roomInfo?: { roomNumber?: string; currentOccupancy?: number };
+}
+
+export async function getLandlordContracts(): Promise<LandlordContractSummary[]> {
+  return apiGet("landlord/contracts");
+}
+
+export async function getLandlordContractById(id: number): Promise<LandlordContractSummary> {
+  return apiGet(`landlord/contracts/${id}`);
+}
+
+/**
  * Lấy chi tiết hợp đồng
  */
 export async function getUserContract(contractId: number): Promise<{

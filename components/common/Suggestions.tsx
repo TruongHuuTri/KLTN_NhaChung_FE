@@ -36,17 +36,20 @@ export default function Suggestions() {
           }
         } catch {}
 
-        const response = await searchPosts({});
+        const response = await searchPosts({ status: 'active' as any });
         const allPosts = Array.isArray(response)
           ? response
           : Array.isArray(response?.posts)
           ? response.posts
           : [];
 
+        // Bảo đảm chỉ lấy bài active nếu BE không áp dụng filter
+        const onlyActive = allPosts.filter((p: any) => (p?.status || '').toLowerCase() === 'active');
+
         // Fetch room data for all posts first
         const roomDataMap: Record<string, any> = {};
         await Promise.all(
-          allPosts
+          onlyActive
             .filter(post => post.roomId)
             .map(async (post: any) => {
               try {
@@ -59,7 +62,7 @@ export default function Suggestions() {
         );
 
         // Filter posts based on room visibility logic
-        const visibilityResults = checkMultiplePostsVisibility(allPosts, roomDataMap);
+        const visibilityResults = checkMultiplePostsVisibility(onlyActive, roomDataMap);
         const visiblePosts = visibilityResults
           .filter(result => result.shouldShow)
           .map(result => result.post);

@@ -28,7 +28,7 @@ import { useAuth } from "../../contexts/AuthContext";
           if (!apiData || apiData.length === 0) {
             try {
               const searchMod = await import("../../services/posts");
-              const searchRes = await searchMod.searchPosts({ postType: 'roommate' });
+              const searchRes = await searchMod.searchPosts({ postType: 'roommate', status: 'active' as any });
               apiData = Array.isArray((searchRes as any)?.posts)
                 ? (searchRes as any).posts
                 : Array.isArray(searchRes)
@@ -49,7 +49,9 @@ import { useAuth } from "../../contexts/AuthContext";
                 : [];
               apiData = allList.filter((p: any) => {
                 const t = (p?.postType || '').toLowerCase();
-                return t === 'roommate' || t === 'tim-o-ghep';
+                const isRoommate = t === 'roommate' || t === 'tim-o-ghep';
+                const isActive = (p?.status || '').toLowerCase() === 'active';
+                return isRoommate && isActive;
               });
             } catch {}
           }

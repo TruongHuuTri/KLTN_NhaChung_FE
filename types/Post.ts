@@ -153,6 +153,7 @@ export interface PostSearchParams {
   gender?: string;
   ageRange?: [number, number];
   location?: string;
+  status?: PostStatus;
   page?: number;
   limit?: number;
 }

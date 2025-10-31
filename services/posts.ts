@@ -48,6 +48,7 @@ export async function searchPosts(params: PostSearchParams = {}): Promise<PostLi
   if (params.gender) searchParams.append('gender', params.gender);
   if (params.ageRange) searchParams.append('ageRange', params.ageRange.join(','));
   if (params.location) searchParams.append('location', params.location);
+  if (params.status) searchParams.append('status', params.status);
   if (params.page) searchParams.append('page', params.page.toString());
   if (params.limit) searchParams.append('limit', params.limit.toString());
   

@@ -272,7 +272,10 @@ export default function PostFormUnified({ postType, selectedRoom, onBack, onSucc
       
       const result = await createPost(cleanPayload);
       
-      showSuccess("Thành công", "Đăng bài thành công!");
+      const statusText = (result as any)?.status === 'active' 
+        ? 'Bài đăng đã được duyệt và hiển thị.' 
+        : 'Bài đăng đã gửi và đang chờ admin duyệt.';
+      showSuccess("Thành công", statusText);
       
       // Phát tín hiệu toàn cục để các trang/listen reload
       try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('posts:changed')); } catch {}
