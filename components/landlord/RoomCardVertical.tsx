@@ -1,6 +1,7 @@
 "use client";
 
 import { Room } from "@/types/Room";
+import { FaRulerCombined, FaBed, FaShower, FaUsers } from "react-icons/fa";
 
 export default function RoomCardVertical({
   room,
@@ -44,15 +45,29 @@ export default function RoomCardVertical({
           <span className={`text-xs px-2 py-1 rounded-full ${room.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{room.isActive ? 'Hoạt động' : 'Tạm dừng'}</span>
         </div>
         <div className="text-sm text-gray-600 flex flex-wrap gap-3 mb-3">
-          <span>📐 {room.area || 'N/A'}m²</span>
+          <span className="flex items-center gap-1">
+            <FaRulerCombined className="text-gray-500" />
+            {room.area || 'N/A'}m²
+          </span>
           {/* Chỉ hiển thị phòng ngủ/phòng tắm cho chung cư và nhà nguyên căn */}
           {room.category !== 'phong-tro' && (
             <>
-              <span>🛏️ {room.bedrooms ?? room.chungCuInfo?.bedrooms ?? room.nhaNguyenCanInfo?.bedrooms ?? 'N/A'}</span>
-              <span>🚿 {room.bathrooms ?? room.chungCuInfo?.bathrooms ?? room.nhaNguyenCanInfo?.bathrooms ?? 'N/A'}</span>
+              <span className="flex items-center gap-1">
+                <FaBed className="text-gray-500" />
+                {room.bedrooms ?? room.chungCuInfo?.bedrooms ?? room.nhaNguyenCanInfo?.bedrooms ?? 'N/A'}
+              </span>
+              <span className="flex items-center gap-1">
+                <FaShower className="text-gray-500" />
+                {room.bathrooms ?? room.chungCuInfo?.bathrooms ?? room.nhaNguyenCanInfo?.bathrooms ?? 'N/A'}
+              </span>
             </>
           )}
-          {room.canShare && <span className="text-blue-600">👥 Ở ghép</span>}
+          {room.canShare && (
+            <span className="text-blue-600 flex items-center gap-1">
+              <FaUsers className="text-blue-500" />
+              Ở ghép
+            </span>
+          )}
         </div>
         {room.description && (
           <p className="text-sm text-gray-500 line-clamp-2">{room.description}</p>

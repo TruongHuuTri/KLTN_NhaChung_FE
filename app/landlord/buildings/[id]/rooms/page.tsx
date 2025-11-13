@@ -7,6 +7,7 @@ import Footer from "@/components/common/Footer";
 import { getRooms, createRoom, deleteRoom, softDeleteRoom, getRoomTenant } from "@/services/rooms";
 import { getBuildingById } from "@/services/buildings";
 import { getPostsByRoom, deletePost } from "@/services/posts";
+import { FaUser } from "react-icons/fa";
 import { Room, RoomListParams, CreateRoomPayload } from "@/types/Room";
 import { Building } from "@/types/Building";
 import { extractApiErrorMessage } from "@/utils/api";
@@ -349,7 +350,9 @@ export default function BuildingRoomsPage() {
                       {tenantInfo?.tenant?.avatarUrl ? (
                         <img src={tenantInfo.tenant.avatarUrl} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gray-200 grid place-items-center text-gray-500">👤</div>
+                        <div className="w-12 h-12 rounded-full bg-gray-200 grid place-items-center text-gray-500">
+                          <FaUser />
+                        </div>
                       )}
                       <div>
                         <div className="text-base font-semibold text-gray-900">{tenantInfo?.tenant?.fullName || '—'}</div>

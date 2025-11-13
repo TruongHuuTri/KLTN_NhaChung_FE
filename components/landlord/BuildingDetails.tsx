@@ -3,6 +3,7 @@
 import { Building } from "@/types/Building";
 import { Room } from "@/types/Room";
 import { addressService } from "@/services/address";
+import { FaMapMarkerAlt, FaHome } from "react-icons/fa";
 
 export default function BuildingDetails({ 
   building, 
@@ -29,9 +30,15 @@ export default function BuildingDetails({
         </div>
         {/* Thông tin dưới */}
         <div className="text-gray-700 space-y-2">
-          <div>📍 {addressService.formatAddressForDisplay(building.address as any)}</div>
+          <div className="flex items-center gap-2">
+            <FaMapMarkerAlt className="text-gray-500" />
+            {addressService.formatAddressForDisplay(building.address as any)}
+          </div>
           <div className="flex gap-6 text-sm">
-            <span>🏠 {rooms && rooms.length > 0 ? rooms.length : building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}</span>
+            <span className="flex items-center gap-1">
+              <FaHome className="text-gray-500" />
+              {rooms && rooms.length > 0 ? rooms.length : building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}
+            </span>
           </div>
         </div>
 

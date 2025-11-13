@@ -2,6 +2,7 @@
 
 import { Building } from "@/types/Building";
 import { addressService } from "@/services/address";
+import { FaMapMarkerAlt, FaHome, FaCalendarAlt, FaSync } from "react-icons/fa";
 
 function formatDate(dateString: string) {
   const date = new Date(dateString);
@@ -97,11 +98,14 @@ export default function BuildingCard({
 
               <div className="flex flex-wrap items-center gap-6 text-sm text-gray-600 mb-3">
                 <span className="flex items-center gap-1">
-                  📍 {addressService.formatAddressForDisplay(building.address as any)}
+                  <FaMapMarkerAlt className="text-gray-500" />
+                  {addressService.formatAddressForDisplay(building.address as any)}
                 </span>
                 <span className="flex items-center gap-6">
                   <span className="flex items-center gap-1">
-                    🏠 {actualRoomCount !== undefined ? actualRoomCount : building.totalRooms} {building.buildingType === 'nha-nguyen-can' ? 'căn' : 'phòng'}
+                    <FaHome className="text-gray-500" />
+                    {actualRoomCount !== undefined ? actualRoomCount : building.totalRooms}{" "}
+                    {building.buildingType === "nha-nguyen-can" ? "căn" : "phòng"}
                   </span>
                 </span>
               </div>
@@ -111,8 +115,14 @@ export default function BuildingCard({
               )}
 
               <div className="flex items-center gap-4 text-sm text-gray-500">
-                <span>📅 Tạo ngày: {formatDate(building.createdAt)}</span>
-                <span>🔄 Cập nhật: {formatDate(overrideUpdatedAt || building.updatedAt)}</span>
+                <span className="flex items-center gap-1">
+                  <FaCalendarAlt className="text-gray-500" />
+                  Tạo ngày: {formatDate(building.createdAt)}
+                </span>
+                <span className="flex items-center gap-1">
+                  <FaSync className="text-gray-500" />
+                  Cập nhật: {formatDate(overrideUpdatedAt || building.updatedAt)}
+                </span>
               </div>
             </div>
 

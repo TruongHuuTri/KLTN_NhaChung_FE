@@ -152,9 +152,9 @@ export function getStatusFromFaceMatch(result: FaceMatchResult): 'approved' | 'p
  */
 export function getStatusMessage(result: FaceMatchResult): string {
   if (result.similarity >= 50) {
-    return `✅ Face Match: ${result.similarity}% (High) - AUTO APPROVED`;
+    return `Face Match: ${result.similarity}% (High) - AUTO APPROVED`;
   } else {
-    return `⚠️ Face Match: ${result.similarity}% (Low) - PENDING`;
+    return `Face Match: ${result.similarity}% (Low) - PENDING`;
   }
 }
 

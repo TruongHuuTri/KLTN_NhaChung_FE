@@ -8,7 +8,7 @@ import { getReviewsByTarget } from "@/services/reviews";
 import { User } from "@/types/User";
 import Footer from "@/components/common/Footer";
 import Link from "next/link";
-import { FaEnvelope, FaPhone, FaClock, FaFileAlt, FaCheckCircle, FaArrowLeft, FaStar } from "react-icons/fa";
+import { FaEnvelope, FaPhone, FaClock, FaFileAlt, FaCheckCircle, FaArrowLeft, FaStar, FaHome, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 
 export default function UserPublicProfilePage() {
   const params = useParams();
@@ -197,8 +197,18 @@ export default function UserPublicProfilePage() {
                   )}
                 </div>
                 
-                <p className="text-white/90 text-lg mb-4">
-                  {user.role === 'landlord' ? '🏠 Chủ nhà' : '👤 Người dùng'}
+                <p className="text-white/90 text-lg mb-4 flex items-center gap-2">
+                  {user.role === 'landlord' ? (
+                    <>
+                      <FaHome className="text-white" />
+                      Chủ nhà
+                    </>
+                  ) : (
+                    <>
+                      <FaUser className="text-white" />
+                      Người dùng
+                    </>
+                  )}
                 </p>
 
                 <div className="flex flex-wrap gap-4 text-white/90">
@@ -293,8 +303,9 @@ export default function UserPublicProfilePage() {
                             </p>
                           )}
                           {post.address && (
-                            <p className="text-gray-600 text-sm mt-2 line-clamp-1">
-                              📍 {post.address}
+                            <p className="text-gray-600 text-sm mt-2 line-clamp-1 flex items-center gap-2">
+                              <FaMapMarkerAlt className="text-gray-500" />
+                              {post.address}
                             </p>
                           )}
                         </div>

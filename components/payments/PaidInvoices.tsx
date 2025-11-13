@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { getPaidInvoices, PaidInvoice, formatCurrency } from "@/services/payments";
+import { FaCheckCircle } from "react-icons/fa";
 
 export default function PaidInvoices() {
   const [invoices, setInvoices] = useState<PaidInvoice[]>([]);
@@ -129,8 +130,9 @@ export default function PaidInvoices() {
                     <h3 className="text-lg font-semibold text-gray-900">
                       Hóa đơn #{invoice.invoiceId}
                     </h3>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      ✅ Đã thanh toán
+                    <span className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      <FaCheckCircle className="h-3.5 w-3.5" />
+                      Đã thanh toán
                     </span>
                   </div>
                   

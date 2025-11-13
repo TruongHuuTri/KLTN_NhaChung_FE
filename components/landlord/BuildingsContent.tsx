@@ -7,6 +7,7 @@ import { Room } from "../../types/Room";
 import { addressService } from "../../services/address";
 import { getRooms } from "../../services/rooms";
 import BuildingCard from "./BuildingCard";
+import { FaBuilding, FaCheckCircle, FaHome } from "react-icons/fa";
 
 interface BuildingsContentProps {
   buildings: Building[];
@@ -131,7 +132,7 @@ export default function BuildingsContent({
               <p className="text-3xl font-bold text-blue-700">{buildings.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🏢</span>
+              <FaBuilding className="text-2xl text-blue-700" />
             </div>
           </div>
         </div>
@@ -145,7 +146,7 @@ export default function BuildingsContent({
               </p>
             </div>
             <div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">✅</span>
+              <FaCheckCircle className="text-2xl text-green-700" />
             </div>
           </div>
         </div>
@@ -159,7 +160,7 @@ export default function BuildingsContent({
               </p>
             </div>
             <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🏠</span>
+              <FaHome className="text-2xl text-amber-600" />
             </div>
           </div>
         </div>
@@ -211,7 +212,7 @@ export default function BuildingsContent({
           {buildings.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-gray-400 text-2xl">🏢</span>
+                <FaBuilding className="text-gray-400 text-2xl" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {searchQuery ? "Không tìm thấy dãy nào" : "Chưa có dãy nào"}

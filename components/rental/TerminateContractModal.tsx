@@ -55,7 +55,11 @@ export default function TerminateContractModal({
           {/* Warning */}
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
             <p className="text-sm text-yellow-800">
-              <strong>⚠️ Lưu ý:</strong> Hành động này không thể hoàn tác. Phòng sẽ được giải phóng và bài đăng sẽ được kích hoạt lại.
+              <span className="inline-flex items-center gap-2 font-semibold text-yellow-900">
+                <FaExclamationTriangle className="h-4 w-4" />
+                Lưu ý:
+              </span>{" "}
+              Hành động này không thể hoàn tác. Phòng sẽ được giải phóng và bài đăng sẽ được kích hoạt lại.
             </p>
           </div>
 

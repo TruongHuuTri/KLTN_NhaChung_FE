@@ -80,8 +80,9 @@ export interface LandlordContractSummary {
   endDate: string;
   monthlyRent: number;
   deposit: number;
+  tenantName?: string;
   tenants?: Array<{ tenantId: number; status: string; monthlyRent?: number }>;
-  roomInfo?: { roomNumber?: string; currentOccupancy?: number };
+  roomInfo?: { roomNumber?: string; currentOccupancy?: number; buildingName?: string };
 }
 
 export async function getLandlordContracts(): Promise<LandlordContractSummary[]> {

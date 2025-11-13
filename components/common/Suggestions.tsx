@@ -6,6 +6,7 @@ import { searchPosts } from "../../services/posts";
 import { getRoomById } from "../../services/rooms";
 import { searchPostToUnified, shuffleArray } from "@/types/MixedPosts";
 import PostCard from "@/components/common/PostCard";
+import { FaHome } from "react-icons/fa";
 import { getMyProfile, UserProfile } from "@/services/userProfiles";
 import { rankPosts, PostRankingOptions } from "../../services/postRanking";
 import { checkMultiplePostsVisibility } from "@/utils/roomVisibility";
@@ -167,7 +168,7 @@ export default function Suggestions() {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-gray-400 text-2xl">🏠</span>
+                  <FaHome className="text-gray-400 text-2xl" />
                 </div>
                 <p className="text-gray-600">Không có gợi ý nào</p>
               </div>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '../../../contexts/AuthContext';
 import VerificationModal from '../../../components/profile/VerificationModal';
 import { VerificationData } from '../../../types/User';
+import { FaCheckCircle, FaRegFileAlt } from 'react-icons/fa';
 
 export default function LandlordVerificationPage() {
   const router = useRouter();
@@ -80,10 +81,10 @@ export default function LandlordVerificationPage() {
         localStorage.removeItem("registrationData");
       }
       
-      alert('✅ Đã hoàn tất đăng ký chủ nhà! Vui lòng đăng nhập.');
+      alert('Đã hoàn tất đăng ký chủ nhà! Vui lòng đăng nhập.');
       router.push('/login');
     } catch (error) {
-      alert('❌ Có lỗi xảy ra khi lưu giấy phép kinh doanh. Vui lòng thử lại.');
+      alert('Có lỗi xảy ra khi lưu giấy phép kinh doanh. Vui lòng thử lại.');
     }
   };
 
@@ -121,7 +122,10 @@ export default function LandlordVerificationPage() {
                 <div className="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-orange-400 transition-colors">
                   {licensePreview ? (
                     <div className="space-y-2">
-                      <p className="text-sm text-green-600 font-medium">✓ Đã tải lên</p>
+                      <p className="text-sm text-green-600 font-medium flex items-center justify-center gap-2">
+                        <FaCheckCircle className="h-4 w-4" />
+                        Đã tải lên
+                      </p>
                       <p className="text-xs text-gray-500">{licenseFile?.name}</p>
                       <button
                         onClick={() => {
@@ -135,7 +139,7 @@ export default function LandlordVerificationPage() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <span className="text-gray-400 text-2xl">📄</span>
+                      <FaRegFileAlt className="mx-auto text-gray-400 text-2xl" />
                       <p className="text-sm text-gray-600">Tải lên file PDF hoặc DOC</p>
                       <p className="text-xs text-gray-500">Tối đa 5MB</p>
                     </div>

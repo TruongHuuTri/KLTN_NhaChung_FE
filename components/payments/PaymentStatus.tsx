@@ -5,6 +5,14 @@ import { checkPaymentStatus, formatPaymentStatus } from "@/services/payments";
 import { PaymentStatus as PaymentStatusType } from "@/services/payments";
 import { useToast } from "@/contexts/ToastContext";
 import { ToastMessages } from "@/utils/toastMessages";
+import {
+  FaCheckCircle,
+  FaHourglassHalf,
+  FaTimesCircle,
+  FaBan,
+  FaQuestionCircle,
+  FaExclamationTriangle,
+} from "react-icons/fa";
 
 interface PaymentStatusProps {
   orderId: string;
@@ -55,11 +63,16 @@ export default function PaymentStatus({
 
   const getStatusIcon = (status: PaymentStatusType['status']) => {
     switch (status) {
-      case 'paid': return '✅';
-      case 'pending': return '⏳';
-      case 'failed': return '❌';
-      case 'cancelled': return '🚫';
-      default: return '❓';
+      case 'paid':
+        return <FaCheckCircle className="text-lg" />;
+      case 'pending':
+        return <FaHourglassHalf className="text-lg" />;
+      case 'failed':
+        return <FaTimesCircle className="text-lg" />;
+      case 'cancelled':
+        return <FaBan className="text-lg" />;
+      default:
+        return <FaQuestionCircle className="text-lg" />;
     }
   };
 
@@ -126,7 +139,7 @@ export default function PaymentStatus({
               {/* Status Badge */}
               <div className="text-center">
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border ${getStatusColor(status.status)}`}>
-                  <span className="text-lg">{getStatusIcon(status.status)}</span>
+                  {getStatusIcon(status.status)}
                   <span className="font-semibold">{formatPaymentStatus(status.status)}</span>
                 </div>
               </div>
@@ -170,7 +183,7 @@ export default function PaymentStatus({
               {status.status === 'paid' && (
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-green-600">🎉</span>
+                    <FaCheckCircle className="text-green-600" />
                     <h4 className="font-semibold text-green-900">Thanh toán thành công!</h4>
                   </div>
                   <p className="text-sm text-green-800">
@@ -183,7 +196,7 @@ export default function PaymentStatus({
               {status.status === 'failed' && (
                 <div className="bg-red-50 p-4 rounded-lg border border-red-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-red-600">⚠️</span>
+                    <FaExclamationTriangle className="text-red-600" />
                     <h4 className="font-semibold text-red-900">Thanh toán thất bại</h4>
                   </div>
                   <p className="text-sm text-red-800">
@@ -196,7 +209,7 @@ export default function PaymentStatus({
               {status.status === 'pending' && (
                 <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <span className="text-yellow-600">⏳</span>
+                    <FaHourglassHalf className="text-yellow-600" />
                     <h4 className="font-semibold text-yellow-900">Đang chờ thanh toán</h4>
                   </div>
                   <p className="text-sm text-yellow-800">

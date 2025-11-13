@@ -33,7 +33,8 @@ import {
   FaReply,
   FaUserCircle,
   FaTrash,
-  FaEdit
+  FaEdit,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import VoteModal from "@/components/reviews/VoteModal";
 import EditForm from "@/components/reviews/EditForm";
@@ -230,7 +231,7 @@ export default function RoomDetailsPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <span className="text-red-500 text-2xl">⚠️</span>
+            <FaExclamationTriangle className="text-red-500 text-2xl" />
           </div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">Lỗi tải dữ liệu</h3>
           <p className="text-gray-500 mb-4">{error}</p>

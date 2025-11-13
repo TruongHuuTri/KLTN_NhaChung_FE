@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
+import { FaCheckCircle, FaTimesCircle, FaInfoCircle } from "react-icons/fa";
+import { FiAlertTriangle } from "react-icons/fi";
 
 interface NotificationModalProps {
   isOpen: boolean;
@@ -10,6 +12,13 @@ interface NotificationModalProps {
   message: string;
   duration?: number; // Auto close after duration (ms)
 }
+
+const iconMap = {
+  success: FaCheckCircle,
+  error: FaTimesCircle,
+  warning: FiAlertTriangle,
+  info: FaInfoCircle,
+};
 
 export default function NotificationModal({
   isOpen,
@@ -34,7 +43,6 @@ export default function NotificationModal({
     switch (type) {
       case "success":
         return {
-          icon: "✅",
           bgColor: "bg-green-50",
           borderColor: "border-green-200",
           iconBg: "bg-green-100",
@@ -44,7 +52,6 @@ export default function NotificationModal({
         };
       case "error":
         return {
-          icon: "❌",
           bgColor: "bg-red-50",
           borderColor: "border-red-200",
           iconBg: "bg-red-100",
@@ -54,7 +61,6 @@ export default function NotificationModal({
         };
       case "warning":
         return {
-          icon: "⚠️",
           bgColor: "bg-yellow-50",
           borderColor: "border-yellow-200",
           iconBg: "bg-yellow-100",
@@ -63,8 +69,8 @@ export default function NotificationModal({
           messageColor: "text-yellow-700"
         };
       case "info":
+      default:
         return {
-          icon: "ℹ️",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
           iconBg: "bg-blue-100",
@@ -76,6 +82,7 @@ export default function NotificationModal({
   };
 
   const styles = getTypeStyles();
+  const IconComponent = iconMap[type];
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
@@ -108,7 +115,7 @@ export default function NotificationModal({
             w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4
             ${styles.iconBg}
           `}>
-            <span className="text-2xl">{styles.icon}</span>
+            <IconComponent className={`text-2xl ${styles.iconColor}`} />
           </div>
 
           {/* Title */}
@@ -147,3 +154,4 @@ export default function NotificationModal({
     </div>
   );
 }
+

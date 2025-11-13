@@ -1,20 +1,21 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { FaCheckCircle } from "react-icons/fa";
 import StatsHeader from "./requests/StatsHeader";
-import { 
-  getLandlordRentalRequests, 
-  approveRentalRequest, 
+import {
+  getLandlordRentalRequests,
+  approveRentalRequest,
   rejectRentalRequest,
   formatRentalRequestStatus,
   getRentalRequestStatusColor,
-  LandlordRentalRequest 
+  LandlordRentalRequest
 } from "@/services/landlord";
-import { 
+import {
   getLandlordSharingRequests,
   approveSharingRequestByLandlord,
   rejectSharingRequestByLandlord,
-  RoomSharingRequest 
+  RoomSharingRequest
 } from "@/services/roomSharing";
 import { useToast } from "@/contexts/ToastContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -369,167 +370,190 @@ export default function LandlordRentalRequests() {
       />
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
         </div>
       ) : activeTab === 'rental' ? (
         requests.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="w-24 h-24 mx-auto mb-4 text-gray-300">
-            <svg fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-            </svg>
+          <div className="text-center py-12">
+            <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có yêu cầu thuê nào</h3>
+            <p className="text-gray-500">Khi người thuê gửi yêu cầu, thông tin sẽ hiển thị tại đây.</p>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có yêu cầu thuê nào</h3>
-          <p className="text-gray-500">Các yêu cầu thuê từ người dùng sẽ hiển thị tại đây</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {requests.map((request) => (
-            <div key={request.requestId} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Yêu cầu thuê
-                    </h3>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getRentalRequestStatusColor(request.status)}`}>
-                      {formatRentalRequestStatus(request.status)}
-                    </span>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+            {requests.map((request, index) => (
+              <div
+                key={request.requestId}
+                className={`px-6 py-5 ${index !== requests.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50 transition-colors`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {request.roomInfo?.roomNumber ? `Phòng ${request.roomInfo.roomNumber}` : `Phòng ${request.roomId}`}
+                      </h3>
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getRentalRequestStatusColor(request.status)}`}>
+                        {formatRentalRequestStatus(request.status)}
+                      </span>
+                    </div>
+                    {(request.roomInfo?.buildingName || request.roomInfo?.address) && (
+                      <p className="text-sm text-gray-600">
+                        {request.roomInfo?.buildingName && <span className="font-medium">{request.roomInfo.buildingName}</span>}
+                        {request.roomInfo?.buildingName && request.roomInfo?.address && <span> • </span>}
+                        {request.roomInfo?.address}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-600">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Người thuê:</span>
+                        <span className="font-medium text-gray-900">{request.tenantInfo?.fullName || `User ${request.tenantId}`}</span>
+                      </div>
+                      <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Ngày chuyển vào:</span>
+                        <span className="font-medium text-gray-900">{formatDate(request.requestedMoveInDate)}</span>
+                      </div>
+                      <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Thời hạn thuê:</span>
+                        <span className="font-medium text-gray-900">{request.requestedDuration} tháng</span>
+                      </div>
+                    </div>
                   </div>
-                  
-                  <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
-                    <div>
-                      <p><strong>Phòng:</strong> {request.roomInfo?.roomNumber || request.roomId}</p>
-                      {request.roomInfo?.roomType && (
-                        <p><strong>Loại phòng:</strong> {formatRoomType(request.roomInfo.roomType)}</p>
-                      )}
-                      <p><strong>Người thuê:</strong> {request.tenantInfo?.fullName || `User ${request.tenantId}`}</p>
-                    </div>
-                    <div>
-                      <p><strong>Ngày chuyển vào:</strong> {formatDate(request.requestedMoveInDate)}</p>
-                      <p><strong>Thời hạn:</strong> {request.requestedDuration} tháng</p>
-                    </div>
-                    <div>
-                      <p><strong>Ngày gửi:</strong> {formatDate(request.createdAt)}</p>
-                      {(request.roomInfo?.buildingName || request.roomInfo?.address) && (
-                        <p><strong>Địa chỉ:</strong> {(request.roomInfo?.buildingName ? `${request.roomInfo.buildingName} • ` : '') + (request.roomInfo?.address || '')}</p>
-                      )}
-                      {request.respondedAt && (
-                        <p><strong>Ngày phản hồi:</strong> {formatDate(request.respondedAt)}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {request.message && (
-                    <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
-                      <span className="font-medium text-blue-900">Lời nhắn: </span>
-                      <span className="text-blue-800">{request.message}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-3 ml-4">
                   <button
                     onClick={() => handleViewDetail(request)}
-                    className="px-4 py-2 text-sm text-teal-600 hover:text-teal-700 font-medium border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
+                    className="px-4 py-2 text-sm font-medium text-teal-600 border border-teal-200 rounded-lg hover:bg-teal-50 transition-colors"
                   >
                     Xem chi tiết
                   </button>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )
-      ) : (
-        // Room sharing requests
-        sharingRequests.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-24 h-24 mx-auto mb-4 text-gray-300">
-              <svg fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có yêu cầu ở ghép nào</h3>
-            <p className="text-gray-500">Các yêu cầu ở ghép từ người dùng sẽ hiển thị tại đây</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {sharingRequests.map((request) => (
-              <div key={request.requestId} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Yêu cầu ở ghép
-                      </h3>
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium ${getSharingStatusColor(request.status)}`}>
-                        {getSharingStatusText(request.status)}
-                      </span>
-                    </div>
-                    
-                    <div className="grid md:grid-cols-3 gap-4 text-sm text-gray-600">
-                    <div>
-                      <p><strong>Phòng:</strong> {(request as any).roomNumber || request.roomId}</p>
-                      {(request as any).roomCategory && (
-                        <p><strong>Loại phòng:</strong> {formatRoomType((request as any).roomCategory)}</p>
-                      )}
-                      {(request as any).senderName && (
-                        <p><strong>Người gửi:</strong> {(request as any).senderName}</p>
-                      )}
-                    </div>
-                      <div>
-                      <p><strong>Ngày dọn vào:</strong> {formatDate(request.requestedMoveInDate)}</p>
-                        <p><strong>Thời hạn:</strong> {request.requestedDuration} tháng</p>
-                      </div>
-                      <div>
-                        <p><strong>Ngày gửi:</strong> {formatDate(request.createdAt)}</p>
-                      {((request as any).buildingName || (request as any).address) && (
-                        <p><strong>Địa chỉ:</strong> {((request as any).buildingName ? `${(request as any).buildingName} • ` : '') + ((request as any).address || '')}</p>
-                      )}
-                      {/* Ẩn hiển thị Hợp đồng theo yêu cầu */}
-                      </div>
-                    </div>
 
-                    {request.message && (
-                      <div className="mt-3 p-2 bg-blue-50 rounded text-sm">
-                        <span className="font-medium text-blue-900">Lời nhắn: </span>
-                        <span className="text-blue-800">{request.message}</span>
-                      </div>
-                    )}
+                {request.message && (
+                  <div className="mt-4 rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+                    <span className="font-semibold text-blue-900">Lời nhắn:</span> {request.message}
                   </div>
+                )}
 
-                  <div className="flex items-center gap-3 ml-4">
-                    {request.status === 'pending_landlord_approval' && (
-                      <>
-                        <button
-                          onClick={() => handleRejectSharing(request.requestId)}
-                          disabled={processingRequests.has(request.requestId)}
-                          className="px-4 py-2 text-sm text-red-600 hover:text-red-700 font-medium border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
-                        >
-                          Từ chối
-                        </button>
-                        <button
-                          onClick={() => handleApproveSharing(request.requestId)}
-                          disabled={processingRequests.has(request.requestId)}
-                          className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          {processingRequests.has(request.requestId) ? 'Đang xử lý...' : 'Duyệt'}
-                        </button>
-                      </>
-                    )}
-                    {request.status === 'approved' && request.contractId && (
-                      <span className="text-sm text-green-600 font-medium">
-                        ✅ Đã tạo hợp đồng
-                      </span>
-                    )}
-                  </div>
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4 text-sm text-gray-500">
+                  <span>Gửi lúc: {formatDate(request.createdAt)}</span>
+                  {request.respondedAt && <span>Phản hồi: {formatDate(request.respondedAt)}</span>}
                 </div>
               </div>
             ))}
           </div>
         )
+      ) : sharingRequests.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có yêu cầu ở ghép nào</h3>
+          <p className="text-gray-500">Khi có người dùng xin ở ghép, yêu cầu sẽ được hiển thị tại đây.</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+          {sharingRequests.map((request, index) => (
+            <div
+              key={request.requestId}
+              className={`px-6 py-5 ${index !== sharingRequests.length - 1 ? "border-b border-gray-200" : ""} hover:bg-gray-50 transition-colors`}
+            >
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center gap-3">
+                  <h3 className="text-lg font-semibold text-gray-900">Yêu cầu ở ghép</h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${getSharingStatusColor(request.status)}`}>
+                    {getSharingStatusText(request.status)}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-600">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Phòng:</span>
+                    <span className="font-medium text-gray-900">{(request as any).roomNumber || request.roomId}</span>
+                  </div>
+                  {(request as any).roomCategory && (
+                    <>
+                      <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Loại phòng:</span>
+                        <span className="font-medium text-gray-900">{formatRoomType((request as any).roomCategory)}</span>
+                      </div>
+                    </>
+                  )}
+                  {(request as any).senderName && (
+                    <>
+                      <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-500">Người gửi:</span>
+                        <span className="font-medium text-gray-900">{(request as any).senderName}</span>
+                      </div>
+                    </>
+                  )}
+                  <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Ngày dọn vào:</span>
+                    <span className="font-medium text-gray-900">{formatDate(request.requestedMoveInDate)}</span>
+                  </div>
+                  <div className="hidden sm:block h-4 w-px bg-gray-200" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500">Thời hạn:</span>
+                    <span className="font-medium text-gray-900">{request.requestedDuration} tháng</span>
+                  </div>
+                </div>
+
+                {((request as any).buildingName || (request as any).address) && (
+                  <p className="text-sm text-gray-600">
+                    {(request as any).buildingName && <span className="font-medium">{(request as any).buildingName}</span>}
+                    {(request as any).buildingName && (request as any).address && <span> • </span>}
+                    {(request as any).address}
+                  </p>
+                )}
+
+                {request.message && (
+                  <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800">
+                    <span className="font-semibold text-blue-900">Lời nhắn:</span> {request.message}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                <div className="text-sm text-gray-500">Gửi lúc: {formatDate(request.createdAt)}</div>
+                <div className="flex flex-wrap items-center gap-3">
+                  {request.status === "approved" && request.contractId ? (
+                    <span className="flex items-center gap-2 text-sm font-medium text-green-600">
+                      <FaCheckCircle className="h-4 w-4" />
+                      Hợp đồng đã được tạo
+                    </span>
+                  ) : null}
+                  {request.status === "pending_landlord_approval" && (
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => handleRejectSharing(request.requestId)}
+                        disabled={processingRequests.has(request.requestId)}
+                        className="px-4 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50"
+                      >
+                        Từ chối
+                      </button>
+                      <button
+                        onClick={() => handleApproveSharing(request.requestId)}
+                        disabled={processingRequests.has(request.requestId)}
+                        className="px-4 py-2 text-sm font-medium text-white bg-teal-600 rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {processingRequests.has(request.requestId) ? "Đang xử lý..." : "Duyệt"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       {/* Detail Modal */}

@@ -17,6 +17,7 @@ import PaymentQR from "./PaymentQR";
 import { useToast } from "@/contexts/ToastContext";
 import { ToastMessages } from "@/utils/toastMessages";
 import { useAuth } from "@/contexts/AuthContext";
+import { FaExclamationTriangle } from "react-icons/fa";
 
 // Extended invoice type để bao gồm cả pending và paid
 type ExtendedInvoice = (Invoice | (PaidInvoice & { status: 'paid'; dueDate?: string; isQrGenerated?: boolean; canPay?: boolean })) & {
@@ -319,7 +320,10 @@ export default function PendingInvoices() {
 
                   {invoice.status !== 'paid' && invoice.dueDate && isInvoiceOverdue(invoice as Invoice) && (
                     <div className="mb-3 p-3 bg-red-50 rounded-lg border border-red-200 text-sm">
-                      <span className="font-medium text-red-900">⚠️ Quá hạn thanh toán: </span>
+                      <span className="font-medium text-red-900 inline-flex items-center gap-2">
+                        <FaExclamationTriangle className="h-4 w-4" />
+                        Quá hạn thanh toán:
+                      </span>
                       <span className="text-red-800">
                         Hóa đơn này đã quá hạn {calculateOverdueDays(invoice as Invoice)} ngày. 
                         Vui lòng thanh toán sớm để tránh phí phạt.

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import NewPostFlow from '@/components/post/NewPostFlow';
 import Footer from '@/components/common/Footer';
+import { FaHome, FaUsers, FaBolt } from 'react-icons/fa';
 
 export default function PostPage() {
   const { user, isLoading } = useAuth();
@@ -102,7 +103,7 @@ export default function PostPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">🏠</span>
+                <FaHome className="text-2xl text-blue-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Cho thuê phòng trọ</h3>
               <p className="text-gray-600">
@@ -112,7 +113,7 @@ export default function PostPage() {
 
             <div className="text-center">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">👥</span>
+                <FaUsers className="text-2xl text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Tìm ở ghép</h3>
               <p className="text-gray-600">
@@ -122,7 +123,7 @@ export default function PostPage() {
 
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl">⚡</span>
+                <FaBolt className="text-2xl text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 mb-2">Tự động duyệt</h3>
               <p className="text-gray-600">

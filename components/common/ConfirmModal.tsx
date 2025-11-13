@@ -1,5 +1,7 @@
 "use client";
 
+import { FaExclamationTriangle, FaInfoCircle } from "react-icons/fa";
+
 interface ConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -11,6 +13,12 @@ interface ConfirmModalProps {
   type?: "danger" | "warning" | "info";
   loading?: boolean;
 }
+
+const iconMap = {
+  danger: FaExclamationTriangle,
+  warning: FaExclamationTriangle,
+  info: FaInfoCircle,
+};
 
 export default function ConfirmModal({
   isOpen,
@@ -29,7 +37,6 @@ export default function ConfirmModal({
     switch (type) {
       case "danger":
         return {
-          icon: "⚠️",
           bgColor: "bg-red-50",
           borderColor: "border-red-200",
           iconBg: "bg-red-100",
@@ -41,7 +48,6 @@ export default function ConfirmModal({
         };
       case "warning":
         return {
-          icon: "⚠️",
           bgColor: "bg-yellow-50",
           borderColor: "border-yellow-200",
           iconBg: "bg-yellow-100",
@@ -52,8 +58,8 @@ export default function ConfirmModal({
           confirmText: "text-white"
         };
       case "info":
+      default:
         return {
-          icon: "ℹ️",
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
           iconBg: "bg-blue-100",
@@ -67,6 +73,7 @@ export default function ConfirmModal({
   };
 
   const styles = getTypeStyles();
+  const IconComponent = iconMap[type];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
@@ -89,7 +96,7 @@ export default function ConfirmModal({
             w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4
             ${styles.iconBg}
           `}>
-            <span className="text-2xl">{styles.icon}</span>
+            <IconComponent className={`text-2xl ${styles.iconColor}`} />
           </div>
 
           {/* Title */}
@@ -140,3 +147,4 @@ export default function ConfirmModal({
     </div>
   );
 }
+

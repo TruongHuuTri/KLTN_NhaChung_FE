@@ -220,7 +220,7 @@ export default function Header() {
                         onClick={() => setIsUserMenuOpen(false)}
                       >
                         <FaClipboardCheck className="text-gray-400 w-4" />
-                        <span>Đăng ký thuê</span>
+                        <span>Đăng ký thuê và thanh toán</span>
                       </Link>
                       
                       <Link

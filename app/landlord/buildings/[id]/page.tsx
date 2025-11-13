@@ -18,6 +18,7 @@ import { Room, CreateRoomPayload, RoomListParams } from "@/types/Room";
 import { extractApiErrorMessage } from "@/utils/api";
 import { useNotification } from "@/hooks/useNotification";
 import { useConfirm } from "@/hooks/useConfirm";
+import { FaUser } from "react-icons/fa";
 
 export default function BuildingDetailsPage() {
   const params = useParams();
@@ -426,7 +427,9 @@ export default function BuildingDetailsPage() {
                       {tenantInfo?.tenant?.avatarUrl ? (
                         <img src={tenantInfo.tenant.avatarUrl} className="w-12 h-12 rounded-full object-cover" />
                       ) : (
-                        <div className="w-12 h-12 rounded-full bg-gray-200 grid place-items-center text-gray-500">👤</div>
+                        <div className="w-12 h-12 rounded-full bg-gray-200 grid place-items-center text-gray-500">
+                          <FaUser />
+                        </div>
                       )}
                       <div>
                         <div className="text-base font-semibold text-gray-900">{tenantInfo?.tenant?.fullName || '—'}</div>

@@ -7,6 +7,8 @@ import { compareFaces, getStatusMessage, validateFaceMatchResult, createFaceMatc
 import { processOCRWithFPT } from "../../services/ocr";
 import { VERIFICATION_CONSTANTS } from "../../utils/verificationConstants";
 import NotificationToast from "../common/NotificationToast";
+import { FiAlertTriangle } from 'react-icons/fi';
+import { FaCheckCircle, FaInfoCircle, FaCamera, FaCloudUploadAlt } from 'react-icons/fa';
 
 interface VerificationModalProps {
   isOpen: boolean;
@@ -296,7 +298,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
             <div className="space-y-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-teal-600 text-2xl">📤</span>
+                  <FaCloudUploadAlt className="text-teal-600 text-2xl" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Tải lên ảnh CCCD/CMND
@@ -306,14 +308,14 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                 </p>
                 {!frontImage || !backImage ? (
                   <div className="inline-flex items-center space-x-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <span className="text-amber-600">⚠</span>
+                    <FiAlertTriangle className="text-amber-600" />
                     <span className="text-sm text-amber-700 font-medium">
                       Cần tải cả 2 mặt để bắt đầu xử lý
                     </span>
                   </div>
                 ) : (
                   <div className="inline-flex items-center space-x-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                    <span className="text-green-600">✓</span>
+                    <FaCheckCircle className="text-green-600" />
                     <span className="text-sm text-green-700 font-medium">
                       Đã tải đủ 2 mặt, đang xử lý...
                     </span>
@@ -336,7 +338,10 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                           className="w-full h-32 object-cover rounded-lg"
                         />
                         <div className="flex items-center justify-between relative z-10">
-                          <p className="text-sm text-green-600 font-medium">✓ Đã tải lên</p>
+                          <p className="text-sm text-green-600 font-medium flex items-center gap-2">
+                            <FaCheckCircle className="h-4 w-4" />
+                            Đã tải lên
+                          </p>
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -351,7 +356,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <span className="text-gray-400 text-2xl">📤</span>
+                        <FaCloudUploadAlt className="text-gray-400 text-2xl mx-auto" />
                         <p className="text-sm text-gray-600">Tải lên ảnh mặt trước</p>
                       </div>
                     )}
@@ -378,7 +383,10 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                           className="w-full h-32 object-cover rounded-lg"
                         />
                         <div className="flex items-center justify-between relative z-10">
-                          <p className="text-sm text-green-600 font-medium">✓ Đã tải lên</p>
+                          <p className="text-sm text-green-600 font-medium flex items-center gap-2">
+                            <FaCheckCircle className="h-4 w-4" />
+                            Đã tải lên
+                          </p>
                           <button
                             onClick={(e) => {
                               e.preventDefault();
@@ -393,7 +401,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <span className="text-gray-400 text-2xl">📤</span>
+                        <FaCloudUploadAlt className="text-gray-400 text-2xl mx-auto" />
                         <p className="text-sm text-gray-600">Tải lên ảnh mặt sau</p>
                       </div>
                     )}
@@ -462,7 +470,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
             <div className="space-y-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-blue-600 text-2xl">📷</span>
+                  <FaCamera className="text-blue-600 text-2xl" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Tải lên ảnh khuôn mặt
@@ -473,14 +481,17 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                 
                 <div className="space-y-3 mb-4">
                   <div className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-                    <span className="text-blue-600">ℹ</span>
+                    <FaInfoCircle className="text-blue-600" />
                     <span className="text-sm text-blue-700 font-medium">
                       Ảnh khuôn mặt sẽ được AI so sánh để xác thực danh tính
                     </span>
                   </div>
                   
                   <div className="text-sm text-gray-600 space-y-1">
-                    <p className="font-medium">📸 Hướng dẫn chụp ảnh tốt nhất:</p>
+                    <p className="font-medium flex items-center gap-2">
+                      <FaCamera className="text-blue-500" />
+                      Hướng dẫn chụp ảnh tốt nhất:
+                    </p>
                     <ul className="list-disc list-inside space-y-1 text-xs text-gray-500 ml-2">
                       <li>Chụp thẳng mặt, nhìn vào camera</li>
                       <li>Đảm bảo ánh sáng đủ, rõ nét</li>
@@ -506,7 +517,10 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                         />
                       </div>
                       <div className="flex items-center justify-between relative z-10">
-                        <p className="text-sm text-green-600 font-medium">✓ Đã tải lên</p>
+                        <p className="text-sm text-green-600 font-medium flex items-center gap-2">
+                          <FaCheckCircle className="h-4 w-4" />
+                          Đã tải lên
+                        </p>
                         <button
                           onClick={(e) => {
                             e.preventDefault();
@@ -521,7 +535,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <span className="text-gray-400 text-2xl">📷</span>
+                      <FaCamera className="text-gray-400 text-2xl mx-auto" />
                       <p className="text-sm text-gray-600">Tải lên ảnh khuôn mặt</p>
                       <p className="text-xs text-gray-500">Chụp ảnh selfie hoặc tải từ thư viện</p>
                     </div>
@@ -575,7 +589,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
             <div className="space-y-6">
               <div className="text-center">
                 <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <span className="text-green-600 text-2xl">✓</span>
+                  <FaCheckCircle className="text-green-600 text-2xl" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Kiểm tra thông tin
@@ -585,7 +599,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                 </p>
                 <div className="space-y-2">
                   <div className="inline-flex items-center space-x-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                    <span className="text-green-600">✓</span>
+                    <FaCheckCircle className="text-green-600" />
                     <span className="text-sm text-green-700 font-medium">
                       Đã đọc thành công thông tin từ ảnh CCCD/CMND
                     </span>
@@ -604,7 +618,11 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
                         : 'bg-amber-50 border-amber-200'
                     }`}>
                       <span className={faceMatchResult.similarity >= 50 ? 'text-green-600' : 'text-amber-600'}>
-                        {faceMatchResult.similarity >= 50 ? '✅' : '⚠️'}
+                        {faceMatchResult.similarity >= 50 ? (
+                          <FaCheckCircle className="h-4 w-4" />
+                        ) : (
+                          <FiAlertTriangle className="h-4 w-4" />
+                        )}
                       </span>
                       <span className={`text-sm font-medium ${
                         faceMatchResult.similarity >= 50 ? 'text-green-700' : 'text-amber-700'
@@ -621,7 +639,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
 
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
                 <div className="flex items-start space-x-3">
-                  <span className="text-amber-600 text-lg">⚠</span>
+                  <FiAlertTriangle className="text-amber-600 text-lg mt-1" />
                   <div>
                     <h4 className="font-medium text-amber-800 mb-1">Lưu ý quan trọng</h4>
                     <p className="text-sm text-amber-700">
@@ -733,7 +751,7 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
           {step === 'success' && (
             <div className="text-center py-8">
               <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-green-600 text-2xl">✓</span>
+                <FaCheckCircle className="text-green-600 text-2xl" />
               </div>
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
                 Xác thực thành công!

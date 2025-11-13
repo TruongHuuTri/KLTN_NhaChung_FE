@@ -305,7 +305,7 @@ export default function ContractView({ contractId }: ContractViewProps) {
                   <p><strong>Mã phòng:</strong> {contract.roomInfo.roomNumber}</p>
                 )}
                 {!(roomData?.chungCuInfo?.unitCode || roomData?.nhaNguyenCanInfo?.unitCode) && roomCategory !== 'phong-tro' && (
-                  <p><strong>Phòng:</strong> {contract.roomInfo.roomNumber}</p>
+                <p><strong>Phòng:</strong> {contract.roomInfo.roomNumber}</p>
                 )}
                 
                 {/* 2. Loại */}
@@ -477,7 +477,7 @@ export default function ContractView({ contractId }: ContractViewProps) {
                 </div>
                 <div className="space-y-2">
                   <p><strong>Email:</strong> {tenantInfo?.email || 'N/A'}</p>
-                  <p><strong>Trạng thái:</strong> {contract.tenants[0].status === 'active' ? 'Đang hoạt động' : 'Không hoạt động'}</p>
+                <p><strong>Trạng thái:</strong> {contract.tenants[0].status === 'active' ? 'Đang hoạt động' : 'Không hoạt động'}</p>
                 </div>
               </div>
             </div>

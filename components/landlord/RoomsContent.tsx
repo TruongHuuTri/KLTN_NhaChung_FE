@@ -5,6 +5,22 @@ import Pagination from "../common/Pagination";
 import { Room } from "../../types/Room";
 import { Building } from "../../types/Building";
 import { addressService } from "../../services/address";
+import {
+  FaHome,
+  FaCheckCircle,
+  FaUsers,
+  FaMoneyBillWave,
+  FaCompass,
+  FaFileAlt,
+  FaCalendarAlt,
+  FaSync,
+  FaMapMarkerAlt,
+  FaRulerCombined,
+  FaBed,
+  FaShower,
+  FaCouch,
+  FaBuilding
+} from "react-icons/fa";
 
 interface RoomsContentProps {
   rooms: Room[];
@@ -117,7 +133,7 @@ export default function RoomsContent({
               <p className="text-3xl font-bold text-blue-700">{rooms?.length || 0}</p>
             </div>
             <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">🏠</span>
+              <FaHome className="text-2xl text-blue-700" />
             </div>
           </div>
         </div>
@@ -131,7 +147,7 @@ export default function RoomsContent({
               </p>
             </div>
             <div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">✅</span>
+              <FaCheckCircle className="text-2xl text-green-700" />
             </div>
           </div>
         </div>
@@ -145,7 +161,7 @@ export default function RoomsContent({
               </p>
             </div>
             <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">👥</span>
+              <FaUsers className="text-2xl text-amber-600" />
             </div>
           </div>
         </div>
@@ -162,7 +178,7 @@ export default function RoomsContent({
               </p>
             </div>
             <div className="w-12 h-12 bg-purple-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">💰</span>
+              <FaMoneyBillWave className="text-2xl text-purple-700" />
             </div>
           </div>
         </div>
@@ -213,9 +229,10 @@ export default function RoomsContent({
               <button
                 type="button"
                 onClick={onRefresh}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
               >
-                🔄 Làm mới
+                <FaSync className="h-4 w-4" />
+                Làm mới
               </button>
               {searchQuery && (
                 <button
@@ -235,7 +252,7 @@ export default function RoomsContent({
           {rooms?.length === 0 ? (
             <div className="p-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <span className="text-gray-400 text-2xl">🏠</span>
+                <FaHome className="text-gray-400 text-2xl" />
               </div>
               <h3 className="text-lg font-medium text-gray-900 mb-2">
                 {searchQuery || selectedBuildingId ? "Không tìm thấy phòng nào" : "Chưa có phòng nào"}
@@ -293,37 +310,47 @@ export default function RoomsContent({
                         
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
                           <span className="flex items-center gap-1">
-                            🏢 {getBuildingName(room.buildingId)}
+                            <FaBuilding className="text-gray-500" />
+                            {getBuildingName(room.buildingId)}
                           </span>
                           <span className="flex items-center gap-1">
-                            📍 {formatAddress(room.address)}
+                            <FaMapMarkerAlt className="text-gray-500" />
+                            {formatAddress(room.address)}
                           </span>
                           <span className="flex items-center gap-1">
-                            📐 {room.area}m²
+                            <FaRulerCombined className="text-gray-500" />
+                            {room.area}m²
                           </span>
                           <span className="flex items-center gap-1">
-                            💰 {formatPrice(room.price)}đ/tháng
+                            <FaMoneyBillWave className="text-gray-500" />
+                            {formatPrice(room.price)}đ/tháng
                           </span>
                           <span className="flex items-center gap-1">
-                            🛏️ {room.bedrooms} phòng ngủ
+                            <FaBed className="text-gray-500" />
+                            {room.bedrooms} phòng ngủ
                           </span>
                           <span className="flex items-center gap-1">
-                            🚿 {room.bathrooms} phòng tắm
+                            <FaShower className="text-gray-500" />
+                            {room.bathrooms} phòng tắm
                           </span>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
                           <span className="flex items-center gap-1">
-                            🪑 {getFurnitureText(room.furniture)}
+                            <FaCouch className="text-gray-500" />
+                            {getFurnitureText(room.furniture)}
                           </span>
                           <span className="flex items-center gap-1">
-                            🧭 {getDirectionText(room.direction || '')}
+                            <FaCompass className="text-gray-500" />
+                            {getDirectionText(room.direction || '')}
                           </span>
                           <span className="flex items-center gap-1">
-                            📄 {getLegalStatusText(room.legalStatus || '')}
+                            <FaFileAlt className="text-gray-500" />
+                            {getLegalStatusText(room.legalStatus || '')}
                           </span>
                           <span className="flex items-center gap-1">
-                            👥 Tối đa {room.maxOccupancy} người
+                            <FaUsers className="text-gray-500" />
+                            Tối đa {room.maxOccupancy} người
                           </span>
                         </div>
 
@@ -334,8 +361,14 @@ export default function RoomsContent({
                         )}
 
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>📅 Tạo ngày: {formatDate(room.createdAt)}</span>
-                          <span>🔄 Cập nhật: {formatDate(room.updatedAt)}</span>
+                          <span className="flex items-center gap-1">
+                            <FaCalendarAlt className="text-gray-500" />
+                            Tạo ngày: {formatDate(room.createdAt)}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <FaSync className="text-gray-500" />
+                            Cập nhật: {formatDate(room.updatedAt)}
+                          </span>
                         </div>
                       </div>
 

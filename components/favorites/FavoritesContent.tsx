@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { addressService } from "../../services/address";
 import Pagination from "../common/Pagination";
+import { FaHeart, FaMapMarkerAlt, FaRulerCombined, FaMoneyBillWave, FaUser, FaPhone, FaCalendarAlt } from "react-icons/fa";
 
 interface Favorite {
   id: number;
@@ -145,7 +146,7 @@ export default function FavoritesContent({ favorites, onContact, onView, onRemov
         {paginatedFavorites.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-gray-400 text-2xl">❤️</span>
+              <FaHeart className="text-gray-400 text-2xl" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có yêu thích nào</h3>
             <p className="text-gray-500">Bắt đầu lưu các phòng trọ bạn quan tâm</p>
@@ -162,9 +163,9 @@ export default function FavoritesContent({ favorites, onContact, onView, onRemov
                 />
                 <button
                   onClick={() => onRemove(favorite.id)}
-                  className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors"
+                  className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-sm transition-colors flex items-center justify-center"
                 >
-                  <span className="text-red-500 text-lg">❤️</span>
+                  <FaHeart className="text-red-500 text-lg" />
                 </button>
               </div>
 
@@ -176,22 +177,38 @@ export default function FavoritesContent({ favorites, onContact, onView, onRemov
                 
                 <div className="space-y-2 text-sm text-gray-600 mb-4">
                   <div className="flex items-center gap-2">
-                    <span>
-                      📍 {typeof favorite.address === 'string'
+                    <span className="flex items-center gap-1">
+                      <FaMapMarkerAlt className="text-gray-500" />
+                      {typeof favorite.address === 'string'
                         ? favorite.address
                         : addressService.formatWardCity(favorite.address)}
                     </span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span>📐 {favorite.area}m²</span>
-                    <span>💰 {formatPrice(favorite.price)}đ/tháng</span>
+                    <span className="flex items-center gap-1">
+                      <FaRulerCombined className="text-gray-500" />
+                      {favorite.area}m²
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FaMoneyBillWave className="text-gray-500" />
+                      {formatPrice(favorite.price)}đ/tháng
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span>👤 {favorite.owner}</span>
-                    <span>📞 {favorite.phone}</span>
+                    <span className="flex items-center gap-1">
+                      <FaUser className="text-gray-500" />
+                      {favorite.owner}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <FaPhone className="text-gray-500" />
+                      {favorite.phone}
+                    </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span>📅 Lưu ngày: {formatDate(favorite.addedAt)}</span>
+                    <span className="flex items-center gap-1">
+                      <FaCalendarAlt className="text-gray-500" />
+                      Lưu ngày: {formatDate(favorite.addedAt)}
+                    </span>
                   </div>
                 </div>
 

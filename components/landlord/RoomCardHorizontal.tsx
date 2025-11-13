@@ -1,6 +1,7 @@
 "use client";
 
 import { Room } from "@/types/Room";
+import { FaRulerCombined, FaBed, FaShower, FaUsers } from "react-icons/fa";
 
 export default function RoomCardHorizontal({
   room,
@@ -50,15 +51,29 @@ export default function RoomCardHorizontal({
           
           {/* Thông tin phòng */}
           <div className="text-sm text-gray-600 flex flex-wrap gap-3 mb-2">
-            <span>📐 {room.area || 'N/A'}m²</span>
+            <span className="flex items-center gap-1">
+              <FaRulerCombined className="text-gray-500" />
+              {room.area || 'N/A'}m²
+            </span>
             {/* Chỉ hiển thị phòng ngủ/phòng tắm cho chung cư và nhà nguyên căn */}
             {room.category !== 'phong-tro' && (
               <>
-                <span>🛏️ {room.bedrooms ?? room.chungCuInfo?.bedrooms ?? room.nhaNguyenCanInfo?.bedrooms ?? 'N/A'}</span>
-                <span>🚿 {room.bathrooms ?? room.chungCuInfo?.bathrooms ?? room.nhaNguyenCanInfo?.bathrooms ?? 'N/A'}</span>
+                <span className="flex items-center gap-1">
+                  <FaBed className="text-gray-500" />
+                  {room.bedrooms ?? room.chungCuInfo?.bedrooms ?? room.nhaNguyenCanInfo?.bedrooms ?? 'N/A'}
+                </span>
+                <span className="flex items-center gap-1">
+                  <FaShower className="text-gray-500" />
+                  {room.bathrooms ?? room.chungCuInfo?.bathrooms ?? room.nhaNguyenCanInfo?.bathrooms ?? 'N/A'}
+                </span>
               </>
             )}
-            {room.canShare && <span className="text-blue-600">👥 Ở ghép</span>}
+            {room.canShare && (
+              <span className="text-blue-600 flex items-center gap-1">
+                <FaUsers className="text-blue-500" />
+                Ở ghép
+              </span>
+            )}
           </div>
           
           {/* Mô tả */}

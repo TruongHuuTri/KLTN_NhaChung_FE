@@ -3,6 +3,7 @@ import MediaPickerPanel, { LocalMediaItem } from '@/components/common/MediaPicke
 import AddressSelector from '@/components/common/AddressSelector';
 import { Address, addressService } from '@/services/address';
 import { AgeUtils } from '@/utils/ageUtils';
+import { FaExclamationTriangle } from 'react-icons/fa';
 
 // Address Modal Component
 function AddressModal({
@@ -225,8 +226,9 @@ export default function RoommateEditForm({ formData, onInputChange, onNumberChan
                   {AgeUtils.getAgeInfo(formData.dateOfBirth).ageText}
                 </span>
                 {!AgeUtils.isAdult(formData.dateOfBirth) && (
-                  <span className="text-red-500 ml-2">
-                    ⚠️ Phải đủ 18 tuổi
+                  <span className="text-red-500 ml-2 inline-flex items-center gap-2">
+                    <FaExclamationTriangle className="h-4 w-4" />
+                    Phải đủ 18 tuổi
                   </span>
                 )}
               </div>

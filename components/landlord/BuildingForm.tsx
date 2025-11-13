@@ -9,6 +9,7 @@ import MediaPickerPanel, { LocalMediaItem } from "../common/MediaPickerLocal";
 import AddressSelector from "../common/AddressSelector";
 import { addressService } from "../../services/address";
 import type { Address } from "../../services/address";
+import { FaMapMarkerAlt } from "react-icons/fa";
 
 function Modal({ open, onClose, onSave, children, title }: { open: boolean; onClose: () => void; onSave: () => void; children: React.ReactNode; title?: string }) {
   if (!open) return null;
@@ -20,7 +21,9 @@ function Modal({ open, onClose, onSave, children, title }: { open: boolean; onCl
         <div className="w-full max-w-3xl max-h-[85vh] overflow-auto bg-white rounded-2xl shadow-2xl border border-gray-100 ring-1 ring-black/5">
           <div className="flex items-center justify-between px-6 py-4 border-b bg-gradient-to-r from-teal-600 to-teal-500 text-white rounded-t-2xl">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/15">📍</span>
+              <span className="inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/15">
+                <FaMapMarkerAlt className="text-white" />
+              </span>
               <div className="font-semibold">{title || "Chọn địa chỉ"}</div>
             </div>
             <button

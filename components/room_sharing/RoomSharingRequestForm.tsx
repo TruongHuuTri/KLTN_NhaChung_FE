@@ -46,7 +46,7 @@ const RoomSharingRequestForm: React.FC<RoomSharingRequestFormProps> = ({
       await createRoomSharingRequest(roomId, { ...formData, postId });
       
       const successMessage = ToastMessages.success.create('Yêu cầu ở ghép');
-      showSuccess(successMessage.title, 'Đăng ký ở ghép thành công! Chờ User A duyệt.');
+      showSuccess(successMessage.title, 'Đăng ký ở ghép thành công! Chờ chủ nhà duyệt.');
       
       // Reset form
       setFormData({

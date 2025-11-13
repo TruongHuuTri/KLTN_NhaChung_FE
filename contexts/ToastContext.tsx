@@ -1,6 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import { FaCheckCircle, FaTimesCircle, FaInfoCircle } from "react-icons/fa";
+import { FiAlertTriangle } from "react-icons/fi";
 
 interface Toast {
   id: string;
@@ -22,6 +24,13 @@ interface ToastContextType {
 }
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
+
+const toastIconMap = {
+  success: FaCheckCircle,
+  error: FaTimesCircle,
+  warning: FiAlertTriangle,
+  info: FaInfoCircle,
+};
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -125,7 +134,6 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
           iconColor: "text-green-600",
           titleColor: "text-green-800",
           messageColor: "text-green-700",
-          icon: "✅"
         };
       case "error":
         return {
@@ -135,7 +143,6 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
           iconColor: "text-red-600",
           titleColor: "text-red-800",
           messageColor: "text-red-700",
-          icon: "❌"
         };
       case "warning":
         return {
@@ -145,9 +152,9 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
           iconColor: "text-yellow-600",
           titleColor: "text-yellow-800",
           messageColor: "text-yellow-700",
-          icon: "⚠️"
         };
       case "info":
+      default:
         return {
           bgColor: "bg-blue-50",
           borderColor: "border-blue-200",
@@ -155,12 +162,12 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
           iconColor: "text-blue-600",
           titleColor: "text-blue-800",
           messageColor: "text-blue-700",
-          icon: "ℹ️"
         };
     }
   };
 
   const styles = getToastStyles();
+  const IconComponent = toastIconMap[toast.type];
 
   return (
     <div className={`
@@ -170,9 +177,7 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
     `}>
       <div className="flex items-start gap-3">
         <div className={`flex-shrink-0 w-8 h-8 ${styles.iconBg} rounded-full flex items-center justify-center`}>
-          <span className={`text-lg ${styles.iconColor}`}>
-            {styles.icon}
-          </span>
+          <IconComponent className={`text-lg ${styles.iconColor}`} />
         </div>
         
         <div className="flex-1 min-w-0">
@@ -196,3 +201,4 @@ function ToastItem({ toast, onHide }: ToastItemProps) {
     </div>
   );
 }
+

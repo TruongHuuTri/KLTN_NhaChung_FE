@@ -8,6 +8,8 @@ import { VerificationData } from "../../types/User";
 import { getMyVerificationStatus } from "../../services/verification";
 import { useAuth } from "../../contexts/AuthContext";
 import { useToast } from "../../contexts/ToastContext";
+import { FiAlertTriangle } from 'react-icons/fi';
+import { FaHourglassHalf, FaTimesCircle } from 'react-icons/fa';
 
 interface AccountSettingsProps {
   isVerified?: boolean;
@@ -89,7 +91,7 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
             <div className="flex items-center justify-between p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <span className="text-blue-600 text-lg">⏳</span>
+                  <FaHourglassHalf className="text-blue-600 text-lg" />
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">Đang chờ duyệt</h4>
@@ -111,7 +113,7 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
             <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-red-100 rounded-lg">
-                  <span className="text-red-600 text-lg">✗</span>
+                  <FaTimesCircle className="text-red-600 text-lg" />
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">Xác thực bị từ chối</h4>
@@ -129,7 +131,7 @@ export default function AccountSettings({ isVerified = false, onVerificationComp
             <div className="flex items-center justify-between p-4 bg-amber-50 border border-amber-200 rounded-lg">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-amber-100 rounded-lg">
-                  <span className="text-amber-600 text-lg">⚠</span>
+                  <FiAlertTriangle className="text-amber-600 text-lg" />
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">Chưa xác thực danh tính</h4>

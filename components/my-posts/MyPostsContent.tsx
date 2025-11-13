@@ -7,6 +7,7 @@ import { Post } from "../../types/Post";
 import EditPostModal from "./EditPostModal";
 import { addressService } from "../../services/address";
 import { getRoomById } from "../../services/rooms";
+import { FaClipboardList, FaCheckCircle, FaClock, FaFileAlt, FaMapMarkerAlt, FaRulerCombined, FaMoneyBillWave, FaCalendarAlt } from "react-icons/fa";
 
 // Legacy interface để tương thích với mock data
 interface LegacyPost {
@@ -278,7 +279,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
               <p className="text-3xl font-bold text-blue-700">{posts.length}</p>
             </div>
             <div className="w-12 h-12 bg-blue-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">📋</span>
+              <FaClipboardList className="text-2xl text-blue-700" />
             </div>
           </div>
         </div>
@@ -290,7 +291,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
               <p className="text-3xl font-bold text-green-700">{tabCounts.active}</p>
             </div>
             <div className="w-12 h-12 bg-green-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">✅</span>
+              <FaCheckCircle className="text-2xl text-green-700" />
             </div>
           </div>
         </div>
@@ -302,7 +303,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
               <p className="text-3xl font-bold text-amber-700">{tabCounts.pending}</p>
             </div>
             <div className="w-12 h-12 bg-amber-200 rounded-lg flex items-center justify-center">
-              <span className="text-2xl">⏱️</span>
+              <FaClock className="text-2xl text-amber-600" />
             </div>
           </div>
         </div>
@@ -350,7 +351,7 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
         ) : paginatedPosts.length === 0 ? (
           <div className="p-12 text-center">
             <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <span className="text-gray-400 text-2xl">📄</span>
+              <FaFileAlt className="text-gray-400 text-2xl" />
             </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">Chưa có bài đăng nào</h3>
             <p className="text-gray-500">Bắt đầu đăng tin để quản lý phòng trọ của bạn</p>
@@ -378,18 +379,24 @@ export default function MyPostsContent({ posts, onEdit, onView, onDelete, onActi
                       
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
                         <span className="flex items-center gap-1">
-                          📍 {post.address}
+                          <FaMapMarkerAlt className="text-gray-500" />
+                          {post.address}
                         </span>
                         <span className="flex items-center gap-1">
-                          📐 {post.area}m²
+                          <FaRulerCombined className="text-gray-500" />
+                          {post.area}m²
                         </span>
                         <span className="flex items-center gap-1">
-                          💰 {formatPrice(post.price)}đ/tháng
+                          <FaMoneyBillWave className="text-gray-500" />
+                          {formatPrice(post.price)}đ/tháng
                         </span>
                       </div>
 
                       <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span>📅 Đăng ngày: {formatDate(post.createdAt)}</span>
+                        <span className="flex items-center gap-1">
+                          <FaCalendarAlt className="text-gray-500" />
+                          Đăng ngày: {formatDate(post.createdAt)}
+                        </span>
                       </div>
                     </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FaMapMarkerAlt } from "react-icons/fa";
 
 interface MapSectionProps {
   postData: any;
@@ -58,7 +59,10 @@ export default function MapSection({ postData, postType }: MapSectionProps) {
         {/* Address overlay */}
         {mapLoaded && (
           <div className="absolute top-2 left-2 bg-white bg-opacity-90 rounded-lg px-3 py-2 shadow-md max-w-xs">
-            <p className="text-xs text-gray-700 font-medium">📍 {address}</p>
+            <p className="text-xs text-gray-700 font-medium flex items-center gap-1">
+              <FaMapMarkerAlt className="text-teal-600" />
+              {address}
+            </p>
           </div>
         )}
         

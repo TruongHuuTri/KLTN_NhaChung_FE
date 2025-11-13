@@ -6,6 +6,7 @@ export interface DashboardSummaryResponse {
     active: number;
     expired: number;
     expiringSoon: number;
+    terminated?: number;
   };
   revenue: {
     totalPaid: number;
