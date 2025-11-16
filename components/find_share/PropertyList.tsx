@@ -1,35 +1,86 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import PostCard from "@/components/common/PostCard";
-import { searchNLP, searchPosts as searchPostsFallback, NlpSearchItem } from "@/services/nlpSearch";
-import { getRoomById } from "@/services/rooms";
-import { rentPostToUnified, roommatePostToUnified, shuffleArray, UnifiedPost, searchPostToUnified } from "@/types/MixedPosts";
-import { getMyProfile, UserProfile } from "@/services/userProfiles";
-import { getPosts, searchPosts } from "@/services/posts";
-import { rankPosts, PostRankingOptions } from "@/services/postRanking";
-import { useAuth } from "@/contexts/AuthContext";
-import { checkMultiplePostsVisibility } from "@/utils/roomVisibility";
-// nlpSearch (cũ) đã được giữ trong service để tương thích, nhưng component này sẽ dùng searchNLP mới
-import { extractApiErrorMessage } from "@/utils/api";
+import { UnifiedPost } from "@/types/MixedPosts";
 
 type SortKey = "random" | "newest" | "priceAsc" | "priceDesc" | "areaDesc" | "nearest";
 
 export default function RoomList() {
+  // PropertyList chỉ nhận kết quả từ SearchDetails, không tự search
   const [items, setItems] = useState<UnifiedPost[]>([]);
-  const [suggestions, setSuggestions] = useState<UnifiedPost[]>([]); // Lưu suggestions ban đầu
-  const suggestionsRef = useRef<UnifiedPost[]>([]); // Ref để track suggestions trong async
+  const [suggestions, setSuggestions] = useState<UnifiedPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string>("");
   const [sort, setSort] = useState<SortKey>("random");
-  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [activeBadges, setActiveBadges] = useState<string[]>([]);
   const [query, setQuery] = useState<string>("");
-  const { user } = useAuth();
 
   // pagination 4x4
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
+
+  // Helper function để extract badges từ query
+  const extractBadges = (queryValue: string): string[] => {
+    const badges: string[] = [];
+    if (queryValue.includes("triệu")) badges.push("Giá");
+    if (queryValue.match(/\b(m2|m²|m\^2)\b/i)) badges.push("Diện tích");
+    if (queryValue.includes("bao điện nước") || queryValue.includes("bao điện") || queryValue.includes("bao nước")) badges.push("Bao điện nước");
+    if (queryValue.includes("gần") || queryValue.includes("quận") || queryValue.includes("phường") || queryValue.includes("tại")) badges.push("Vị trí");
+    return badges;
+  };
+
+  // Lắng nghe kết quả search từ SearchDetails
+  useEffect(() => {
+    const handler = (ev: any) => {
+      const { query: searchQuery, items: searchItems, suggestions: searchSuggestions, error: searchError } = ev?.detail || {};
+      
+      setQuery(searchQuery || "");
+      setItems(searchItems || []);
+      setErr(searchError || "");
+      setLoading(false);
+      
+      // Lưu suggestions nếu có
+      if (searchSuggestions && searchSuggestions.length > 0) {
+        setSuggestions(searchSuggestions);
+      }
+      
+      // Update badges
+      if (searchQuery) {
+        setActiveBadges(extractBadges(searchQuery));
+      }
+      
+      setCurrentPage(1);
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('app:search-result' as any, handler as any);
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('app:search-result' as any, handler as any);
+      }
+    };
+  }, []);
+
+  // Lắng nghe event 'app:nlp-search' để set loading state (backward compatible)
+  useEffect(() => {
+    const handler = () => {
+      setLoading(true);
+      setErr("");
+    };
+    
+    if (typeof window !== 'undefined') {
+      window.addEventListener('app:nlp-search' as any, handler as any);
+    }
+    
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('app:nlp-search' as any, handler as any);
+      }
+    };
+  }, []);
 
   // Reload khi có bài đăng mới/đổi trạng thái
   useEffect(() => {
@@ -47,466 +98,15 @@ export default function RoomList() {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    let controller: AbortController | null = null;
-    (async () => {
-      try {
-        setLoading(true);
-        setErr("");
-
-        // Load profile nếu có và KHÔNG phải landlord
-        let currentProfile: UserProfile | null = null;
-        try {
-          if (user && (user as any)?.role !== 'landlord') {
-            const pf = await getMyProfile();
-            currentProfile = pf as any;
-            setProfile(currentProfile);
-          } else {
-            setProfile(null);
-          }
-        } catch {}
-
-        // Gọi unified search API để lấy tất cả posts
-        const url = new URL((typeof window !== 'undefined') ? window.location.href : 'http://localhost');
-        const q = url.searchParams.get('q') || "";
-        setQuery(q);
-
-        // Load suggestions song song nếu chưa có (để restore khi search không ra)
-        let suggestionsPromise: Promise<UnifiedPost[]> | null = null;
-        if (suggestionsRef.current.length === 0) {
-          suggestionsPromise = (async () => {
-            try {
-              const response = await searchPosts({ status: 'active' as any });
-              const allPosts = Array.isArray(response) ? response : Array.isArray(response?.posts) ? response.posts : [];
-              const onlyActive = allPosts.filter((p: any) => (p?.status || '').toLowerCase() === 'active');
-              const roomDataMap: Record<string, any> = {};
-              await Promise.all(onlyActive.filter(p => p.roomId).map(async (p: any) => {
-                try { roomDataMap[p.roomId] = await getRoomById(p.roomId); } catch {}
-              }));
-              const visibilityResults = checkMultiplePostsVisibility(onlyActive, roomDataMap);
-              const visiblePosts = visibilityResults.filter(r => r.shouldShow).map(r => r.post);
-              const unified = await Promise.all(shuffleArray(visiblePosts).slice(0, 24).map(async (post: any) => {
-                return searchPostToUnified(post, roomDataMap[post.roomId] || null);
-              }));
-              const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
-              const userCity = (user as any)?.address?.city || (user as any)?.city || '';
-              const rankingOptions: PostRankingOptions = {
-                userCity,
-                profileCity: currentProfile?.preferredCity,
-                selectedCity: selectedCityLS,
-                strictCityFilter: false
-              };
-            const { ranked } = rankPosts(unified, currentProfile, rankingOptions);
-            return ranked.slice(0, 24).map(({ _score, _price, _cityMatch, _cityScore, ...rest }) => rest as any);
-            } catch {
-              return [];
-            }
-          })();
-        }
-
-        let items: any[] = [];
-        if (q.trim()) {
-          try {
-            controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-            const data = await searchNLP(q, { signal: controller?.signal });
-            items = Array.isArray(data?.items) ? data.items : [];
-          } catch (e: any) {
-            // Fallback sang search/posts khi lỗi mạng/timeout
-            try {
-              // Lấy thêm tham số roommate/searcherGender từ URL nếu có
-              const curUrl = new URL((typeof window !== 'undefined') ? window.location.href : 'http://localhost');
-              const fallbackParams: Record<string, string> = { q };
-              const roommate = curUrl.searchParams.get('roommate') || '';
-              const searcherGender = curUrl.searchParams.get('searcherGender') || '';
-              if (roommate) fallbackParams.roommate = roommate;
-              if (searcherGender) fallbackParams.searcherGender = searcherGender;
-              const fb = await searchPostsFallback(fallbackParams);
-              // /api/search/posts trả { items, page, limit, total } (không có data wrapper)
-              items = Array.isArray((fb as any)?.items) ? (fb as any).items : [];
-            } catch (e2: any) {
-              const status = (e2 as any)?.status;
-              if (status === 400) setErr("Vui lòng nhập truy vấn để tìm kiếm.");
-              else setErr(extractApiErrorMessage(e2));
-              items = [];
-            }
-          }
-        } else {
-          // Chưa có truy vấn: dùng logic từ Suggestions (match profile) với limit cao hơn
-          try {
-            const response = await searchPosts({ status: 'active' as any });
-            const allPosts = Array.isArray(response)
-              ? response
-              : Array.isArray(response?.posts)
-              ? response.posts
-              : [];
-            
-            // Bảo đảm chỉ lấy bài active nếu BE không áp dụng filter
-            const onlyActive = allPosts.filter((p: any) => (p?.status || '').toLowerCase() === 'active');
-            
-            // Fetch room data for all posts first
-            const roomDataMap: Record<string, any> = {};
-            await Promise.all(
-              onlyActive
-                .filter(post => post.roomId)
-                .map(async (post: any) => {
-                  try {
-                    const roomData = await getRoomById(post.roomId);
-                    roomDataMap[post.roomId] = roomData;
-                  } catch (error) {
-                    // Room data không tải được, sẽ skip post này
-                  }
-                })
-            );
-            
-            // Filter posts based on room visibility logic
-            const visibilityResults = checkMultiplePostsVisibility(onlyActive, roomDataMap);
-            const visiblePosts = visibilityResults
-              .filter(result => result.shouldShow)
-              .map(result => result.post);
-            
-            // Convert to unified format (giống Suggestions)
-            const unified = await Promise.all(
-              shuffleArray(visiblePosts).slice(0, 24).map(async (post: any) => {
-                const roomData = roomDataMap[post.roomId] || null;
-                return searchPostToUnified(post, roomData);
-              })
-            );
-            
-            // Rank theo profile (giống Suggestions nhưng limit cao hơn)
-            const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
-            const userCity = (user as any)?.address?.city || (user as any)?.city || '';
-            
-            const rankingOptions: PostRankingOptions = {
-              userCity,
-              profileCity: currentProfile?.preferredCity,
-              selectedCity: selectedCityLS,
-              strictCityFilter: false // PropertyList: ưu tiên thành phố nhưng không loại bỏ
-            };
-            
-            const { ranked } = rankPosts(unified, currentProfile, rankingOptions);
-            const suggestedItems = ranked.slice(0, 24).map(({ _score, _price, _cityMatch, _cityScore, ...rest }) => rest as any);
-            // Lưu suggestions ban đầu nếu chưa có
-            if (suggestionsRef.current.length === 0) {
-              suggestionsRef.current = suggestedItems;
-              setSuggestions(suggestedItems);
-            }
-            items = suggestedItems;
-          } catch (e: any) {
-            items = [];
-          }
-        }
-        
-        // Xử lý kết quả từ search API
-        let unifiedPosts: UnifiedPost[] = [];
-        
-        // Nếu items đã là UnifiedPost (từ Suggestions logic), dùng trực tiếp
-        if (items.length > 0 && (items[0] as any)?.type) {
-          unifiedPosts = items as UnifiedPost[];
-        } else {
-          // Nếu items là raw posts (từ NLP/fallback), cần convert
-          const allPosts = items;
-          
-          // Fetch room data for all posts first
-          const roomDataMap: Record<string, any> = {};
-          await Promise.all(
-            allPosts
-              .filter((post: any) => post.roomId)
-              .map(async (post: any) => {
-                try {
-                  const roomData = await getRoomById(post.roomId);
-                  roomDataMap[post.roomId] = roomData;
-                } catch (error) {
-                  // Room data không tải được, sẽ skip post này
-                }
-              })
-          );
-
-          // Filter posts based on room visibility logic
-          const visibilityResults = checkMultiplePostsVisibility(allPosts, roomDataMap);
-          const visiblePosts = visibilityResults
-            .filter((result: any) => result.shouldShow)
-            .map((result: any) => result.post);
-
-          // Convert to unified format
-          unifiedPosts = visiblePosts.map((post: any) => {
-          // Map backend postType to frontend format
-          const mappedPostType = post.postType === 'cho-thue' ? 'rent' : 
-                                 post.postType === 'tim-o-ghep' ? 'roommate' : post.postType;
-          
-          // Get room data
-          const roomData = roomDataMap[post.roomId];
-          let price = 0;
-          let area = 0;
-          let location = 'Chưa xác định';
-          let address = undefined;
-          let bedrooms = undefined;
-          let bathrooms = undefined;
-          let images = post.images || [];
-          const distance = (post as NlpSearchItem)?.distance;
-          const score = (post as NlpSearchItem)?.score;
-          
-          if (roomData) {
-            price = roomData.price || 0;
-            area = roomData.area || 0;
-            location = roomData.address ? 
-              `${roomData.address.ward}, ${roomData.address.city}` : 
-              'Chưa xác định';
-            address = roomData.address;
-            images = roomData.images?.length > 0 ? roomData.images : (post.images || []);
-            
-            // Chỉ lấy bedrooms/bathrooms cho chung cư và nhà nguyên căn, không lấy cho phòng trọ
-            const roomType = roomData.roomType || post.category || '';
-            const isPhongTro = roomType === 'phong-tro' || post.category === 'phong-tro';
-            if (!isPhongTro) {
-              bedrooms = roomData.chungCuInfo?.bedrooms || roomData.nhaNguyenCanInfo?.bedrooms;
-              bathrooms = roomData.chungCuInfo?.bathrooms || roomData.nhaNguyenCanInfo?.bathrooms;
-            }
-          }
-          
-          // Convert new API format to UnifiedPost format
-          const finalCategory = post.category || mappedPostType;
-          return {
-            id: post.postId,
-            type: mappedPostType as 'rent' | 'roommate',
-            title: post.title || 'Không có tiêu đề',
-            description: post.description || 'Không có mô tả',
-            images: images,
-            price: price,
-            area: area,
-            location: location,
-            address: address,
-            category: finalCategory,
-            photoCount: images.length + (post.videos?.length || 0),
-            bedrooms: bedrooms,
-            bathrooms: bathrooms,
-            isVerified: false,
-            createdAt: post.createdAt,
-            originalData: { ...post, distance, score }
-          };
-          });
-        }
-        
-        // Nếu search không ra kết quả (có query nhưng unifiedPosts rỗng), dùng suggestions
-        if (q.trim() && unifiedPosts.length === 0) {
-          // Nếu suggestions chưa có, await suggestionsPromise
-          if (suggestionsRef.current.length === 0 && suggestionsPromise) {
-            try {
-              const loadedSuggestions = await suggestionsPromise;
-              if (loadedSuggestions.length > 0) {
-                suggestionsRef.current = loadedSuggestions;
-                setSuggestions(loadedSuggestions);
-                unifiedPosts = loadedSuggestions;
-              }
-            } catch {
-              // Ignore
-            }
-          } else if (suggestionsRef.current.length > 0) {
-            unifiedPosts = suggestionsRef.current;
-          }
-        }
-        
-        if (!cancelled) {
-          setItems(unifiedPosts);
-          setCurrentPage(1);
-          // badges tự suy luận đơn giản từ q
-          const badges: string[] = [];
-          if (q.includes("triệu")) badges.push("Giá");
-          if (q.match(/\b(m2|m²|m\^2)\b/i)) badges.push("Diện tích");
-          if (q.includes("bao điện nước") || q.includes("bao điện") || q.includes("bao nước")) badges.push("Bao điện nước");
-          if (q.includes("gần") || q.includes("quận") || q.includes("phường") || q.includes("tại")) badges.push("Vị trí");
-          setActiveBadges(badges);
-        }
-      } catch (e: any) {
-        if (!cancelled) setErr(e?.message || "Không tải được danh sách");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      try { controller?.abort(); } catch {}
-    };
-  }, []);
-
-  // Lắng nghe event từ SearchDetails
-  useEffect(() => {
-    const handler = (ev: any) => {
-      const value = ev?.detail?.q || "";
-      setQuery(value);
-      // Triggers reload
-      (async () => {
-        try {
-          setLoading(true);
-          setErr("");
-          let controller: AbortController | null = typeof AbortController !== 'undefined' ? new AbortController() : null;
-          let allPosts: any[] = [];
-          if (value.trim()) {
-            try {
-              const data = await searchNLP(value, { signal: controller?.signal });
-              allPosts = Array.isArray(data?.items) ? data.items : [];
-            } catch (e: any) {
-              const curUrl = new URL((typeof window !== 'undefined') ? window.location.href : 'http://localhost');
-              const fallbackParams: Record<string, string> = { q: value };
-              const roommate = curUrl.searchParams.get('roommate') || '';
-              const searcherGender = curUrl.searchParams.get('searcherGender') || '';
-              if (roommate) fallbackParams.roommate = roommate;
-              if (searcherGender) fallbackParams.searcherGender = searcherGender;
-              const fb = await searchPostsFallback(fallbackParams);
-              // /api/search/posts trả { items, page, limit, total } (không có data wrapper)
-              allPosts = Array.isArray((fb as any)?.items) ? (fb as any).items : [];
-            }
-          } else {
-            // Không có query: dùng logic từ Suggestions (match profile) với limit cao hơn
-            try {
-              // Load profile nếu chưa có
-              let currentProfileLocal = profile;
-              if (!currentProfileLocal && user && (user as any)?.role !== 'landlord') {
-                try {
-                  currentProfileLocal = (await getMyProfile()) as any;
-                  setProfile(currentProfileLocal);
-                } catch {}
-              }
-              
-              const response = await searchPosts({ status: 'active' as any });
-              const allPostsRaw = Array.isArray(response)
-                ? response
-                : Array.isArray(response?.posts)
-                ? response.posts
-                : [];
-              
-              const onlyActive = allPostsRaw.filter((p: any) => (p?.status || '').toLowerCase() === 'active');
-              
-              const roomDataMap: Record<string, any> = {};
-              await Promise.all(
-                onlyActive.filter((p: any) => p.roomId).map(async (p: any) => {
-                  try { roomDataMap[p.roomId] = await getRoomById(p.roomId); } catch {}
-                })
-              );
-              
-              const visibilityResults = checkMultiplePostsVisibility(onlyActive, roomDataMap);
-              const visiblePosts = visibilityResults.filter(v => v.shouldShow).map(v => v.post);
-              
-              const unified = await Promise.all(
-                shuffleArray(visiblePosts).slice(0, 24).map(async (post: any) => {
-                  return searchPostToUnified(post, roomDataMap[post.roomId] || null);
-                })
-              );
-              
-              const selectedCityLS = (typeof window !== 'undefined') ? localStorage.getItem('selectedCity') || '' : '';
-              const userCity = (user as any)?.address?.city || (user as any)?.city || '';
-              
-              const rankingOptions: PostRankingOptions = {
-                userCity,
-                profileCity: currentProfileLocal?.preferredCity,
-                selectedCity: selectedCityLS,
-                strictCityFilter: false
-              };
-              
-              const { ranked } = rankPosts(unified, currentProfileLocal, rankingOptions);
-              const suggestedItems = ranked.slice(0, 24).map(({ _score, _price, _cityMatch, _cityScore, ...rest }) => rest as any);
-              // Lưu suggestions nếu chưa có
-              if (suggestionsRef.current.length === 0) {
-                suggestionsRef.current = suggestedItems;
-                setSuggestions(suggestedItems);
-              }
-              allPosts = suggestedItems;
-            } catch (e: any) {
-              allPosts = [];
-            }
-          }
-          
-          // Nếu allPosts đã là UnifiedPost (từ Suggestions logic), dùng trực tiếp
-          let unified: UnifiedPost[] = [];
-          if (allPosts.length > 0 && (allPosts[0] as any)?.type) {
-            unified = allPosts as UnifiedPost[];
-          } else {
-            // Nếu allPosts là raw posts (từ NLP/fallback), cần convert
-            const roomDataMap: Record<string, any> = {};
-            await Promise.all(allPosts.filter((p: any) => p.roomId).map(async (p: any) => {
-              try { roomDataMap[p.roomId] = await getRoomById(p.roomId); } catch {}
-            }));
-            const visibilityResults = checkMultiplePostsVisibility(allPosts, roomDataMap);
-            const visiblePosts = visibilityResults.filter(v => v.shouldShow).map(v => v.post);
-            unified = visiblePosts.map((post: any) => {
-            const mappedPostType = post.postType === 'cho-thue' ? 'rent' : post.postType === 'tim-o-ghep' ? 'roommate' : post.postType;
-            const roomData = roomDataMap[post.roomId];
-            const distance = (post as NlpSearchItem)?.distance;
-            const score = (post as NlpSearchItem)?.score;
-            let price = 0, area = 0, location = 'Chưa xác định', address: any = undefined, bedrooms: any = undefined, bathrooms: any = undefined, images = post.images || [];
-            if (roomData) {
-              price = roomData.price || 0;
-              area = roomData.area || 0;
-              location = roomData.address ? `${roomData.address.ward}, ${roomData.address.city}` : 'Chưa xác định';
-              address = roomData.address;
-              images = roomData.images?.length > 0 ? roomData.images : (post.images || []);
-              
-              // Chỉ lấy bedrooms/bathrooms cho chung cư và nhà nguyên căn, không lấy cho phòng trọ
-              const roomType = roomData.roomType || post.category || '';
-              const isPhongTro = roomType === 'phong-tro' || post.category === 'phong-tro';
-              if (!isPhongTro) {
-                bedrooms = roomData.chungCuInfo?.bedrooms || roomData.nhaNguyenCanInfo?.bedrooms;
-                bathrooms = roomData.chungCuInfo?.bathrooms || roomData.nhaNguyenCanInfo?.bathrooms;
-              }
-            }
-            const finalCategory = post.category || mappedPostType;
-            return {
-              id: post.postId,
-              type: (mappedPostType as any) || 'rent',
-              title: post.title || 'Không có tiêu đề',
-              description: post.description || 'Không có mô tả',
-              images,
-              price,
-              area,
-              location,
-              address,
-              category: finalCategory,
-              photoCount: images.length + (post.videos?.length || 0),
-              bedrooms,
-              bathrooms,
-              isVerified: false,
-              createdAt: post.createdAt,
-              originalData: { ...post, distance, score },
-            } as UnifiedPost;
-            });
-          }
-          
-          // Nếu search không ra kết quả (có query nhưng unified rỗng), dùng suggestions
-          if (value.trim() && unified.length === 0 && suggestionsRef.current.length > 0) {
-            unified = suggestionsRef.current;
-          }
-          
-          setItems(unified);
-          const badges: string[] = [];
-          if (value.includes("triệu")) badges.push("Giá");
-          if (value.match(/\b(m2|m²|m\^2)\b/i)) badges.push("Diện tích");
-          if (value.includes("bao điện nước") || value.includes("bao điện") || value.includes("bao nước")) badges.push("Bao điện nước");
-          if (value.includes("gần") || value.includes("quận") || value.includes("phường") || value.includes("tại")) badges.push("Vị trí");
-          setActiveBadges(badges);
-          setCurrentPage(1);
-        } catch (e: any) {
-          setErr(extractApiErrorMessage(e));
-        } finally {
-          setLoading(false);
-        }
-      })();
-    };
-    if (typeof window !== 'undefined') {
-      window.addEventListener('app:nlp-search' as any, handler as any);
-    }
-    return () => {
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('app:nlp-search' as any, handler as any);
-      }
-    };
-  }, [profile, user]);
+  // PropertyList chỉ nhận kết quả từ SearchDetails, không tự search
 
   // sort client-side
   const sorted = useMemo(() => {
     const a = [...items];
     switch (sort) {
       case "random":
-        // Giữ nguyên thứ tự shuffle từ API load
+        // Giữ nguyên thứ tự ranking theo profile (không shuffle)
+        // Items đã được rank theo profile ở backend/ranking service
         return a;
       case "nearest":
         a.sort((x, y) => {

@@ -1,8 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { getMyProfile, UserProfile } from "@/services/userProfiles";
 import { parseIntent } from "@/utils/searchIntent";
+import { searchProperties, loadProfileIfNeeded, SearchOptions } from "@/services/propertySearchService";
+import { UnifiedPost } from "@/types/MixedPosts";
 
 // Filter cơ bản (luôn hiển thị)
 const BASE_CHIPS = [
@@ -62,6 +64,7 @@ export default function SearchDetails({
     furniture: "Tất cả",
     demand: "Tất cả"
   });
+  const suggestionsRef = useRef<UnifiedPost[]>([]); // Cache suggestions
   const recentSearchKey = useMemo(() => {
     if (user?.userId) {
       return `recentSearches_user_${user.userId}`;
@@ -181,8 +184,222 @@ export default function SearchDetails({
     }
   }, [recentSearchKey]);
 
+  // Hàm phát hiện pattern giá trong text
+  const extractPricePatterns = (text: string): string[] => {
+    const patterns: string[] = [];
+    // Pattern: "X triệu", "dưới X triệu", "từ X-Y triệu", "trên X triệu", "giá X triệu"
+    const priceRegex = /(?:giá\s*)?(?:dưới|từ|trên|khoảng|tầm)?\s*\d+(?:\s*-\s*\d+)?\s*triệu/gi;
+    let match;
+    while ((match = priceRegex.exec(text)) !== null) {
+      patterns.push(match[0].trim());
+    }
+    return patterns;
+  };
+
+  // Hàm phát hiện pattern địa điểm trong text
+  const extractLocationPatterns = (text: string): string[] => {
+    const patterns: string[] = [];
+    // Pattern: "quận X", "phường X", "tại X", "ở X", "gần X", "TP. X", "Thành phố X"
+    // Cải thiện: bắt cả "ở gò vấp", "quận Gò Vấp", "phường Hạnh Thông"
+    const locationRegex = /(?:quận|phường|tại|ở|gần|TP\.|Thành phố)\s+[A-Za-zÀ-ỹ\s]+/gi;
+    let match;
+    while ((match = locationRegex.exec(text)) !== null) {
+      // Loại bỏ các từ dừng ở cuối (như "có", "với", "và")
+      let pattern = match[0].trim();
+      // Cắt bỏ các từ không phải địa danh ở cuối
+      pattern = pattern.replace(/\s+(có|với|và|,|\.|$)/gi, '').trim();
+      if (pattern) {
+        patterns.push(pattern);
+      }
+    }
+    return patterns;
+  };
+
+  // Hàm phát hiện loại chip (giá, địa điểm, tiện ích, khác)
+  const getChipType = (chip: string): 'price' | 'location' | 'amenity' | 'other' => {
+    const lowerChip = chip.toLowerCase();
+    
+    // Kiểm tra giá
+    if (lowerChip.includes('triệu') || lowerChip.includes('giá')) {
+      return 'price';
+    }
+    
+    // Kiểm tra địa điểm
+    if (lowerChip.includes('quận') || lowerChip.includes('phường') || 
+        lowerChip.includes('tại') || lowerChip.includes('gần') ||
+        lowerChip.includes('tp.') || lowerChip.includes('thành phố')) {
+      return 'location';
+    }
+    
+    // Kiểm tra tiện ích (có thể mở rộng)
+    if (lowerChip.includes('máy lạnh') || lowerChip.includes('ban công') || 
+        lowerChip.includes('gác') || lowerChip.includes('điện nước') ||
+        lowerChip.includes('phòng ngủ') || lowerChip.includes('diện tích')) {
+      return 'amenity';
+    }
+    
+    return 'other';
+  };
+
+  // Hàm loại bỏ pattern khỏi text
+  const removePatternsFromText = (text: string, patterns: string[]): string => {
+    let result = text;
+    patterns.forEach(pattern => {
+      // Loại bỏ pattern và các dấu phẩy/thừa xung quanh
+      const regex = new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+      result = result.replace(regex, '').replace(/\s*,\s*,/g, ',').replace(/^,\s*|\s*,$/g, '').trim();
+    });
+    return result;
+  };
+
+  // Hàm kết hợp query và các chip đã chọn thành query string (thông minh)
+  const buildQueryFromChips = (baseQuery: string, chips: string[]): string => {
+    if (chips.length === 0) return baseQuery.trim();
+    if (!baseQuery.trim()) return chips.join(', ').trim();
+    
+    let result = baseQuery.trim();
+    
+    // Phân loại chips theo type
+    const priceChips: string[] = [];
+    const locationChips: string[] = [];
+    const amenityChips: string[] = [];
+    const otherChips: string[] = [];
+    
+    chips.forEach(chip => {
+      const type = getChipType(chip);
+      switch (type) {
+        case 'price':
+          priceChips.push(chip);
+          break;
+        case 'location':
+          locationChips.push(chip);
+          break;
+        case 'amenity':
+          amenityChips.push(chip);
+          break;
+        default:
+          otherChips.push(chip);
+      }
+    });
+    
+    // Xử lý giá: loại bỏ pattern giá cũ, thêm giá mới
+    if (priceChips.length > 0) {
+      const existingPricePatterns = extractPricePatterns(result);
+      if (existingPricePatterns.length > 0) {
+        result = removePatternsFromText(result, existingPricePatterns);
+      }
+      // Thêm giá mới (ưu tiên chip cuối cùng nếu có nhiều)
+      result = result ? `${result}, ${priceChips[priceChips.length - 1]}` : priceChips[priceChips.length - 1];
+    }
+    
+    // Xử lý địa điểm: loại bỏ pattern địa điểm cũ, thêm địa điểm mới
+    if (locationChips.length > 0) {
+      const existingLocationPatterns = extractLocationPatterns(result);
+      if (existingLocationPatterns.length > 0) {
+        result = removePatternsFromText(result, existingLocationPatterns);
+      }
+      // Thêm địa điểm mới (ưu tiên chip cuối cùng nếu có nhiều)
+      result = result ? `${result}, ${locationChips[locationChips.length - 1]}` : locationChips[locationChips.length - 1];
+    }
+    
+    // Xử lý tiện ích: chỉ thêm nếu chưa có (không thay thế)
+    if (amenityChips.length > 0) {
+      amenityChips.forEach(amenity => {
+        const lowerResult = result.toLowerCase();
+        const lowerAmenity = amenity.toLowerCase();
+        // Kiểm tra xem tiện ích đã có trong query chưa (kiểm tra keyword chính)
+        const amenityKeywords = lowerAmenity.split(/\s+/).filter(w => w.length > 2);
+        const hasAmenity = amenityKeywords.some(keyword => lowerResult.includes(keyword));
+        
+        // Chỉ thêm nếu chưa có trong query
+        if (!hasAmenity) {
+          result = result ? `${result}, ${amenity}` : amenity;
+        }
+      });
+    }
+    
+    // Xử lý các chip khác: chỉ thêm nếu chưa có
+    otherChips.forEach(chip => {
+      const lowerResult = result.toLowerCase();
+      const lowerChip = chip.toLowerCase();
+      if (!lowerResult.includes(lowerChip)) {
+        result = result ? `${result}, ${chip}` : chip;
+      }
+    });
+    
+    // Làm sạch: loại bỏ dấu phẩy thừa và khoảng trắng
+    result = result.replace(/\s*,\s*,/g, ',').replace(/^,\s*|\s*,$/g, '').replace(/\s+/g, ' ').trim();
+    
+    return result;
+  };
+
+  // Hàm loại bỏ chip khỏi query
+  const removeChipFromQuery = (query: string, chip: string): string => {
+    const chipType = getChipType(chip);
+    let result = query;
+    
+    if (chipType === 'price') {
+      // Loại bỏ pattern giá tương ứng với chip
+      const pricePatterns = extractPricePatterns(result);
+      const lowerChip = chip.toLowerCase();
+      const matchingPattern = pricePatterns.find(pattern => {
+        const lowerPattern = pattern.toLowerCase();
+        return lowerPattern.includes(lowerChip) || lowerChip.includes(lowerPattern);
+      });
+      if (matchingPattern) {
+        result = removePatternsFromText(result, [matchingPattern]);
+      }
+    } else if (chipType === 'location') {
+      // Loại bỏ pattern địa điểm tương ứng với chip
+      const locationPatterns = extractLocationPatterns(result);
+      const lowerChip = chip.toLowerCase();
+      const matchingPattern = locationPatterns.find(pattern => {
+        const lowerPattern = pattern.toLowerCase();
+        return lowerPattern.includes(lowerChip) || lowerChip.includes(lowerPattern);
+      });
+      if (matchingPattern) {
+        result = removePatternsFromText(result, [matchingPattern]);
+      }
+    } else {
+      // Loại bỏ chip trực tiếp (cho tiện ích và các loại khác)
+      const lowerResult = result.toLowerCase();
+      const lowerChip = chip.toLowerCase();
+      if (lowerResult.includes(lowerChip)) {
+        // Tìm và loại bỏ chip (có thể ở đầu, giữa, hoặc cuối)
+        const regex = new RegExp(`\\s*,\\s*${chip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}|${chip.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,?`, 'gi');
+        result = result.replace(regex, '').replace(/\s*,\s*,/g, ',').replace(/^,\s*|\s*,$/g, '').trim();
+      }
+    }
+    
+    return result.trim();
+  };
+
   const toggle = (name: string) => {
-    setSelected((cur) => (cur.includes(name) ? cur.filter((x) => x !== name) : [...cur, name]));
+    setSelected((cur) => {
+      const isCurrentlySelected = cur.includes(name);
+      const newSelected = isCurrentlySelected
+        ? cur.filter((x) => x !== name) 
+        : [...cur, name];
+      
+      let combinedQuery: string;
+      
+      if (isCurrentlySelected) {
+        // Đang bỏ chọn chip: loại bỏ chip khỏi query
+        combinedQuery = removeChipFromQuery(q, name);
+      } else {
+        // Đang chọn chip: thêm chip vào query (với logic thông minh)
+        combinedQuery = buildQueryFromChips(q, newSelected);
+      }
+      
+      // Cập nhật query trong input để hiển thị
+      setQ(combinedQuery);
+      
+      // Cập nhật URL và trigger search
+      pushQueryToUrl(combinedQuery);
+      emitSearchEvent(combinedQuery);
+      
+      return newSelected;
+    });
   };
 
   const pushQueryToUrl = (value: string) => {
@@ -205,10 +422,73 @@ export default function SearchDetails({
     window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   };
 
+  // Hàm search chính - xử lý tất cả logic search và emit kết quả
+  const performSearch = useCallback(async (queryValue: string, signal?: AbortSignal | null) => {
+    try {
+      // Load profile nếu chưa có
+      let profileToUse = profile;
+      if (!profileToUse) {
+        profileToUse = await loadProfileIfNeeded(user, null);
+        if (profileToUse) {
+          setProfile(profileToUse);
+        }
+      }
+
+      // Gọi service để search
+      const searchOptions: SearchOptions = {
+        signal,
+        currentProfile: profileToUse,
+        user,
+        loadSuggestions: suggestionsRef.current.length === 0 // Chỉ load suggestions nếu chưa có
+      };
+
+      const result = await searchProperties(queryValue, searchOptions);
+
+      // Lưu suggestions nếu có
+      if (result.suggestions && result.suggestions.length > 0) {
+        if (suggestionsRef.current.length === 0) {
+          suggestionsRef.current = result.suggestions;
+        }
+      }
+
+      // Emit kết quả cho PropertyList và các components khác
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:search-result', { 
+          detail: { 
+            query: result.query,
+            items: result.items,
+            suggestions: result.suggestions,
+            error: result.error
+          } 
+        }));
+      }
+
+      return result;
+    } catch (error: any) {
+      // Emit error
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('app:search-result', { 
+          detail: { 
+            query: queryValue,
+            items: [],
+            error: error?.message || "Không tải được danh sách"
+          } 
+        }));
+      }
+      throw error;
+    }
+  }, [profile, user]);
+
   const emitSearchEvent = (value: string) => {
     if (typeof window === 'undefined') return;
     const trimmed = value.trim();
+    
+    // Emit query để trigger search (backward compatible)
     window.dispatchEvent(new CustomEvent('app:nlp-search', { detail: { q: trimmed } }));
+    
+    // Thực hiện search và emit kết quả
+    performSearch(trimmed);
+    
     // Nếu sử dụng ở trang không có PropertyList (ví dụ trang chủ), điều hướng sang /find_share
     try {
       const curPath = window.location.pathname;
@@ -255,25 +535,24 @@ export default function SearchDetails({
     emitSearchEvent(q);
   };
 
-  // Clear query từ URL khi reload (user reload = không muốn search nữa)
-  // Input luôn trống khi mount để load suggestions
+  // Load từ URL khi mount và thực hiện search
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    
     const url = new URL(window.location.href);
-    const urlQ = url.searchParams.get('q');
+    const urlQ = url.searchParams.get('q') || "";
     
-    // Clear query params khi có query trong URL (coi như reload)
-    // Để input trống và PropertyList sẽ load suggestions
-    if (urlQ) {
-      url.searchParams.delete('q');
-      url.searchParams.delete('roommate');
-      url.searchParams.delete('searcherGender');
-      window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-    }
+    // Set query vào input
+    setQ(urlQ);
     
-    // Input luôn trống khi mount
-    setQ("");
-  }, []);
+    // Thực hiện search với query từ URL (hoặc empty để load suggestions)
+    let controller: AbortController | null = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    performSearch(urlQ, controller?.signal);
+    
+    return () => {
+      try { controller?.abort(); } catch {}
+    };
+  }, [performSearch]); // Chạy khi performSearch thay đổi (sau khi profile load)
 
   const clearFilters = () => {
     setSelected([]); // Xóa chips được chọn
@@ -283,6 +562,11 @@ export default function SearchDetails({
       furniture: "Tất cả",
       demand: "Tất cả"
     }); // Trả về mặc định
+    
+    // Xóa query và trigger search lại để load suggestions
+    setQ("");
+    pushQueryToUrl("");
+    emitSearchEvent("");
   };
 
   const clearSearch = () => {

@@ -68,8 +68,9 @@ export default function Suggestions() {
           .filter(result => result.shouldShow)
           .map(result => result.post);
 
+        // Convert to unified format (KHÔNG shuffle - để rank đúng)
         const unified = await Promise.all(
-          shuffleArray(visiblePosts).slice(0, 20).map(async (post: any) => {
+          visiblePosts.map(async (post: any) => {
             const roomData = roomDataMap[post.roomId] || null;
             return searchPostToUnified(post, roomData);
           })
@@ -86,7 +87,9 @@ export default function Suggestions() {
           strictCityFilter: true // Suggestions: loại bỏ bài không cùng thành phố
         };
         
-        const { ranked } = rankPosts(unified, profile, rankingOptions);
+        // Rank tất cả posts trước
+        const { ranked } = rankPosts(unified, pf, rankingOptions);
+        // Sau đó mới slice để lấy top 12 posts được rank cao nhất
         const finalItems = ranked.slice(0, 12);
 
         setItems(finalItems);

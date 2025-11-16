@@ -1,6 +1,7 @@
 // services/postRanking.ts - Service xử lý ranking và filtering posts
 
 import { isSameCity, cityToProvinceCode } from '../utils/geoMatch';
+import { getDistrictFromWard, areWardsInSameDistrict } from '../utils/districtMapping';
 
 export interface PostRankingOptions {
   userCity?: string;
@@ -86,23 +87,99 @@ export function calculateBaseScore(post: any, profile: any): number {
     }
   }
   
+  // Hàm extract district từ ward name sử dụng mapping JSON
+  const extractDistrict = (ward: string, city?: string): string | null => {
+    if (!ward) return null;
+    
+    // Pattern: "Phường X, Quận Y" hoặc "X, Quận Y" hoặc "Quận Y"
+    const districtMatch = ward.match(/quận\s+([^,]+)/i) || 
+                         ward.match(/huyện\s+([^,]+)/i);
+    if (districtMatch) {
+      return districtMatch[1].trim().toLowerCase();
+    }
+    
+    // Sử dụng mapping từ JSON file
+    // Xác định city code từ city hoặc mặc định là "hcm"
+    let cityCode = 'hcm';
+    if (city) {
+      const cityLower = city.toLowerCase();
+      if (cityLower.includes('hà nội') || cityLower.includes('ha noi') || cityLower.includes('hn')) {
+        cityCode = 'hn';
+      } else if (cityLower.includes('hồ chí minh') || cityLower.includes('ho chi minh') || cityLower.includes('hcm')) {
+        cityCode = 'hcm';
+      }
+    }
+    
+    const district = getDistrictFromWard(ward, cityCode);
+    if (district) {
+      // Normalize: loại bỏ "Quận", "Huyện" prefix
+      return district.replace(/^(quận|huyện|thị xã|thành phố)\s*/i, '').trim();
+    }
+    
+    return null;
+  };
+
+  // Hàm kiểm tra xem ward có cùng quận với preferredWards không
+  const isSameDistrict = (postWard: string, preferredWards: string[], city?: string): boolean => {
+    if (!postWard || preferredWards.length === 0) return false;
+    
+    // Xác định city code
+    let cityCode = 'hcm';
+    if (city) {
+      const cityLower = city.toLowerCase();
+      if (cityLower.includes('hà nội') || cityLower.includes('ha noi') || cityLower.includes('hn')) {
+        cityCode = 'hn';
+      } else if (cityLower.includes('hồ chí minh') || cityLower.includes('ho chi minh') || cityLower.includes('hcm')) {
+        cityCode = 'hcm';
+      }
+    }
+    
+    // Kiểm tra xem postWard có cùng district với bất kỳ preferredWard nào không
+    return preferredWards.some((prefWard: string) => {
+      return areWardsInSameDistrict(postWard, prefWard, cityCode);
+    });
+  };
+
   // Ward preference (500 points) - SECOND PRIORITY
   const preferredWards = profile.preferredWards || [];
   if (preferredWards.length > 0 && post.address?.ward) {
     const postWard = post.address.ward;
-    if (preferredWards.some((ward: string) => 
-      postWard.toLowerCase().includes(ward.toLowerCase()) ||
-      ward.toLowerCase().includes(postWard.toLowerCase())
-    )) {
+    // Normalize: loại bỏ "Phường", "Quận", "TP.", "Thành phố" và lowercase
+    const normalizeWard = (ward: string) => 
+      ward?.toLowerCase().replace(/^(phường|quận|tp\.|thành phố)\s*/i, '').trim();
+    
+    const normalizedPostWard = normalizeWard(postWard);
+    const normalizedPreferredWards = preferredWards.map((w: string) => normalizeWard(w));
+    
+    // Exact ward match (500 points)
+    const exactMatch = normalizedPreferredWards.some((normalizedWard: string) => 
+      normalizedPostWard === normalizedWard ||
+      normalizedPostWard.includes(normalizedWard) ||
+      normalizedWard.includes(normalizedPostWard)
+    );
+    
+    if (exactMatch) {
       score += 500; // Ward match gets high score
+    } else {
+      // Same district match (200 points) - ưu tiên thấp hơn nhưng vẫn cao hơn các posts khác
+      const postCity = post.address?.city || '';
+      if (isSameDistrict(postWard, preferredWards, postCity)) {
+        score += 200; // Same district gets medium score
+      }
     }
   }
   
   // Room type preference (100 points) - THIRD PRIORITY
   const preferredRoomTypes = profile.roomType || [];
-  if (preferredRoomTypes.length > 0) {
-    const postCategory = post.category?.replace('-', '_');
-    if (preferredRoomTypes.includes(postCategory)) {
+  if (preferredRoomTypes.length > 0 && post.category) {
+    // Normalize cả hai phía: thay '-' và ' ' thành '_', lowercase
+    const normalizeRoomType = (type: string) => 
+      type?.toLowerCase().replace(/[- ]/g, '_').trim();
+    
+    const postCategory = normalizeRoomType(post.category);
+    const normalizedPreferred = preferredRoomTypes.map((t: string) => normalizeRoomType(t));
+    
+    if (normalizedPreferred.includes(postCategory)) {
       score += 100;
     }
   }
@@ -160,13 +237,13 @@ export function rankPosts(
       };
     })
     .sort((a, b) => {
-      // Primary sort: by score (higher first)
+      // Primary sort: by score (higher first) - QUAN TRỌNG NHẤT
       if (b._score !== a._score) return b._score - a._score;
       
       // Secondary sort: by city match (city matches first)
       if (a._cityMatch !== b._cityMatch) return b._cityMatch ? 1 : -1;
       
-      // Tertiary sort: by price proximity to budget
+      // Tertiary sort: by price proximity to budget (nếu có profile với budgetRange)
       if (profile?.budgetRange) {
         const { min, max } = profile.budgetRange;
         const midBudget = (min + max) / 2;
@@ -175,8 +252,14 @@ export function rankPosts(
         return aDistance - bDistance;
       }
       
-      // Final sort: by price (lower first)
-      return a._price - b._price;
+      // Nếu có profile nhưng không có budgetRange, giữ nguyên thứ tự (không sort theo giá)
+      // Chỉ sort theo giá nếu KHÔNG có profile
+      if (!profile) {
+        return a._price - b._price;
+      }
+      
+      // Có profile nhưng không có budgetRange: giữ nguyên thứ tự ranking
+      return 0;
     });
   
   return { ranked, cityInfo };
