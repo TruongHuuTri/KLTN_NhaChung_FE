@@ -15,6 +15,17 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
   const isLoginPage = pathname === '/login';
   const isRegisterPage = pathname === '/register';
   const isFindSharePage = pathname === '/find_share';
+  const headerFeatureRoutes = [
+    '/',
+    '/find_share',
+    '/post',
+    '/blog',
+    '/support',
+  ];
+  const isHeaderFeaturePage =
+    headerFeatureRoutes.includes(pathname) ||
+    pathname.startsWith('/post') ||
+    pathname.startsWith('/room_details');
   
   // Các trang cần sidebar (trừ find_share)
   const needsSidebar = !isLoginPage && !isRegisterPage && !isFindSharePage && (
@@ -26,8 +37,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     pathname === '/my-rooms' ||
     pathname === '/favorites' ||
     pathname.startsWith('/landlord') ||
-    pathname === '/post' ||
-    pathname.startsWith('/post/')
+    pathname.startsWith('/contracts')
   );
 
   return (
@@ -46,7 +56,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                   children
                 )}
               </main>
-              {!isLoginPage && <Footer />}
+              {!isLoginPage && isHeaderFeaturePage && <Footer />}
               <FloatingChatButton />
             </div>
           </ChatProvider>

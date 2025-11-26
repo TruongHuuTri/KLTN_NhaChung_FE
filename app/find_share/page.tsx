@@ -1,7 +1,6 @@
 import SearchDetails from "../../components/common/SearchDetails";
 import PropertyList from "../../components/find_share/PropertyList";
 import Suggestions from "../../components/common/Suggestions";
-import Footer from "../../components/common/Footer";
 
 export const metadata = { title: "Tìm phòng trọ, ở ghép" };
 
@@ -17,9 +16,6 @@ export default function FindSharePage() {
       
       {/* Suggestions Section */}
       <Suggestions />
-      
-      {/* Footer */}
-      <Footer />
     </div>
   );
 }

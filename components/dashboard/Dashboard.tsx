@@ -34,17 +34,30 @@ interface MenuItem {
   color: "teal" | "blue" | "purple" | "orange" | "green" | "pink" | "indigo" | "red";
 }
 
+interface StatCardData {
+  title: string;
+  value: string;
+  change?: {
+    value: string;
+    isPositive: boolean;
+  };
+  icon: ReactNode;
+  iconBg?: string;
+  trend?: {
+    label: string;
+    percentage: number;
+  };
+}
+
 export default function Dashboard() {
   const { user, isLoading } = useAuth();
-  const [stats, setStats] = useState<any[]>([]);
-  const [loadingStats, setLoadingStats] = useState(true);
+  const [stats, setStats] = useState<StatCardData[]>([]);
 
   // Fetch stats data from API
   useEffect(() => {
     const loadStats = async () => {
       if (!user || isLoading) return;
       
-      setLoadingStats(true);
       try {
         if (user.role === 'landlord') {
           // Load landlord stats
@@ -150,8 +163,6 @@ export default function Dashboard() {
         console.error("Failed to load stats:", error);
         // Fallback to empty stats
         setStats([]);
-      } finally {
-        setLoadingStats(false);
       }
     };
     
@@ -299,7 +310,6 @@ export default function Dashboard() {
 
   // Select menu items based on role
   const menuItems = user?.role === 'landlord' ? landlordMenuItems : tenantMenuItems;
-  const roleLabel = user?.role === 'landlord' ? 'Chủ nhà' : 'Người thuê';
 
   return (
     <div className="bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100 min-h-full">
@@ -319,8 +329,8 @@ export default function Dashboard() {
           <div className="mb-8 md:mb-10">
             <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-5">Thống kê nhanh</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-              {stats.map((stat, index) => (
-                <StatsCard key={index} {...stat} />
+              {stats.map((stat) => (
+                <StatsCard key={stat.title} {...stat} />
               ))}
             </div>
           </div>

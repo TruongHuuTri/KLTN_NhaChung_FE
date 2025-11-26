@@ -12,12 +12,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex bg-gray-50 overflow-x-hidden">
+    <div className="relative flex bg-gray-50 overflow-x-hidden">
       {/* Sidebar */}
       <DashboardSidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* Main Content */}
-      <div className="flex-1 min-w-0 overflow-x-hidden">
+      <div className="flex-1 min-w-0 overflow-x-hidden lg:ml-64 min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-5rem)]">
         {/* Mobile sidebar toggle */}
         <button
           onClick={() => setSidebarOpen(true)}
@@ -28,7 +28,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         </button>
 
         {/* Content */}
-        <main className="w-full max-w-full pt-16 md:pt-20 pb-6 px-4 lg:pl-4 overflow-x-hidden">
+        <main className="w-full max-w-full pt-16 md:pt-20 pb-6 px-4 lg:px-8 overflow-x-hidden">
           {children}
         </main>
       </div>

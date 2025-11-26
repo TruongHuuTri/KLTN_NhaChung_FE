@@ -35,6 +35,8 @@ export default function Header() {
   const { user, logout } = useAuth();
   const { openModal } = useChat();
   const [selectedCity, setSelectedCity] = useState<string>('TP. Hồ Chí Minh');
+  const userMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [userMenuWidth, setUserMenuWidth] = useState<number>();
 
   // Auto detect current page based on pathname
   const getCurrentPage = () => {
@@ -67,6 +69,19 @@ export default function Header() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  useEffect(() => {
+    const updateMenuWidth = () => {
+      if (userMenuButtonRef.current) {
+        setUserMenuWidth(userMenuButtonRef.current.offsetWidth);
+      }
+    };
+    updateMenuWidth();
+    window.addEventListener('resize', updateMenuWidth);
+    return () => {
+      window.removeEventListener('resize', updateMenuWidth);
+    };
+  }, [user?.name]);
 
   // Lắng nghe thay đổi city từ AreaDropdown
   useEffect(() => {
@@ -164,6 +179,7 @@ export default function Header() {
               {/* Desktop User Menu */}
               <div className="relative hidden lg:block" ref={userMenuRef}>
                 <button
+                  ref={userMenuButtonRef}
                   onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
                   className="flex items-center gap-2 xl:gap-3 px-3 xl:px-4 py-2 rounded-xl bg-white/10 backdrop-blur-sm text-white hover:bg-white/20 transition-all duration-300 border border-white/20 hover:border-white/30"
                 >
@@ -186,28 +202,41 @@ export default function Header() {
 
                 {/* User Dropdown Menu */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
-                {/* Header */}
-                <div className="px-4 py-3 bg-gradient-to-r from-teal-500 to-teal-600">
-                  <p className="text-sm font-semibold text-white truncate">{user.name}</p>
-                  <p className="text-xs text-teal-50 truncate">{user.email}</p>
-                </div>
-
+                  <div
+                    className="absolute right-0 mt-2 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50"
+                    style={{ width: userMenuWidth }}
+                  >
                 {/* Dashboard */}
                 <Link
                   href="/dashboard"
-                  className="flex items-center gap-3 px-4 py-3 bg-teal-50 border-b border-gray-200 hover:bg-teal-100 transition-colors group"
+                  className="flex items-center gap-3 px-4 py-3 w-full bg-teal-50 border-b border-gray-200 hover:bg-teal-100 transition-colors group"
                   onClick={() => setIsUserMenuOpen(false)}
                 >
                   <FaHome className="text-teal-600 text-lg" />
                   <span className="text-sm font-semibold text-teal-700 group-hover:text-teal-800">Dashboard</span>
+                </Link>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-3 w-full border-b border-gray-200 hover:bg-gray-50 transition-colors group"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  <FaUser className="text-gray-500 text-lg" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Hồ sơ cá nhân</span>
+                </Link>
+                <Link
+                  href="/favorites"
+                  className="flex items-center gap-3 px-4 py-3 w-full border-b border-gray-200 hover:bg-gray-50 transition-colors group"
+                  onClick={() => setIsUserMenuOpen(false)}
+                >
+                  <FaHeart className="text-pink-500 text-lg" />
+                  <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900">Yêu thích</span>
                 </Link>
 
                 {/* Logout */}
                 <div className="pt-2 pb-2">
                   <button
                     onClick={logout}
-                    className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
+                  className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors w-full"
                   >
                     <FaSignOutAlt className="text-red-500 w-4" />
                     <span className="font-medium">Đăng xuất</span>
@@ -334,6 +363,22 @@ export default function Header() {
                 >
                   <FaHome className="text-teal-400 text-lg" />
                   <span className="font-semibold">Dashboard</span>
+                </Link>
+                <Link
+                  href="/profile"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/15 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <FaUser className="text-white/80 text-lg" />
+                  <span className="font-medium">Hồ sơ cá nhân</span>
+                </Link>
+                <Link
+                  href="/favorites"
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl bg-white/10 text-white hover:bg-white/15 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  <FaHeart className="text-pink-400 text-lg" />
+                  <span className="font-medium">Yêu thích</span>
                 </Link>
 
                 <button

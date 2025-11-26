@@ -10,7 +10,6 @@ import Suggestions from "@/components/common/Suggestions";
 import LatestNews from "@/components/home/LatestNews";
 import Testimonials from "@/components/home/Testimonials";
 import LandlordSection from "@/components/home/LandlordSection";
-import Footer from "@/components/common/Footer";
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -26,7 +25,6 @@ export default function HomePage() {
       <LatestNews />
       <Testimonials />
       <LandlordSection />
-      <Footer />
     </>
   );
 }

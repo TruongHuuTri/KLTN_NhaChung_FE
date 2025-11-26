@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { FaFacebook, FaEnvelope, FaInstagram, FaHeadset, FaChevronLeft, FaChevronRight } from "react-icons/fa";
-import Footer from "@/components/common/Footer";
 
 export default function SupportPage() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -298,7 +297,6 @@ export default function SupportPage() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

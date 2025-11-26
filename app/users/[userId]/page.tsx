@@ -6,7 +6,6 @@ import { getUserById } from "@/services/user";
 import { getPosts } from "@/services/posts";
 import { getReviewsByTarget } from "@/services/reviews";
 import { User } from "@/types/User";
-import Footer from "@/components/common/Footer";
 import Link from "next/link";
 import { FaEnvelope, FaPhone, FaClock, FaFileAlt, FaCheckCircle, FaArrowLeft, FaStar, FaHome, FaUser, FaMapMarkerAlt } from "react-icons/fa";
 
@@ -374,7 +373,6 @@ export default function UserPublicProfilePage() {
         </div>
       </div>
 
-      <Footer />
     </div>
   );
 }

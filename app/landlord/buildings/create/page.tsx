@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../../contexts/AuthContext";
-import Footer from "../../../../components/common/Footer";
 import BuildingForm from "../../../../components/landlord/BuildingForm";
 import { createBuilding } from "../../../../services/buildings";
 import { CreateBuildingPayload } from "../../../../types/Building";
@@ -86,7 +85,6 @@ export default function CreateBuildingPage() {
         />
       </div>
 
-      <Footer />
     </div>
   );
 }

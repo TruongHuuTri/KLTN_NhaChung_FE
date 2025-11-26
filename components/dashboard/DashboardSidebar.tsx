@@ -6,25 +6,17 @@ import { usePathname } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   FaHome,
-  FaSearch,
   FaClipboardCheck,
   FaDoorOpen,
-  FaHeart,
   FaFileAlt,
-  FaUser,
   FaClipboardList,
   FaBuilding,
   FaMoneyBillWave,
   FaChartBar,
-  FaPen,
-  FaBars,
   FaTimes,
   FaChevronDown,
-  FaChevronRight,
-  FaComments,
-  FaSignOutAlt
+  FaChevronRight
 } from "react-icons/fa";
-import { useChat } from "@/contexts/ChatContext";
 
 interface MenuItem {
   title: string;
@@ -42,8 +34,7 @@ interface DashboardSidebarProps {
 export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: DashboardSidebarProps = {}) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
-  const { user, logout } = useAuth();
-  const { openModal } = useChat();
+  const { user } = useAuth();
   const pathname = usePathname();
   
   // Use external state if provided, otherwise use internal state
@@ -74,29 +65,9 @@ export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: Da
           icon: <FaHome />
         },
         {
-          title: "Tìm phòng",
-          href: "/find_share",
-          icon: <FaSearch />
-        },
-        {
-          title: "Hồ sơ cá nhân",
-          href: "/profile",
-          icon: <FaUser />
-        },
-        {
           title: "Bài đăng của tôi",
           href: "/my-posts",
           icon: <FaFileAlt />
-        },
-        {
-          title: "Yêu thích",
-          href: "/favorites",
-          icon: <FaHeart />
-        },
-        {
-          title: "Tin nhắn",
-          href: "#",
-          icon: <FaComments />
         },
         {
           title: "Quản lý",
@@ -133,17 +104,7 @@ export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: Da
           href: "/dashboard",
           icon: <FaHome />
         },
-        {
-          title: "Tìm phòng",
-          href: "/find_share",
-          icon: <FaSearch />
-        },
         // Menu items theo thứ tự trong hình ảnh
-        {
-          title: "Hồ sơ cá nhân",
-          href: "/profile",
-          icon: <FaUser />
-        },
         {
           title: "Bài đăng của tôi",
           href: "/my-posts",
@@ -159,16 +120,6 @@ export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: Da
           href: "/my-rooms",
           icon: <FaDoorOpen />
         },
-        {
-          title: "Yêu thích",
-          href: "/favorites",
-          icon: <FaHeart />
-        },
-        {
-          title: "Tin nhắn",
-          href: "#",
-          icon: <FaComments />
-        }
       ];
     }
   };
@@ -260,33 +211,6 @@ export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: Da
       );
     }
 
-    // Handle special case for "Tin nhắn" - open chat modal
-    if (item.title === "Tin nhắn" && item.href === "#") {
-      return (
-        <button
-          key={item.title}
-          onClick={() => {
-            openModal();
-            handleClose();
-          }}
-          className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors w-full text-left ${
-            active
-              ? "bg-teal-50 text-teal-700 font-semibold"
-              : "text-gray-700 hover:bg-gray-100"
-          }`}
-          style={{ paddingLeft: `${0.75 + level * 1}rem` }}
-        >
-          <span className="text-lg">{item.icon}</span>
-          <span>{item.title}</span>
-          {item.badge && (
-            <span className="ml-auto bg-teal-500 text-white text-xs px-2 py-0.5 rounded-full">
-              {item.badge}
-            </span>
-          )}
-        </button>
-      );
-    }
-
     return (
       <Link
         key={item.title}
@@ -348,27 +272,28 @@ export default function DashboardSidebar({ isOpen: externalIsOpen, onClose }: Da
           <nav className="flex-1 overflow-y-auto px-3 pt-6 pb-4 space-y-1">
             {menuItems.map(item => renderMenuItem(item))}
           </nav>
+          {user && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* Desktop Sidebar - Sticky layout */}
-      <aside
-        className="hidden lg:flex flex-col bg-white border-r border-gray-200 w-56"
-        style={{ 
-          position: 'sticky',
-          top: '5rem',
-          alignSelf: 'flex-start',
-          height: 'calc(100vh - 5rem)',
-          maxHeight: 'calc(100vh - 5rem)',
-          zIndex: 10,
-          overflowY: 'auto',
-          overflowX: 'hidden'
-        }}
-      >
-        {/* Menu */}
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {menuItems.map(item => renderMenuItem(item))}
-        </nav>
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:flex fixed top-16 md:top-20 left-0 w-64 bg-white border-r border-gray-200 z-40 h-[calc(100vh-4rem)] md:h-[calc(100vh-5rem)]">
+        <div className="flex flex-col w-full h-full overflow-hidden">
+          <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+            {menuItems.map(item => renderMenuItem(item))}
+          </nav>
+          {user && (
+            <div className="px-4 py-4 border-t border-gray-200 bg-gray-50">
+              <p className="text-sm font-semibold text-gray-900 truncate">{user.name}</p>
+              <p className="text-xs text-gray-500 truncate">{user.email}</p>
+            </div>
+          )}
+        </div>
       </aside>
     </>
   );

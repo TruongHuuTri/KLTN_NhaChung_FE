@@ -8,7 +8,6 @@ import PropertyDetails from "../../../components/room_details/PropertyDetails";
 import ContactCard from "../../../components/room_details/ContactCard";
 import MapSection from "../../../components/room_details/MapSection";
 import Suggestions from "../../../components/common/Suggestions";
-import Footer from "../../../components/common/Footer";
 import { getPostById } from "../../../services/posts";
 import { getReviewsByTarget, voteReview, deleteReview, voteReply, updateReview } from "@/services/reviews";
 import { getUserById } from "@/services/user";
@@ -686,8 +685,6 @@ export default function RoomDetailsPage() {
       
       {/* Suggestions Section */}
       <Suggestions />
-      
-      <Footer />
       
       {/* Vote Modal - dùng chung cho Review */}
       <VoteModal
