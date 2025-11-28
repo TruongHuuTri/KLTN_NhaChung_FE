@@ -324,24 +324,33 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
       // Kiểm tra nếu đang trong quá trình đăng ký
       const isRegistrationFlow = typeof window !== "undefined" && localStorage.getItem("isRegistrationFlow") === "true";
       const registrationData = typeof window !== "undefined" ? localStorage.getItem("registrationData") : null;
+      let parsedRegistration: any = null;
+      if (registrationData) {
+        try {
+          parsedRegistration = JSON.parse(registrationData);
+        } catch (error) {
+          if (isRegistrationFlow) {
+            setError("Không thể tải thông tin đăng ký. Vui lòng thử lại.");
+            setLoading(false);
+            return;
+          }
+        }
+      }
       
       let actualUser = localUser || user;
       
       // Nếu đang trong registration flow và có registrationData, tạo user từ đó
-      if (isRegistrationFlow && registrationData && actualUser?.userId === 0) {
+      if (isRegistrationFlow && parsedRegistration) {
         try {
-          const regData = JSON.parse(registrationData);
-          
-          // Tạo user object từ registration data với userId thật
           const userFromReg: User = {
-            userId: regData.userId || 0, // Sử dụng userId thật từ backend
-            name: regData.name,
-            email: regData.email,
-            role: regData.role,
-            phone: regData.phone,
-            avatar: regData.avatar,
+            userId: parsedRegistration.userId || 0,
+            name: parsedRegistration.name,
+            email: parsedRegistration.email,
+            role: parsedRegistration.role,
+            phone: parsedRegistration.phone,
+            avatar: parsedRegistration.avatar,
             isVerified: true,
-            createdAt: regData.verifiedAt
+            createdAt: parsedRegistration.verifiedAt
           };
           actualUser = userFromReg;
         } catch (error) {
@@ -361,7 +370,7 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
       const preferredCity = currentAddress?.provinceName || currentAddress?.city || undefined;
 
       const payload: UserProfile = {
-        userId: actualUser.userId,
+        userId: actualUser.userId || parsedRegistration?.userId,
         occupation: data.occupation,
         pets: data.pets,
         preferredCity,
@@ -369,14 +378,34 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         roomType: data.roomType,
         contactMethod: data.contactMethod,
       };
+      if (!payload.userId) {
+        setError("Không tìm thấy userId hợp lệ. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
+      
+      const submitProfile = async () => {
+        if (isRegistrationFlow) {
+          try {
+            await createProfilePublic(payload);
+          } catch (publicError: any) {
+            if (parsedRegistration?.email) {
+              await createProfilePublicFallback({ ...payload, email: parsedRegistration.email });
+            } else {
+              throw publicError;
+            }
+          }
+        } else {
+          try {
+            await createProfile(payload);
+          } catch (createError) {
+            await updateMyProfile(payload);
+          }
+        }
+      };
       
       try {
-        // Dùng token bình thường cho cả registration flow và user đã đăng nhập
-        try {
-          await createProfile(payload);
-        } catch (createError) {
-          await updateMyProfile(payload);
-        }
+        await submitProfile();
       } catch (error) {
         throw new Error("Không thể lưu profile. Vui lòng thử lại.");
       }
