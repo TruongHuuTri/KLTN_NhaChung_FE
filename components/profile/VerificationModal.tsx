@@ -232,6 +232,22 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
       }, 2000);
       
     } catch (error: any) {
+      // 🔥 Xử lý lỗi 401 Unauthorized (thiếu hoặc token không hợp lệ)
+      if (error?.status === 401 || error?.message?.includes('Unauthorized') || error?.message?.includes('401')) {
+        showNotification(
+          'error',
+          'Lỗi xác thực',
+          'Phiên đăng nhập đã hết hạn hoặc token không hợp lệ. Vui lòng đăng nhập lại.'
+        );
+        // Tự động redirect đến trang login sau 2 giây
+        setTimeout(() => {
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        }, 2000);
+        return;
+      }
+      
       // Fallback: thử gửi không có ảnh nếu bị lỗi kích thước (S3 limit)
       if (error.message?.includes('request entity too large') || error.message?.includes('413')) {
         try {
@@ -254,11 +270,25 @@ export default function VerificationModal({ isOpen, onClose, onVerify, skipAutoS
           }, 2000);
           return;
         } catch (retryError: any) {
-          showNotification(
-            'error',
-            'Lỗi gửi hồ sơ',
-            `${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_ERROR} ${retryError.message || 'Vui lòng thử lại'}`
-          );
+          // Xử lý lỗi 401 trong retry
+          if (retryError?.status === 401) {
+            showNotification(
+              'error',
+              'Lỗi xác thực',
+              'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+            );
+            setTimeout(() => {
+              if (typeof window !== 'undefined') {
+                window.location.href = '/login';
+              }
+            }, 2000);
+          } else {
+            showNotification(
+              'error',
+              'Lỗi gửi hồ sơ',
+              `${VERIFICATION_CONSTANTS.MESSAGES.SUBMIT_ERROR} ${retryError.message || 'Vui lòng thử lại'}`
+            );
+          }
         }
       } else {
         showNotification(

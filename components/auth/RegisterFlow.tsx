@@ -124,11 +124,24 @@ export default function RegisterFlow() {
       }
       const verifyResult = await verifyRegistration(form.email, otp);
       
-      // LƯU TOKEN để dùng cho survey/verification
-      if (typeof window !== "undefined" && verifyResult?.access_token && verifyResult?.user) {
-        localStorage.setItem("token", verifyResult.access_token);
-        localStorage.setItem("user", JSON.stringify(verifyResult.user));
+      // 🔥 QUAN TRỌNG: LƯU TOKEN ngay khi có access_token (không phụ thuộc vào user)
+      // Token cần thiết cho các API call tiếp theo (verification, survey)
+      if (typeof window !== "undefined") {
+        if (verifyResult?.access_token) {
+          localStorage.setItem("token", verifyResult.access_token);
+          localStorage.setItem("token_issued_at", String(Date.now()));
+        } else {
+          console.error("⚠️ Backend không trả về access_token sau khi verify OTP");
+          setError("Lỗi: Không nhận được token xác thực. Vui lòng thử lại.");
+          return;
+        }
         
+        // Lưu user nếu có
+        if (verifyResult?.user) {
+          localStorage.setItem("user", JSON.stringify(verifyResult.user));
+        }
+        
+        // Lưu registration data
         localStorage.setItem("registrationData", JSON.stringify({
           name: form.name,
           email: form.email,

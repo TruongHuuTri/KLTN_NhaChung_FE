@@ -65,6 +65,14 @@ export default function LandlordVerificationPage() {
       return;
     }
 
+    // 🔥 KIỂM TRA TOKEN trước khi gọi API
+    const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+    if (!token) {
+      alert('Lỗi: Không tìm thấy token xác thực. Vui lòng đăng nhập lại.');
+      router.push('/login');
+      return;
+    }
+
     try {
       // Note: Verification đã được submit trong modal rồi
       // Giờ chỉ cần submit thêm businessLicense (dùng API update hoặc submit lại với license)
@@ -72,7 +80,7 @@ export default function LandlordVerificationPage() {
       const response = await submitVerification({
         ...verificationData,
         businessLicense: licensePreview
-      }); // Dùng token bình thường
+      }); // Token sẽ được tự động gắn vào header bởi apiPost
 
       // Xóa registration data nếu đang trong registration flow
       const isRegistrationFlow = typeof window !== "undefined" && localStorage.getItem("isRegistrationFlow") === "true";
@@ -83,8 +91,15 @@ export default function LandlordVerificationPage() {
       
       alert('Đã hoàn tất đăng ký chủ nhà! Vui lòng đăng nhập.');
       router.push('/login');
-    } catch (error) {
-      alert('Có lỗi xảy ra khi lưu giấy phép kinh doanh. Vui lòng thử lại.');
+    } catch (error: any) {
+      // Xử lý lỗi 401 cụ thể
+      if (error?.status === 401) {
+        alert('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+        router.push('/login');
+      } else {
+        const errorMessage = error?.message || error?.body?.message || 'Có lỗi xảy ra khi lưu giấy phép kinh doanh. Vui lòng thử lại.';
+        alert(errorMessage);
+      }
     }
   };
 
