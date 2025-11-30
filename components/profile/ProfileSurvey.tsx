@@ -527,16 +527,23 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
         const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
         const hasAuthToken = !!token;
         
-        // Theo BE guide: Nếu preferredCity thay đổi, phải gửi 2 request riêng
-        if (cityChanged && hasAuthToken) {
-          // Request 1: Chỉ gửi preferredCity (Backend sẽ tự động clear preferredWards)
-          const cityPayload: Partial<UserProfile> = {
-            preferredCity: payload.preferredCity,
-            // KHÔNG gửi preferredWards trong request này
-          };
-          
-          try {
+        // Xác định user đã có profile hay chưa:
+        // 1. Nếu đang trong registration flow → chưa có profile → dùng POST
+        // 2. Nếu đã load được profile (có profileId hoặc originalPreferredCity đã được set) → đã có profile → dùng PATCH
+        // 3. Nếu không có token → dùng POST public
+        const hasExistingProfile = !isRegistrationFlow && (data.profileId || originalPreferredCity !== undefined);
+        
+        if (hasAuthToken && hasExistingProfile) {
+          // User đã có profile → dùng PATCH để update
+          // Theo BE guide: Nếu preferredCity thay đổi, phải gửi 2 request riêng
+          if (cityChanged) {
+            // Request 1: Chỉ gửi preferredCity (Backend sẽ tự động clear preferredWards)
+            const cityPayload: Partial<UserProfile> = {
+              preferredCity: payload.preferredCity,
+              // KHÔNG gửi preferredWards trong request này
+            };
             await updateMyProfile(cityPayload);
+            
             // Request 2: Gửi preferredWards sau khi city đã được update
             const wardsPayload: Partial<UserProfile> = {
               preferredWards: payload.preferredWards,
@@ -552,26 +559,23 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
               contactMethod: payload.contactMethod,
             };
             await updateMyProfile(otherFieldsPayload);
-            return;
-          } catch (updateError: any) {
-            if (updateError?.status !== 401) {
-              throw updateError;
-            }
+          } else {
+            // Nếu city không thay đổi, có thể gửi cả preferredWards cùng lúc
+            await updateMyProfile(payload);
           }
+          return;
         }
         
-        // Nếu city không thay đổi hoặc không có token, gửi bình thường
+        // User chưa có profile → dùng POST để tạo mới
         if (hasAuthToken) {
           try {
             await createProfile(payload);
             return;
           } catch (createError: any) {
+            // Nếu profile đã tồn tại (409) nhưng logic trên không phát hiện, fallback sang PATCH
             if (createError?.status === 409) {
-              // Nếu city không thay đổi, có thể gửi cả preferredWards cùng lúc
-              if (!cityChanged) {
-                await updateMyProfile(payload);
-              } else {
-                // Nếu city thay đổi nhưng không có token ở trên, vẫn phải gửi 2 request
+              // Theo BE guide: Nếu preferredCity thay đổi, phải gửi 2 request riêng
+              if (cityChanged) {
                 const cityPayload: Partial<UserProfile> = { preferredCity: payload.preferredCity };
                 await updateMyProfile(cityPayload);
                 const wardsPayload: Partial<UserProfile> = { preferredWards: payload.preferredWards };
@@ -583,15 +587,19 @@ export default function ProfileSurvey({ role }: { role: "user" | "landlord" }) {
                   contactMethod: payload.contactMethod,
                 };
                 await updateMyProfile(otherFieldsPayload);
+              } else {
+                await updateMyProfile(payload);
               }
               return;
             }
+            // Nếu lỗi 401, tiếp tục thử public API
             if (createError?.status !== 401) {
               throw createError;
             }
           }
         }
         
+        // Nếu không có token, dùng public API (POST)
         try {
           await createProfilePublic(payload);
         } catch (publicError: any) {
