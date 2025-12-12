@@ -18,6 +18,7 @@ type PostCardProps = RoomCardData & {
     avg: number;
     count: number;
   };
+  onClick?: () => void;
 };
 
 function sanitizeEmOnly(html: string): string {
@@ -51,6 +52,7 @@ export default function PostCard({
   isVerified,
   highlight,
   rating: propRating,
+  onClick,
 }: PostCardProps) {
   const router = useRouter();
   const { isFavorited, toggleFavorite } = useFavorites();
@@ -84,6 +86,13 @@ export default function PostCard({
   }, [rentPostId, propRating]);
 
   const goDetail = () => {
+    if (onClick) {
+      try {
+        onClick();
+      } catch {
+        // ignore click tracking error
+      }
+    }
     const postType = category === 'roommate' ? 'roommate' : 'rent';
     router.push(`/room_details/${postType}-${rentPostId}`);
   };

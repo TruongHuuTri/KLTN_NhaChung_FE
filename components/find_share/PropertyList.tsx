@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import PostCard from "@/components/common/PostCard";
 import { UnifiedPost } from "@/types/MixedPosts";
+import { useAuth } from "@/contexts/AuthContext";
 
 type SortKey = "random" | "newest" | "priceAsc" | "priceDesc" | "areaDesc" | "nearest";
 
 export default function RoomList() {
+  const { user } = useAuth();
   // PropertyList chỉ nhận kết quả từ SearchDetails, không tự search
   const [items, setItems] = useState<UnifiedPost[]>([]);
   const [suggestions, setSuggestions] = useState<UnifiedPost[]>([]);
@@ -15,6 +17,28 @@ export default function RoomList() {
   const [sort, setSort] = useState<SortKey>("random");
   const [activeBadges, setActiveBadges] = useState<string[]>([]);
   const [query, setQuery] = useState<string>("");
+
+  const handlePostClick = useCallback(
+    (post: UnifiedPost) => {
+      if (!user?.userId || !post?.id) return;
+      const payload: any = {
+        userId: user.userId,
+        postId: post.id,
+      };
+      const roomId = (post as any)?.roomId || (post as any)?.originalData?.roomId;
+      if (roomId) payload.roomId = roomId;
+      const amenities = (post as any)?.amenities || (post as any)?.originalData?.amenities;
+      if (amenities) payload.amenities = amenities;
+
+      // Fire-and-forget để không chặn UX
+      fetch("/api/events/click", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    },
+    [user?.userId]
+  );
 
   // pagination 4x4
   const [currentPage, setCurrentPage] = useState(1);
@@ -168,7 +192,7 @@ export default function RoomList() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-gray-900">
-          Danh sách phòng trọ ({sorted.length})
+          Danh sách phòng trọ
         </h2>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <span>Sắp xếp theo:</span>
@@ -238,6 +262,7 @@ export default function RoomList() {
                 {...(it.address ? { address: it.address as any } : { city: it.location || '' })}
                 price={it.price}
                 isVerified={it.isVerified || false}
+                onClick={() => handlePostClick(it)}
                 highlight={{
                   // BE trả highlight dạng string[] hoặc string, normalize về string
                   title: Array.isArray((it as any)?.originalData?.highlight?.title)
