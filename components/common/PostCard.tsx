@@ -3,9 +3,11 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import type { RoomCardData } from "@/types/RentPostApi";
 import { useFavorites } from "../../contexts/FavoritesContext";
+import { useAuth } from "../../contexts/AuthContext";
 import { formatPrice } from "@/utils/format";
 import { addressService } from "../../services/address";
 import { getReviewsByTarget } from "../../services/reviews";
+import { logClickEvent } from "../../services/events";
 import { FaStar } from "react-icons/fa";
 
 type PostCardProps = RoomCardData & {
@@ -19,6 +21,8 @@ type PostCardProps = RoomCardData & {
     count: number;
   };
   onClick?: () => void;
+  roomId?: number;
+  amenities?: string[];
 };
 
 function sanitizeEmOnly(html: string): string {
@@ -32,8 +36,9 @@ function sanitizeEmOnly(html: string): string {
   // Loại bỏ toàn bộ thẻ còn lại
   out = out.replace(/<[^>]+>/g, "");
   // Khôi phục thẻ em chuẩn
-  out = out.replace(new RegExp(placeholderOpen, 'g'), '<em>')
-           .replace(new RegExp(placeholderClose, 'g'), '</em>');
+  out = out
+    .replace(new RegExp(placeholderOpen, "g"), "<em>")
+    .replace(new RegExp(placeholderClose, "g"), "</em>");
   return out;
 }
 
@@ -53,29 +58,34 @@ export default function PostCard({
   highlight,
   rating: propRating,
   onClick,
+  roomId,
+  amenities,
 }: PostCardProps) {
   const router = useRouter();
+  const { user } = useAuth();
   const { isFavorited, toggleFavorite } = useFavorites();
-  const [rating, setRating] = useState<{ avg: number; count: number } | null>(propRating || null);
-  
-  // Check if this post is favorited  
-  const postType = category === 'roommate' ? 'roommate' : 'rent';
+  const [rating, setRating] = useState<{ avg: number; count: number } | null>(
+    propRating || null
+  );
+
+  // Check if this post is favorited
+  const postType = category === "roommate" ? "roommate" : "rent";
   const isFav = isFavorited(postType, rentPostId);
 
   // Fetch rating if not provided
   useEffect(() => {
     if (!propRating && rentPostId) {
       getReviewsByTarget({
-        targetType: 'POST',
+        targetType: "POST",
         targetId: rentPostId,
         page: 1,
-        pageSize: 1
+        pageSize: 1,
       })
         .then((data) => {
           if (data.ratingSummary && data.ratingSummary.ratingCount > 0) {
             setRating({
               avg: data.ratingSummary.ratingAvg,
-              count: data.ratingSummary.ratingCount
+              count: data.ratingSummary.ratingCount,
             });
           }
         })
@@ -86,6 +96,19 @@ export default function PostCard({
   }, [rentPostId, propRating]);
 
   const goDetail = () => {
+    // Gửi click event để cải thiện personalization (silent fail)
+    if (user?.userId && rentPostId) {
+      logClickEvent({
+        userId: user.userId,
+        postId: rentPostId,
+        roomId,
+        amenities,
+      }).catch(() => {
+        // ignore errors to avoid breaking UX
+      });
+    }
+
+    // Gọi onClick callback nếu có (backward compatible)
     if (onClick) {
       try {
         onClick();
@@ -93,7 +116,8 @@ export default function PostCard({
         // ignore click tracking error
       }
     }
-    const postType = category === 'roommate' ? 'roommate' : 'rent';
+
+    const postType = category === "roommate" ? "roommate" : "rent";
     router.push(`/room_details/${postType}-${rentPostId}`);
   };
 
@@ -117,7 +141,6 @@ export default function PostCard({
           <div className="w-full h-full bg-gradient-to-br from-gray-300 to-gray-400" />
         )}
 
-
         {/* Verified */}
         {isVerified && (
           <div className="absolute top-2 left-2 bg-gray-800 text-white text-xs px-2 py-1 rounded-md group-hover:bg-teal-600 transition-colors duration-300">
@@ -127,16 +150,15 @@ export default function PostCard({
 
         {/* Rating Badge */}
         {rating && (
-          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 z-10"
-            style={{ marginTop: isVerified ? '2.5rem' : '0' }}
+          <div
+            className="absolute top-2 left-2 bg-white/95 backdrop-blur-sm px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5 z-10"
+            style={{ marginTop: isVerified ? "2.5rem" : "0" }}
           >
             <FaStar className="w-4 h-4 text-amber-400" />
             <span className="font-bold text-gray-900">
               {rating.avg.toFixed(1)}
             </span>
-            <span className="text-xs text-gray-500">
-              ({rating.count})
-            </span>
+            <span className="text-xs text-gray-500">({rating.count})</span>
           </div>
         )}
 
@@ -146,7 +168,7 @@ export default function PostCard({
             onClick={async (e) => {
               e.stopPropagation();
               // Determine post type based on category
-              const postType = category === 'roommate' ? 'roommate' : 'rent';
+              const postType = category === "roommate" ? "roommate" : "rent";
               await toggleFavorite(postType, rentPostId);
             }}
             className={`p-2 rounded-full transition-all duration-300 hover:scale-110 ${
@@ -209,7 +231,9 @@ export default function PostCard({
         <h3 className="font-bold text-gray-900 text-lg mb-2 line-clamp-2 group-hover:text-teal-700 transition-colors duration-300">
           {highlight?.title ? (
             <span
-              dangerouslySetInnerHTML={{ __html: sanitizeEmOnly(highlight.title) }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeEmOnly(highlight.title),
+              }}
             />
           ) : (
             title
@@ -221,10 +245,12 @@ export default function PostCard({
           {[
             area != null ? `${area} m²` : null,
             // Chỉ hiển thị phòng ngủ/phòng tắm cho chung cư và nhà nguyên căn
-            ...(category !== 'phong-tro' ? [
-              bedrooms != null ? `${bedrooms} phòng ngủ` : null,
-              bathrooms != null ? `${bathrooms} phòng tắm` : null,
-            ] : []),
+            ...(category !== "phong-tro"
+              ? [
+                  bedrooms != null ? `${bedrooms} phòng ngủ` : null,
+                  bathrooms != null ? `${bathrooms} phòng tắm` : null,
+                ]
+              : []),
           ]
             .filter(Boolean)
             .join(" • ")}
@@ -246,10 +272,14 @@ export default function PostCard({
           {highlight?.address ? (
             <span
               className="line-clamp-1"
-              dangerouslySetInnerHTML={{ __html: sanitizeEmOnly(highlight.address) }}
+              dangerouslySetInnerHTML={{
+                __html: sanitizeEmOnly(highlight.address),
+              }}
             />
+          ) : address ? (
+            addressService.formatWardCity(address)
           ) : (
-            address ? addressService.formatWardCity(address) : (city || "")
+            city || ""
           )}
         </div>
 
