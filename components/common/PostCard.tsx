@@ -103,9 +103,14 @@ export default function PostCard({
         postId: rentPostId,
         roomId,
         amenities,
-      }).catch(() => {
-        // ignore errors to avoid breaking UX
+      }).catch((err) => {
+        // Log để debug nhưng không làm gián đoạn UX
+        console.warn("[PostCard] Click event failed:", err);
       });
+    } else {
+      // Debug: tại sao không gửi click event
+      if (!user?.userId) console.warn("[PostCard] No userId");
+      if (!rentPostId) console.warn("[PostCard] No rentPostId");
     }
 
     // Gọi onClick callback nếu có (backward compatible)

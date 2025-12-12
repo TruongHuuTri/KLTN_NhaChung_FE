@@ -14,10 +14,17 @@ export async function logClickEvent(
   payload: ClickEventPayload,
   opts?: { signal?: AbortSignal }
 ) {
-  const url = new URL("/api/events/click", API_BASE);
+  // Chuẩn hóa endpoint: dù API_BASE có /api hay không đều trỏ về /api/events/click
+  const base = API_BASE.replace(/\/+$/, "");
+  const url = base.endsWith("/api")
+    ? `${base}/events/click`
+    : `${base}/api/events/click`;
+
+  console.log("[Click Event] Sending to:", url.toString());
+  console.log("[Click Event] Payload:", payload);
 
   try {
-    await fetch(url.toString(), {
+    const response = await fetch(url.toString(), {
       method: "POST",
       signal: opts?.signal,
       headers: {
@@ -26,7 +33,18 @@ export async function logClickEvent(
       },
       body: JSON.stringify(payload),
     });
-  } catch {
-    // ignore errors to avoid breaking UX
+    console.log(
+      "[Click Event] Response:",
+      response.status,
+      response.statusText
+    );
+    if (!response.ok) {
+      console.warn(
+        `[Click Event] Failed: ${response.status} ${response.statusText}`
+      );
+    }
+  } catch (error) {
+    // Log error để debug nhưng không làm gián đoạn UX
+    console.error("[Click Event] Error:", error);
   }
 }
