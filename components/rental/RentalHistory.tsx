@@ -81,7 +81,11 @@ export default function RentalHistory({ onCountChange }: RentalHistoryProps) {
     const promises = postIdsToCheck.map(postId =>
       getPostById(postId)
         .then((post) => {
-          postTypeMap[postId] = post.postType || 'rent';
+          // Convert postType từ backend format (cho-thue/tim-o-ghep) sang frontend format (rent/roommate)
+          const pt = String(post.postType || 'cho-thue');
+          const mappedPostType = pt === 'cho-thue' ? 'rent' : 
+                                 pt === 'tim-o-ghep' ? 'roommate' : 'rent';
+          postTypeMap[postId] = mappedPostType;
         })
         .catch(() => {
           // Nếu lỗi, mặc định là null (không hiển thị nút)
