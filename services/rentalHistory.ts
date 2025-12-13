@@ -10,6 +10,8 @@ export interface RentalHistoryItem {
   buildingId: number;
   address?: string;
   activePostId?: number | null; // 🆕 ID của bài đăng active (để link thuê lại)
+  roomStatus?: 'available' | 'occupied' | 'unknown'; // ⬅️ MỚI: Trạng thái phòng hiện tại
+  canRentAgain?: boolean; // ⬅️ MỚI: true nếu phòng available và có bài đăng active
   contractStatus: 'expired' | 'terminated';
   startDate: string;
   endDate: string;

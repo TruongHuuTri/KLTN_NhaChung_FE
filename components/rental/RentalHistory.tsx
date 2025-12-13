@@ -95,15 +95,6 @@ export default function RentalHistory({ onCountChange }: RentalHistoryProps) {
     setPostTypes(prev => ({ ...prev, ...postTypeMap }));
   };
 
-  // Kiểm tra có nên hiển thị nút "Thuê lại" không
-  // Chỉ hiển thị nếu postType là 'rent'
-  const shouldShowRentAgainButton = (item: RentalHistoryItem): boolean => {
-    if (!item.activePostId) {
-      return false;
-    }
-    const postType = postTypes[item.activePostId];
-    return postType === 'rent';
-  };
 
   if (loading) {
     return (
@@ -250,12 +241,12 @@ export default function RentalHistory({ onCountChange }: RentalHistoryProps) {
               </div>
 
               {/* Action Button - Thuê lại */}
-              {shouldShowRentAgainButton(item) ? (
+              {item.canRentAgain ? (
                 <Link 
-                  href={`/room_details/${item.activePostId}`}
+                  href={`/room_details/${postTypes[item.activePostId!] || 'rent'}-${item.activePostId}`}
                   className="block w-full text-center bg-gradient-to-r from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white py-2.5 px-4 rounded-lg transition-all duration-300 font-medium shadow-md hover:shadow-lg"
                 >
-                  Thuê lại phòng này
+                  Thuê lại
                 </Link>
               ) : (
                 <Link 
